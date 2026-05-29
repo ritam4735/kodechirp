@@ -4,6 +4,15 @@ const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const { pool } = require('./db');
+
+// Verify DB connection
+pool.query('SELECT NOW()')
+  .then(() => console.log('\n[DB] Successfully connected to PostgreSQL'))
+  .catch(err => {
+    console.error('\n[DB] Failed to connect to PostgreSQL:', err.message);
+    console.error('Please check your DATABASE_URL in .env and ensure PostgreSQL is running.');
+  });
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors({
@@ -26,6 +35,7 @@ app.use('/api/auth',        require('./routes/auth'));
 app.use('/api/problems',    require('./routes/problems'));
 app.use('/api/submissions', require('./routes/submissions'));
 app.use('/api/chirps',      require('./routes/chirps'));
+app.use('/api/execute',     require('./routes/execute'));
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {

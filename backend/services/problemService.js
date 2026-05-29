@@ -8,6 +8,7 @@ exports.getAllProblems = async (searchQuery) => {
     id: p.id,
     slug: p.slug,
     title: p.title,
+    difficulty: p.difficulty,
     short_description: getShortDescription(p.description),
     created_at: p.created_at
   }));

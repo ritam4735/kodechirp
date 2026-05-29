@@ -21,7 +21,7 @@ export const useEditor = () => {
     store.setIsExecuting(true);
     store.resetConsole();
     try {
-      const result = await api.submitCode(problemId, store.code);
+      const result = await api.submitCode(problemId, store.code, store.language);
       store.setVerdict(result);
     } catch (error) {
       store.setOutput('Failed to submit code.');

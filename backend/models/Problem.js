@@ -2,7 +2,7 @@ const db = require('../db');
 
 class Problem {
   static async findAll(searchQuery = '') {
-    let query = 'SELECT id, slug, title, description, created_at FROM problems';
+    let query = 'SELECT id, slug, title, description, difficulty, created_at FROM problems';
     const values = [];
 
     if (searchQuery && searchQuery.trim()) {
@@ -33,7 +33,7 @@ class Problem {
       [problem.id]
     );
 
-    problem.sample_test_cases = testCasesResult.rows;
+    problem.testCases = testCasesResult.rows;
 
     return problem;
   }
