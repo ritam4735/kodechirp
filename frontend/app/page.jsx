@@ -1,124 +1,231 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
+import { motion, useAnimation, useInView } from 'framer-motion';
+import { Bird, Code2, Users, PlaySquare, Bookmark, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { Search, ChevronRight, BookOpen, Zap } from 'lucide-react';
-import { useProblem } from '../hooks/useProblem';
 
-function ProblemCard({ problem, index }) {
-  return (
-    <Link
-      href={`/problems/${problem.slug}`}
-      className="group flex items-center gap-4 px-5 py-4 border-b border-[#21262d] hover:bg-[#161b22] transition-colors"
-    >
-      <span className="w-8 text-sm text-[#484f58] font-mono tabular-nums flex-shrink-0">
-        {String(index + 1).padStart(2, '0')}
-      </span>
-      <div className="flex-1 min-w-0">
-        <h3 className="text-sm font-semibold text-[#e6edf3] group-hover:text-[#22c55e] transition-colors truncate">
-          {problem.title}
-        </h3>
-        <p className="text-xs text-[#8b949e] mt-0.5 truncate">{problem.short_description}</p>
-      </div>
-      <span className={`px-2.5 py-0.5 rounded text-xs font-medium ${
-        problem.difficulty === 'Easy' ? 'bg-[#22c55e]/10 text-[#22c55e]' :
-        problem.difficulty === 'Medium' ? 'bg-[#eab308]/10 text-[#eab308]' :
-        'bg-[#ef4444]/10 text-[#ef4444]'
-      }`}>
-        {problem.difficulty}
-      </span>
-      <ChevronRight size={14} className="text-[#484f58] group-hover:text-[#22c55e] transition-colors flex-shrink-0 ml-2" />
-    </Link>
-  );
-}
+function FloatingBubble() {
+  const controls = useAnimation();
+  const bubbleRef = useRef(null);
+  const [popped, setPopped] = useState(false);
+  const [birdPos, setBirdPos] = useState({ x: 400, y: -200 });
 
-function StatBadge({ label, value, color }) {
+  useEffect(() => {
+    // Gentle floating animation
+    if (!popped) {
+      controls.start({
+        y: [0, -15, 0],
+        rotate: [0, 2, -2, 0],
+        scale: [1, 1.02, 0.98, 1],
+        transition: {
+          duration: 6,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }
+      });
+    }
+  }, [controls, popped]);
+
+  const handleInteract = () => {
+    if (popped) return;
+    
+    // Bird flies in from top right towards the bubble
+    setBirdPos({ x: 120, y: -80 });
+    
+    setTimeout(() => {
+      // Tap the bubble - elastic distortion then pop
+      controls.start({
+        scaleX: [1, 1.1, 0.9, 1.3, 0],
+        scaleY: [1, 0.9, 1.1, 1.3, 0],
+        opacity: [1, 1, 0.9, 0],
+        filter: ['blur(0px)', 'blur(0px)', 'blur(2px)', 'blur(10px)'],
+        transition: { duration: 0.5, ease: "easeInOut" }
+      }).then(() => {
+        setPopped(true);
+        // Redirect to problems page
+        window.location.href = '/problems';
+      });
+    }, 600);
+  };
+
+  if (popped) return null;
+
   return (
-    <div className="flex flex-col items-center p-4 bg-[#161b22] rounded-xl border border-[#21262d]">
-      <span className={`text-2xl font-bold font-display ${color}`}>{value}</span>
-      <span className="text-xs text-[#8b949e] mt-0.5">{label}</span>
+    <div className="relative flex justify-center items-center h-80 mt-12 mb-16 perspective-1000">
+      {/* Floating Bird */}
+      <motion.div
+        animate={{ x: birdPos.x, y: birdPos.y, opacity: birdPos.x < 400 ? 1 : 0 }}
+        transition={{ type: 'spring', stiffness: 120, damping: 15 }}
+        className="absolute z-20 pointer-events-none"
+        style={{ left: '50%', top: '50%', marginLeft: '-24px', marginTop: '-24px' }}
+      >
+        <Bird size={48} className="text-[#a371f7] drop-shadow-[0_0_20px_rgba(163,113,247,0.8)] transform -scale-x-100" fill="currentColor" />
+      </motion.div>
+
+      {/* Glass Bubble CTA */}
+      <motion.button
+        ref={bubbleRef}
+        animate={controls}
+        onClick={handleInteract}
+        className="group relative w-64 h-64 rounded-full flex flex-col items-center justify-center cursor-pointer overflow-hidden z-10"
+        style={{
+          background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), rgba(255,255,255,0.05) 60%, rgba(88,166,255,0.2) 100%)',
+          boxShadow: 'inset 0 0 20px rgba(255,255,255,0.2), inset 10px 0 40px rgba(163,113,247,0.3), inset -10px 0 40px rgba(88,166,255,0.3), 0 10px 40px rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255,255,255,0.3)'
+        }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        {/* Specular highlight */}
+        <div className="absolute top-[10%] left-[20%] w-16 h-8 bg-white rounded-[100%] rotate-[-45deg] opacity-40 blur-[2px]" />
+        
+        <span className="text-2xl font-display font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] mb-2 group-hover:text-[#58a6ff] transition-colors duration-300">
+          Explore Problems
+        </span>
+        <ChevronRight size={24} className="text-white/70 group-hover:text-[#58a6ff] group-hover:translate-x-2 transition-all duration-300 drop-shadow-md" />
+        
+        {/* Glow behind text */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#58a6ff]/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      </motion.button>
+
+      {/* Ripple effects below bubble */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-48 h-8 rounded-full border border-[#58a6ff]/30 animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite]" />
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-64 h-12 rounded-full border border-[#a371f7]/20 animate-[ping_4s_cubic-bezier(0,0,0.2,1)_infinite_1s]" />
+      <div className="absolute bottom-[26px] left-1/2 -translate-x-1/2 w-32 h-2 bg-[#58a6ff]/50 blur-xl rounded-full" />
     </div>
   );
 }
 
-export default function HomePage() {
-  const { problems, isLoading, fetchProblems } = useProblem();
-  const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    const debounce = setTimeout(() => {
-      fetchProblems(search);
-    }, 250);
-    return () => clearTimeout(debounce);
-  }, [search]);
-
+function FeatureCard({ title, desc, icon: Icon, color, delay }) {
   return (
-    <div className="max-w-5xl mx-auto w-full px-4 py-10">
-      <div className="mb-10 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#22c55e]/10 border border-[#22c55e]/20 rounded-full text-[#22c55e] text-xs font-medium mb-4">
-          <Zap size={10} />
-          Learn through peers, not just solutions
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, delay, ease: 'easeOut' }}
+      whileHover={{ y: -10, transition: { duration: 0.2 } }}
+      className="relative p-6 rounded-2xl border border-white/10 bg-[#0d1117]/40 backdrop-blur-md overflow-hidden group cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+    >
+      {/* Dynamic background glow */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500"
+           style={{ background: `radial-gradient(circle at 50% 0%, ${color}, transparent 70%)` }} />
+      
+      <div className="relative z-10 flex flex-col items-center text-center">
+        <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4 border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-300"
+             style={{ backgroundColor: `${color}15` }}>
+          <Icon size={24} color={color} className="drop-shadow-lg" />
         </div>
-        <h1 className="font-display text-4xl font-extrabold text-white mb-3">
-          Code. Explain.<br />
-          <span className="text-[#22c55e]">Understand.</span>
-        </h1>
-        <p className="text-[#8b949e] max-w-md mx-auto text-sm leading-relaxed">
-          Solve problems, share your thinking as a Chirp, and learn from how others think — not just what they wrote.
-        </p>
+        <h3 className="text-white font-display font-bold text-lg mb-2">{title}</h3>
+        <p className="text-[#8b949e] text-sm leading-relaxed">{desc}</p>
+      </div>
+    </motion.div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <div className="relative min-h-screen bg-[#06090e] overflow-hidden selection:bg-[#58a6ff]/30">
+      {/* Mystical Background Layers */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Core dark radial */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,_#111928_0%,_#06090e_100%)]" />
+        
+        {/* Nebulous glows */}
+        <div className="absolute top-0 left-1/4 w-[800px] h-[600px] bg-[#58a6ff]/10 rounded-full blur-[120px] mix-blend-screen" />
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[500px] bg-[#a371f7]/10 rounded-full blur-[100px] mix-blend-screen" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[400px] bg-[#22c55e]/5 rounded-full blur-[150px] mix-blend-screen" />
+        
+        {/* Distant stars / particles */}
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20" />
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-8">
-        <StatBadge label="Problems" value={problems.length || '—'} color="text-[#58a6ff]" />
-        <StatBadge label="Chirps" value="100+" color="text-[#22c55e]" />
-        <StatBadge label="Learners" value="Open" color="text-[#a78bfa]" />
-      </div>
+      <div className="relative z-10 flex flex-col items-center pt-32 pb-20 px-4 min-h-screen">
+        
+        {/* Badge */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-8"
+        >
+          <Bird size={14} className="text-[#a371f7]" />
+          <span className="text-xs font-semibold text-[#c9d1d9] tracking-widest uppercase">Learn. Share. Grow.</span>
+        </motion.div>
 
-      <div className="relative mb-6">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#484f58]" />
-        <input
-          type="text"
-          placeholder="Search problems..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-[#161b22] border border-[#21262d] text-sm text-[#e6edf3] placeholder-[#484f58] rounded-xl pl-9 pr-4 py-2.5 focus:outline-none focus:border-[#22c55e] transition-colors"
-        />
-        {search && (
-          <button
-            onClick={() => setSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#484f58] hover:text-[#8b949e] text-xs"
-          >
-            Clear
-          </button>
-        )}
-      </div>
+        {/* Headlines */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
+          className="text-center max-w-3xl mx-auto"
+        >
+          <h1 className="text-5xl md:text-7xl font-display font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-[#e6edf3] to-[#8b949e] mb-6 drop-shadow-sm leading-tight">
+            Chirp your code. <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#58a6ff] via-[#a371f7] to-[#58a6ff] animate-gradient-x">
+              Inspire the world.
+            </span>
+          </h1>
+          <p className="text-[#8b949e] text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed text-balance">
+            KodeChirp is where developers learn together, share knowledge, and grow through real conversations.
+          </p>
+        </motion.div>
 
-      <div className="bg-[#0d1117] border border-[#21262d] rounded-xl overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-[#21262d] bg-[#161b22]">
-          <BookOpen size={14} className="text-[#22c55e]" />
-          <span className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider">
-            {isLoading ? 'Loading…' : `${problems.length} Problem${problems.length !== 1 ? 's' : ''}`}
-          </span>
+        {/* Bubble CTA Interaction */}
+        <FloatingBubble />
+
+        {/* Feature Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-6 max-w-7xl w-full px-4 mt-8">
+          <FeatureCard 
+            title="Solve Problems" 
+            desc="Sharpen your skills with curated challenges designed to level you up." 
+            icon={Code2} 
+            color="#22c55e" 
+            delay={0.6}
+          />
+          <FeatureCard 
+            title="Share Chirps" 
+            desc="Post your thoughts, solutions & ideas for the entire flock to see." 
+            icon={Bird} 
+            color="#a371f7" 
+            delay={0.7}
+          />
+          <FeatureCard 
+            title="Watch Flights" 
+            desc="Learn visually with short, powerful coding videos from top developers." 
+            icon={PlaySquare} 
+            color="#58a6ff" 
+            delay={0.8}
+          />
+          <FeatureCard 
+            title="Join Flocks" 
+            desc="Be part of specialized communities that build and learn together." 
+            icon={Users} 
+            color="#eab308" 
+            delay={0.9}
+          />
+          <FeatureCard 
+            title="Save in Nest" 
+            desc="Bookmark your favorite content & revisit them later in your Nest." 
+            icon={Bookmark} 
+            color="#f43f5e" 
+            delay={1.0}
+          />
         </div>
 
-        {isLoading ? (
-          <div className="py-16 flex flex-col items-center gap-3">
-            <div className="w-6 h-6 border-2 border-[#22c55e] border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm text-[#484f58]">Loading problems…</span>
-          </div>
-        ) : problems.length === 0 ? (
-          <div className="py-16 flex flex-col items-center gap-3 text-center">
-            <Search size={28} className="text-[#484f58]" />
-            <p className="text-sm text-[#8b949e]">No problems match "{search}"</p>
-            <button onClick={() => setSearch('')} className="text-xs text-[#22c55e] hover:underline">
-              Clear search
-            </button>
-          </div>
-        ) : (
-          problems.map((problem, i) => (
-            <ProblemCard key={problem.id} problem={problem} index={i} />
-          ))
-        )}
+        {/* Bottom Quote */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 1.5 }}
+          className="mt-20 px-8 py-6 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm max-w-2xl text-center relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-20 mix-blend-overlay" />
+          <p className="text-[#8b949e] italic text-lg relative z-10">
+            "Code is not just written, it's shared, discussed, and elevated together."
+          </p>
+        </motion.div>
+
       </div>
     </div>
   );
