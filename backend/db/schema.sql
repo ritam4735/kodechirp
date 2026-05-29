@@ -1,6 +1,14 @@
 -- KodeChirp Database Schema
 -- Run this to initialize your PostgreSQL database
 
+-- Drop existing tables to avoid schema drift during development
+DROP TABLE IF EXISTS chirp_upvotes CASCADE;
+DROP TABLE IF EXISTS chirps CASCADE;
+DROP TABLE IF EXISTS submissions CASCADE;
+DROP TABLE IF EXISTS test_cases CASCADE;
+DROP TABLE IF EXISTS problems CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -98,6 +106,7 @@ INSERT INTO problems (id, slug, title, description, input_format, output_format,
 You may assume that each input would have exactly one solution, and you may not use the same element twice.
 
 You can return the answer in any order.',
+  'Easy',
   'First line contains n (size of array) and target separated by space.
 Second line contains n space-separated integers.',
   'Print two space-separated indices (0-indexed) that sum to target.',
