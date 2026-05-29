@@ -1,20 +1,11 @@
 import Editor from '@monaco-editor/react';
 import { useEditor } from '../../hooks/useEditor';
-import { useEffect } from 'react';
-import { DEFAULT_CODE_SNIPPETS } from '../../lib/constants';
 
 export const CodeEditor = () => {
   const { code, language, setCode } = useEditor();
 
-  // Initialize with default snippet if empty
-  useEffect(() => {
-    if (!code) {
-      setCode(DEFAULT_CODE_SNIPPETS[language] || '');
-    }
-  }, [language, code, setCode]);
-
   return (
-    <div className="flex-1 min-h-0">
+    <div className="flex-1 min-h-0 relative group bg-[#0d1117]">
       <Editor
         height="100%"
         language={language}
@@ -23,16 +14,24 @@ export const CodeEditor = () => {
         onChange={(value) => setCode(value || '')}
         options={{
           minimap: { enabled: false },
-          fontSize: 14,
+          fontSize: 15,
           fontFamily: 'JetBrains Mono, Menlo, Monaco, Courier New, monospace',
-          padding: { top: 16 },
+          padding: { top: 24, bottom: 24 },
           scrollBeyondLastLine: false,
           smoothScrolling: true,
           cursorBlinking: 'smooth',
           cursorSmoothCaretAnimation: 'on',
           formatOnPaste: true,
+          fontLigatures: true,
+          renderLineHighlight: 'all',
+          lineHeight: 1.6,
         }}
-        loading={<div className="flex items-center justify-center h-full text-[#8b949e]">Loading Editor...</div>}
+        loading={
+          <div className="flex flex-col items-center justify-center h-full w-full bg-[#0d1117] gap-3">
+            <div className="w-8 h-8 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin" />
+            <span className="text-[#8b949e] font-medium text-sm animate-pulse">Warming up the nest...</span>
+          </div>
+        }
       />
     </div>
   );

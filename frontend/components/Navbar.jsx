@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Code2, Swords, BrainCircuit, ClipboardList, ChevronDown,
+  Bird, Swords, BrainCircuit, ClipboardList, ChevronDown,
   LogOut, User, Menu, X, Zap
 } from 'lucide-react';
 import { useAuth } from '../app/layout';
@@ -32,8 +32,8 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#22c55e] to-[#16a34a] flex items-center justify-center shadow-lg shadow-green-900/20">
-            <Code2 size={14} className="text-white" />
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#22c55e] to-[#16a34a] flex items-center justify-center shadow-lg shadow-green-900/20 group-hover:scale-105 transition-transform">
+            <Bird size={15} className="text-white" />
           </div>
           <span className="font-display font-700 text-lg tracking-tight text-white">
             Kode<span className="text-[#22c55e]">Chirp</span>

@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 
 export const useEditorStore = create((set) => ({
-  code: '',
+  codes: {},
   language: 'javascript',
   output: '',
   isExecuting: false,
   verdict: null,
-  setCode: (code) => set({ code }),
+  setCode: (code) => set((state) => ({ 
+    codes: { ...state.codes, [state.language]: code } 
+  })),
   setLanguage: (language) => set({ language }),
   setOutput: (output) => set({ output }),
   setIsExecuting: (isExecuting) => set({ isExecuting }),

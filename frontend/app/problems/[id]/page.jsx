@@ -48,10 +48,10 @@ export default function ProblemPage() {
       </div>
 
       {/* Right Panel: Editor & Console */}
-      <div className="w-full md:w-1/2 flex flex-col bg-[#0d1117]">
-        <div className="flex items-center justify-between border-b border-[#21262d] bg-[#161b22]">
+      <div className="w-full md:w-1/2 flex flex-col bg-[#0d1117] shadow-[-4px_0_24px_rgba(0,0,0,0.5)] z-10 relative">
+        <div className="flex items-center justify-between border-b border-[#30363d] bg-gradient-to-r from-[#0d1117] via-[#161b22] to-[#161b22] h-14">
           <LanguageSelector />
-          <div className="flex items-center gap-2 pr-4">
+          <div className="flex items-center gap-3 pr-5">
             <RunButton />
             <SubmitButton problemId={currentProblem.id} />
           </div>
