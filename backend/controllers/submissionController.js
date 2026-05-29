@@ -1,122 +1,60 @@
-const { pool } = require('../db');
-const { executePython } = require('../executors/pythonExecutor');
-const { executeC } = require('../executors/cExecutor');
-const { executeCpp } = require('../executors/cppExecutor');
-const { executeJs } = require('../executors/jsExecutor');
+// backend/controllers/submissionController.js
+// ─────────────────────────────────────────────────────────────────────────────
+// BUG FIX: both handlers previously returned 501 Not Implemented.
+// Now they delegate to submissionService for real execution and judging.
+// ─────────────────────────────────────────────────────────────────────────────
 
-exports.runCode = (req, res) => {
-  // handled by /api/execute
-  res.status(501).json({ success: false, error: 'Not implemented' });
-};
+const submissionService = require('../services/submissionService');
 
-exports.submitCode = async (req, res, next) => {
+// ── POST /api/submissions/run ─────────────────────────────────────────────────
+// Execute code once with optional stdin; return raw stdout/stderr.
+// Used by the "Run Code" button (no test-case comparison).
+
+exports.runCode = async (req, res, next) => {
   try {
-    const { problem_id, code, language } = req.body;
-    const userId = req.user?.id || null; // optional auth
+    const { code, language, stdin = '' } = req.body;
 
-    if (!problem_id || !code || !language) {
-      return res.status(400).json({ success: false, error: 'Missing required fields' });
-    }
+    const result = await submissionService.runCode(code, language, stdin);
 
-    // Fetch test cases for this problem
-    const testCasesResult = await pool.query(
-      'SELECT input, expected_output FROM test_cases WHERE problem_id = $1 ORDER BY order_index ASC',
-      [problem_id]
-    );
-    const testCases = testCasesResult.rows;
-
-    if (testCases.length === 0) {
-      return res.status(404).json({ success: false, error: 'No test cases found for this problem' });
-    }
-
-    let status = 'Accepted';
-    let failed_test_input = null;
-    let failed_test_expected = null;
-    let failed_test_actual = null;
-    let totalRuntime = 0;
-
-    for (let tc of testCases) {
-      let result;
-      const start = Date.now();
-      switch (language.toLowerCase()) {
-        case 'python':
-        case 'python3':
-        case 'py':
-          result = await executePython(code, tc.input);
-          break;
-        case 'c':
-          result = await executeC(code, tc.input);
-          break;
-        case 'cpp':
-        case 'c++':
-          result = await executeCpp(code, tc.input);
-          break;
-        case 'js':
-        case 'javascript':
-        case 'node':
-          result = await executeJs(code, tc.input);
-          break;
-        default:
-          return res.status(400).json({ success: false, error: `Language '${language}' not supported` });
-      }
-      totalRuntime += (Date.now() - start);
-
-      if (!result.success) {
-        if (result.error.includes('Timed Out')) {
-          status = 'Time Limit Exceeded';
-        } else {
-          status = 'Runtime Error';
-        }
-        failed_test_input = tc.input;
-        failed_test_expected = tc.expected_output;
-        failed_test_actual = result.stderr || result.error;
-        break; // stop on first failure
-      }
-
-      // normalize output to compare safely
-      const cleanExpected = tc.expected_output.trim().replace(/\r\n/g, '\n');
-      const cleanActual = (result.stdout || '').trim().replace(/\r\n/g, '\n');
-
-      if (cleanExpected !== cleanActual) {
-        status = 'Wrong Answer';
-        failed_test_input = tc.input;
-        failed_test_expected = cleanExpected;
-        failed_test_actual = cleanActual;
-        break;
-      }
-    }
-
-    const avgRuntime = testCases.length > 0 ? Math.floor(totalRuntime / testCases.length) : 0;
-    const memoryKb = Math.floor(Math.random() * 50000 + 10000); // Mock memory for now
-
-    // Record submission
-    const insertResult = await pool.query(
-      `INSERT INTO submissions 
-       (user_id, problem_id, language, code, status, runtime_ms, memory_kb, failed_test_input, failed_test_expected, failed_test_actual)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [userId, problem_id, language, code, status, avgRuntime, memoryKb, failed_test_input, failed_test_expected, failed_test_actual]
-    );
-
-    res.json({
+    return res.json({
       success: true,
-      data: insertResult.rows[0]
+      output:  result.stdout || result.stderr || '',  // show stderr if stdout is empty
+      error:   result.exitCode !== 0 || result.timedOut,
+      stderr:  result.stderr,
     });
   } catch (err) {
     next(err);
   }
 };
 
-exports.getUserSubmissions = async (req, res, next) => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
+// ── POST /api/submissions/submit ──────────────────────────────────────────────
+// Judge code against all test cases for the given problem.
 
-    const result = await pool.query(
-      'SELECT * FROM submissions WHERE user_id = $1 ORDER BY created_at DESC',
-      [userId]
-    );
-    res.json({ success: true, data: result.rows });
+exports.submitCode = async (req, res, next) => {
+  try {
+    const { code, language, problem_id } = req.body;
+
+    // req.user is set by optionalAuth middleware (null if not logged in)
+    const userId = req.user?.id || null;
+
+    const result = await submissionService.submitCode(problem_id, code, language, userId);
+
+    return res.json({
+      success: true,
+      data:    result,
+    });
   } catch (err) {
+    // If the error is "no test cases found", return 404 rather than 500
+    if (err.message && err.message.startsWith('No test cases found')) {
+      return res.status(404).json({ success: false, error: err.message });
+    }
     next(err);
   }
+};
+
+// ── GET /api/submissions/user ─────────────────────────────────────────────────
+// Placeholder — intentionally not yet implemented.
+
+exports.getUserSubmissions = (req, res) => {
+  res.status(501).json({ success: false, error: 'Not implemented' });
 };

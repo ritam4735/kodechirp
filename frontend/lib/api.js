@@ -1,88 +1,119 @@
-import axios from 'axios';
+// frontend/lib/api.js
+// ─────────────────────────────────────────────────────────────────────────────
+// Real API client. All mock functions have been removed.
+// Set NEXT_PUBLIC_API_URL in your .env.local (default: http://localhost:4000).
+// ─────────────────────────────────────────────────────────────────────────────
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
-const apiClient = axios.create({
-  baseURL: `${API_URL}/api`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+async function request(path, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+    ...options,
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
+
+  return data;
+}
 
 export const api = {
+  // ── Problems ────────────────────────────────────────────────────────────────
+
   getProblems: async (searchQuery = '') => {
-    try {
-      const { data } = await apiClient.get(`/problems${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`);
-      return { problems: data.data || [] };
-    } catch (error) {
-      console.error('Error fetching problems:', error);
-      return { problems: [] };
-    }
+    const qs = searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : '';
+    const data = await request(`/api/problems${qs}`);
+    // Backend returns { success, data: [...], meta }
+    return { problems: data.data };
   },
-  
+
   getProblem: async (slug) => {
-    try {
-      const { data } = await apiClient.get(`/problems/${slug}`);
-      return { problem: data.data };
-    } catch (error) {
-      console.error('Error fetching problem details:', error);
-      throw new Error(error.response?.data?.error || 'Problem not found');
-    }
+    const data = await request(`/api/problems/${slug}`);
+    // Backend returns { success, data: { ...problem, sample_test_cases: [...] } }
+    const problem = data.data;
+    // Normalise test cases to the shape the frontend already uses: { input, output }
+    problem.testCases = (problem.sample_test_cases || []).map((tc) => ({
+      input: tc.input,
+      output: tc.expected_output,
+    }));
+    return { problem };
   },
 
-  runCode: async (code, language) => {
-    try {
-      const { data } = await apiClient.post('/execute', { code, language });
-      if (data.success) {
-        return { output: data.stdout, error: false };
-      } else {
-        return { output: data.stderr || data.error || 'Execution failed', error: true };
-      }
-    } catch (error) {
-      console.error('Error running code:', error);
-      return { output: error.response?.data?.error || 'Execution error.', error: true };
-    }
+  // ── Code execution ──────────────────────────────────────────────────────────
+
+  // BUG FIX: was a mock that always returned 'Mock execution successful.'
+  runCode: async (code, language, stdin = '') => {
+    const data = await request('/api/submissions/run', {
+      method: 'POST',
+      body: JSON.stringify({ code, language, stdin }),
+    });
+    // Backend returns { success, output, error (bool), stderr }
+    return {
+      output: data.output || '',
+      error: data.error || false,
+    };
   },
 
+  // BUG FIX: was a mock using Math.random() > 0.3 — always "passed"
+  //          Also: was missing `language` in the payload.
   submitCode: async (problemId, code, language) => {
-    try {
-      const { data } = await apiClient.post('/submissions/submit', { problem_id: problemId, code, language });
-      return {
-        verdict: data.data?.status || 'Unknown',
-        runtime: data.data?.runtime_ms ? `${data.data.runtime_ms}ms` : 'N/A',
-        memory: data.data?.memory_kb ? `${(data.data.memory_kb / 1024).toFixed(1)}MB` : 'N/A',
-        details: data.data?.failed_test_actual 
-          ? `Failed test case. Expected: ${data.data.failed_test_expected}, Actual: ${data.data.failed_test_actual}` 
-          : 'All test cases passed!'
-      };
-    } catch (error) {
-      console.error('Error submitting code:', error);
-      return {
-        verdict: 'Error',
-        runtime: 'N/A',
-        memory: 'N/A',
-        details: 'Failed to submit code.'
-      };
-    }
+    const data = await request('/api/submissions/submit', {
+      method: 'POST',
+      body: JSON.stringify({ problem_id: problemId, code, language }),
+    });
+    // Backend returns { success, data: { verdict, passed, total, ... } }
+    const result = data.data;
+    return {
+      verdict: result.verdict,                              // 'Accepted' | 'Wrong Answer' | 'Runtime Error' | 'Time Limit Exceeded'
+      runtime: result.runtime || 'N/A',
+      memory: result.memory || 'N/A',
+      details: buildDetails(result),
+    };
   },
+
+  // ── Chirps ──────────────────────────────────────────────────────────────────
 
   getChirps: async (problemId) => {
-    try {
-      const { data } = await apiClient.get(`/chirps/${problemId}`);
-      return data.data || [];
-    } catch (error) {
-      console.error('Error fetching chirps:', error);
-      return [];
-    }
+    const data = await request(`/api/chirps?problem_id=${problemId}`);
+    return data.data || [];
   },
 
-  postChirp: async (problemId, content, author = 'Anonymous') => {
-    try {
-      const { data } = await apiClient.post('/chirps', { problem_id: problemId, content });
-      return data.data;
-    } catch (error) {
-      console.error('Error posting chirp:', error);
-      throw new Error('Failed to post chirp');
-    }
-  }
+  postChirp: async (problemId, content) => {
+    const data = await request('/api/chirps', {
+      method: 'POST',
+      body: JSON.stringify({ problem_id: problemId, content }),
+    });
+    return data.data;
+  },
 };
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function buildDetails(result) {
+  if (result.verdict === 'Accepted') {
+    return `All ${result.total} test case${result.total !== 1 ? 's' : ''} passed!`;
+  }
+
+  if (result.verdict === 'Wrong Answer') {
+    return [
+      `Failed on test case ${result.passed + 1} of ${result.total}.`,
+      result.failedInput    ? `\nInput:    ${result.failedInput}`    : '',
+      result.failedExpected ? `\nExpected: ${result.failedExpected}` : '',
+      result.failedActual   ? `\nGot:      ${result.failedActual}`   : '',
+    ].join('');
+  }
+
+  if (result.verdict === 'Runtime Error') {
+    return `Runtime error on test case ${result.passed + 1} of ${result.total}.\n${result.error || ''}`;
+  }
+
+  if (result.verdict === 'Time Limit Exceeded') {
+    return `Time limit exceeded on test case ${result.passed + 1} of ${result.total}.`;
+  }
+
+  return result.verdict;
+}

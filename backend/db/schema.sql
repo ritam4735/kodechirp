@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS problems (
   slug VARCHAR(100) UNIQUE NOT NULL,
   title VARCHAR(255) NOT NULL,
   description TEXT NOT NULL,
+  difficulty VARCHAR(20) DEFAULT 'Medium',
   input_format TEXT,
   output_format TEXT,
   constraints TEXT,
@@ -96,7 +97,7 @@ CREATE INDEX IF NOT EXISTS idx_chirps_upvotes ON chirps(upvote_count DESC);
 -- ============================================================
 
 -- Sample problems
-INSERT INTO problems (id, slug, title, description, input_format, output_format, constraints) VALUES
+INSERT INTO problems (id, slug, title, description, difficulty, input_format, output_format, constraints) VALUES
 (
   '11111111-1111-1111-1111-111111111111',
   'two-sum',
@@ -125,6 +126,7 @@ An input string is valid if:
 - Open brackets must be closed by the same type of brackets.
 - Open brackets must be closed in the correct order.
 - Every close bracket has a corresponding open bracket of the same type.',
+  'Easy',
   'A single line containing the string s.',
   'Print "true" if the string is valid, "false" otherwise.',
   '1 ≤ |s| ≤ 10^4
@@ -139,6 +141,7 @@ s consists of parentheses only: ()[]{}'
 **Example:**
 Input: 1 → 2 → 3 → 4 → 5
 Output: 5 → 4 → 3 → 2 → 1',
+  'Medium',
   'First line contains n (number of nodes).
 Second line contains n space-separated integers representing node values.',
   'Print the values of the reversed linked list separated by spaces.',
@@ -152,6 +155,7 @@ Second line contains n space-separated integers representing node values.',
   'You are climbing a staircase. It takes `n` steps to reach the top.
 
 Each time you can either climb 1 or 2 steps. In how many distinct ways can you climb to the top?',
+  'Medium',
   'A single integer n.',
   'Print the number of distinct ways to climb to the top.',
   '1 ≤ n ≤ 45'
@@ -163,6 +167,7 @@ Each time you can either climb 1 or 2 steps. In how many distinct ways can you c
   'Given an integer array `nums`, find the subarray with the largest sum, and return its sum.
 
 A subarray is a contiguous non-empty sequence of elements within an array.',
+  'Hard',
   'First line contains n (size of array).
 Second line contains n space-separated integers.',
   'Print the maximum subarray sum.',
@@ -176,6 +181,7 @@ Second line contains n space-separated integers.',
   'You are given two integer arrays `nums1` and `nums2`, sorted in non-decreasing order, and two integers `m` and `n`, representing the number of elements in nums1 and nums2 respectively.
 
 Merge nums1 and nums2 into a single array sorted in non-decreasing order.',
+  'Easy',
   'First line: m n
 Second line: m space-separated integers (nums1)
 Third line: n space-separated integers (nums2)',
