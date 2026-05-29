@@ -1,232 +1,326 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { motion, useAnimation, useInView } from 'framer-motion';
-import { Bird, Code2, Users, PlaySquare, Bookmark, ChevronRight } from 'lucide-react';
+import { motion, useAnimation } from 'framer-motion';
+import { Bird, Code2, Users, PlaySquare, Bookmark, ChevronRight, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { AnimatedBackground } from '../components/ui/AnimatedBackground';
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   FLOATING BUBBLE CTA
+───────────────────────────────────────────────────────────────────────────── */
 function FloatingBubble() {
-  const controls = useAnimation();
-  const bubbleRef = useRef(null);
-  const [popped, setPopped] = useState(false);
-  const [birdPos, setBirdPos] = useState({ x: 400, y: -200 });
+  const controls  = useAnimation();
+  const [popped, setPopped]   = useState(false);
+  const [stage, setStage]     = useState('idle'); // idle | bird-incoming | popping
+  const router = useRouter();
 
+  // Continuous gentle float
   useEffect(() => {
-    // Gentle floating animation
-    if (!popped) {
-      controls.start({
-        y: [0, -15, 0],
-        rotate: [0, 2, -2, 0],
-        scale: [1, 1.02, 0.98, 1],
-        transition: {
-          duration: 6,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }
-      });
-    }
-  }, [controls, popped]);
+    if (stage !== 'idle') return;
+    controls.start({
+      y: [0, -14, 0],
+      rotate: [0, 1.5, -1.5, 0],
+      scale: [1, 1.015, 0.985, 1],
+      transition: { duration: 6, repeat: Infinity, ease: 'easeInOut' },
+    });
+  }, [controls, stage]);
 
-  const handleInteract = () => {
-    if (popped) return;
-    
-    // Bird flies in from top right towards the bubble
-    setBirdPos({ x: 120, y: -80 });
-    
+  const handleClick = () => {
+    if (stage !== 'idle') return;
+    setStage('bird-incoming');
+
+    // Bird arrives → bubble pops → navigate
     setTimeout(() => {
-      // Tap the bubble - elastic distortion then pop
+      setStage('popping');
       controls.start({
-        scaleX: [1, 1.1, 0.9, 1.3, 0],
-        scaleY: [1, 0.9, 1.1, 1.3, 0],
-        opacity: [1, 1, 0.9, 0],
-        filter: ['blur(0px)', 'blur(0px)', 'blur(2px)', 'blur(10px)'],
-        transition: { duration: 0.5, ease: "easeInOut" }
+        scaleX: [1, 1.12, 0.88, 1.4, 0],
+        scaleY: [1, 0.88, 1.12, 1.4, 0],
+        opacity: [1, 1, 0.8, 0],
+        filter: ['blur(0px)', 'blur(0px)', 'blur(3px)', 'blur(14px)'],
+        transition: { duration: 0.55, ease: 'easeInOut' },
       }).then(() => {
         setPopped(true);
-        // Redirect to problems page
-        window.location.href = '/problems';
+        router.push('/questions');
       });
-    }, 600);
+    }, 650);
   };
 
   if (popped) return null;
 
   return (
-    <div className="relative flex justify-center items-center h-80 mt-12 mb-16 perspective-1000">
-      {/* Floating Bird */}
+    <div className="relative flex justify-center items-center h-72 mt-6 mb-10">
+
+      {/* Bird that flies in on click */}
       <motion.div
-        animate={{ x: birdPos.x, y: birdPos.y, opacity: birdPos.x < 400 ? 1 : 0 }}
-        transition={{ type: 'spring', stiffness: 120, damping: 15 }}
         className="absolute z-20 pointer-events-none"
         style={{ left: '50%', top: '50%', marginLeft: '-24px', marginTop: '-24px' }}
+        initial={{ x: 260, y: -140, opacity: 0 }}
+        animate={
+          stage === 'bird-incoming' || stage === 'popping'
+            ? { x: 90, y: -60, opacity: 1 }
+            : { x: 260, y: -140, opacity: 0 }
+        }
+        transition={{ type: 'spring', stiffness: 130, damping: 16 }}
       >
-        <Bird size={48} className="text-[#a371f7] drop-shadow-[0_0_20px_rgba(163,113,247,0.8)] transform -scale-x-100" fill="currentColor" />
+        <Bird
+          size={46}
+          className="drop-shadow-[0_0_18px_rgba(163,113,247,0.9)] -scale-x-100"
+          style={{ color: '#a371f7' }}
+          fill="currentColor"
+        />
       </motion.div>
 
-      {/* Glass Bubble CTA */}
+      {/* Glass sphere */}
       <motion.button
-        ref={bubbleRef}
         animate={controls}
-        onClick={handleInteract}
-        className="group relative w-64 h-64 rounded-full flex flex-col items-center justify-center cursor-pointer overflow-hidden z-10"
+        onClick={handleClick}
+        aria-label="Explore Problems"
+        whileHover={stage === 'idle' ? { scale: 1.04 } : {}}
+        whileTap={stage === 'idle' ? { scale: 0.97 } : {}}
+        className="group relative w-56 h-56 rounded-full flex flex-col items-center justify-center cursor-pointer z-10 select-none"
         style={{
-          background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), rgba(255,255,255,0.05) 60%, rgba(88,166,255,0.2) 100%)',
-          boxShadow: 'inset 0 0 20px rgba(255,255,255,0.2), inset 10px 0 40px rgba(163,113,247,0.3), inset -10px 0 40px rgba(88,166,255,0.3), 0 10px 40px rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(255,255,255,0.3)'
+          background:
+            'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.22), rgba(255,255,255,0.04) 55%, rgba(88,166,255,0.18) 100%)',
+          boxShadow:
+            'inset 0 0 24px rgba(255,255,255,0.18), inset 12px 0 44px rgba(163,113,247,0.25), inset -12px 0 44px rgba(88,166,255,0.25), 0 12px 60px rgba(0,0,0,0.55), 0 0 80px rgba(88,166,255,0.08)',
+          backdropFilter: 'blur(10px)',
+          border: '1.5px solid rgba(255,255,255,0.28)',
         }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
       >
         {/* Specular highlight */}
-        <div className="absolute top-[10%] left-[20%] w-16 h-8 bg-white rounded-[100%] rotate-[-45deg] opacity-40 blur-[2px]" />
-        
-        <span className="text-2xl font-display font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] mb-2 group-hover:text-[#58a6ff] transition-colors duration-300">
-          Explore Problems
+        <div className="absolute top-[10%] left-[22%] w-14 h-7 bg-white rounded-[100%] -rotate-45 opacity-40 blur-[1.5px] pointer-events-none" />
+
+        <span className="text-xl font-display font-bold text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] mb-2 group-hover:text-[#58a6ff] transition-colors duration-300 text-center leading-tight px-3">
+          Explore<br />Problems
         </span>
-        <ChevronRight size={24} className="text-white/70 group-hover:text-[#58a6ff] group-hover:translate-x-2 transition-all duration-300 drop-shadow-md" />
-        
-        {/* Glow behind text */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#58a6ff]/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <ChevronRight
+          size={22}
+          className="text-white/60 group-hover:text-[#58a6ff] group-hover:translate-x-1.5 transition-all duration-300"
+        />
+
+        {/* Hover inner glow */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-t from-[#58a6ff]/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
       </motion.button>
 
-      {/* Ripple effects below bubble */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-48 h-8 rounded-full border border-[#58a6ff]/30 animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite]" />
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-64 h-12 rounded-full border border-[#a371f7]/20 animate-[ping_4s_cubic-bezier(0,0,0.2,1)_infinite_1s]" />
-      <div className="absolute bottom-[26px] left-1/2 -translate-x-1/2 w-32 h-2 bg-[#58a6ff]/50 blur-xl rounded-full" />
+      {/* Platform shadow & ripples */}
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-40 h-5 bg-[#58a6ff]/20 blur-xl rounded-full pointer-events-none" />
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-44 h-7 rounded-full border border-[#58a6ff]/20 animate-[ping_3.5s_cubic-bezier(0,0,0.2,1)_infinite] pointer-events-none" />
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-56 h-10 rounded-full border border-[#a371f7]/12 animate-[ping_4.5s_cubic-bezier(0,0,0.2,1)_infinite_1.2s] pointer-events-none" />
     </div>
   );
 }
 
-function FeatureCard({ title, desc, icon: Icon, color, delay }) {
+/* ─────────────────────────────────────────────────────────────────────────────
+   LIQUID GLASS FEATURE CARD
+───────────────────────────────────────────────────────────────────────────── */
+function LiquidCard({ title, desc, icon: Icon, color, rgb, href, delay }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: 28 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, delay, ease: 'easeOut' }}
-      whileHover={{ y: -10, transition: { duration: 0.2 } }}
-      className="relative p-6 rounded-2xl border border-white/10 bg-[#0d1117]/40 backdrop-blur-md overflow-hidden group cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+      transition={{ duration: 0.75, delay, ease: [0.22, 1, 0.36, 1] }}
     >
-      {/* Dynamic background glow */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500"
-           style={{ background: `radial-gradient(circle at 50% 0%, ${color}, transparent 70%)` }} />
-      
-      <div className="relative z-10 flex flex-col items-center text-center">
-        <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4 border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-300"
-             style={{ backgroundColor: `${color}15` }}>
-          <Icon size={24} color={color} className="drop-shadow-lg" />
+      <Link
+        href={href}
+        className="group block h-full relative rounded-2xl p-5 cursor-pointer overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, rgba(255,255,255,0.055) 0%, rgba(${rgb},0.06) 100%)`,
+          border: `1px solid rgba(${rgb},0.18)`,
+          boxShadow: `0 4px 24px rgba(0,0,0,0.35), 0 0 0 0px rgba(${rgb},0)`,
+          backdropFilter: 'blur(14px)',
+          transition: 'box-shadow 0.35s ease, transform 0.2s ease, border-color 0.3s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = `0 8px 40px rgba(0,0,0,0.45), 0 0 30px rgba(${rgb},0.15), inset 0 1px 0 rgba(255,255,255,0.1)`;
+          e.currentTarget.style.transform = 'translateY(-6px)';
+          e.currentTarget.style.borderColor = `rgba(${rgb},0.4)`;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = `0 4px 24px rgba(0,0,0,0.35)`;
+          e.currentTarget.style.transform = 'translateY(0px)';
+          e.currentTarget.style.borderColor = `rgba(${rgb},0.18)`;
+        }}
+      >
+        {/* Top specular sheen */}
+        <div
+          className="absolute top-0 left-0 right-0 h-px opacity-40 pointer-events-none"
+          style={{ background: `linear-gradient(90deg, transparent, rgba(${rgb},0.5), transparent)` }}
+        />
+
+        {/* Ambient corner glow */}
+        <div
+          className="absolute top-0 right-0 w-20 h-20 rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none blur-xl"
+          style={{ background: `rgba(${rgb},1)` }}
+        />
+
+        {/* Icon */}
+        <div
+          className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110"
+          style={{
+            background: `rgba(${rgb},0.12)`,
+            border: `1px solid rgba(${rgb},0.22)`,
+            boxShadow: `0 0 16px rgba(${rgb},0.1)`,
+          }}
+        >
+          <Icon size={20} style={{ color }} />
         </div>
-        <h3 className="text-white font-display font-bold text-lg mb-2">{title}</h3>
-        <p className="text-[#8b949e] text-sm leading-relaxed">{desc}</p>
-      </div>
+
+        <h3 className="text-white font-display font-bold text-base mb-1.5 group-hover:text-white transition-colors">
+          {title}
+        </h3>
+        <p className="text-[#8b949e] text-[13px] leading-relaxed">
+          {desc}
+        </p>
+
+        {/* Bottom arrow */}
+        <div
+          className="mt-4 flex items-center gap-1 text-[12px] font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0"
+          style={{ color }}
+        >
+          Explore <ChevronRight size={12} />
+        </div>
+      </Link>
     </motion.div>
   );
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   LANDING PAGE
+───────────────────────────────────────────────────────────────────────────── */
+const FEATURE_CARDS = [
+  {
+    title: 'Solve Problems',
+    desc:  'Sharpen your skills with curated challenges designed to level you up.',
+    icon:  Code2,
+    color: '#22c55e',
+    rgb:   '34,197,94',
+    href:  '/questions',
+  },
+  {
+    title: 'Share Chirps',
+    desc:  'Post your thoughts, solutions & ideas for the entire flock to see.',
+    icon:  MessageSquare,
+    color: '#a371f7',
+    rgb:   '163,113,247',
+    href:  '/coming-soon/chirps',
+  },
+  {
+    title: 'Watch Flights',
+    desc:  'Bite-sized video walkthroughs from brilliant developers.',
+    icon:  PlaySquare,
+    color: '#58a6ff',
+    rgb:   '88,166,255',
+    href:  '/coming-soon/flights',
+  },
+  {
+    title: 'Join Flocks',
+    desc:  'Be part of specialized communities that build and learn together.',
+    icon:  Users,
+    color: '#eab308',
+    rgb:   '234,179,8',
+    href:  '/coming-soon/flocks',
+  },
+  {
+    title: 'Save in Nest',
+    desc:  'Bookmark your favorite content and revisit them in your personal Nest.',
+    icon:  Bookmark,
+    color: '#f43f5e',
+    rgb:   '244,63,94',
+    href:  '/coming-soon/nest',
+  },
+];
+
 export default function HomePage() {
   return (
-    <div className="relative min-h-screen bg-[#06090e] overflow-hidden selection:bg-[#58a6ff]/30">
-      {/* Mystical Background Layers */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Core dark radial */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,_#111928_0%,_#06090e_100%)]" />
-        
-        {/* Nebulous glows */}
-        <div className="absolute top-0 left-1/4 w-[800px] h-[600px] bg-[#58a6ff]/10 rounded-full blur-[120px] mix-blend-screen" />
-        <div className="absolute bottom-0 right-1/4 w-[600px] h-[500px] bg-[#a371f7]/10 rounded-full blur-[100px] mix-blend-screen" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[400px] bg-[#22c55e]/5 rounded-full blur-[150px] mix-blend-screen" />
-        
-        {/* Distant stars / particles */}
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20" />
-      </div>
+    <div className="relative flex-1 overflow-hidden selection:bg-[#58a6ff]/25">
+      <AnimatedBackground variant="default" />
 
-      <div className="relative z-10 flex flex-col items-center pt-32 pb-20 px-4 min-h-screen">
-        
-        {/* Badge */}
+      <div className="relative z-10 flex flex-col items-center px-4 pt-12 pb-24">
+
+        {/* ── Badge ────────────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: -14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-8"
+          transition={{ duration: 0.8 }}
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/[0.04] backdrop-blur-md mb-8"
         >
-          <Bird size={14} className="text-[#a371f7]" />
-          <span className="text-xs font-semibold text-[#c9d1d9] tracking-widest uppercase">Learn. Share. Grow.</span>
+          <Bird size={13} className="text-[#a371f7]" />
+          <span className="text-[11px] font-bold text-[#c9d1d9] tracking-[0.18em] uppercase">
+            Learn. Share. Grow.
+          </span>
         </motion.div>
 
-        {/* Headlines */}
+        {/* ── Hero headline ─────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
+          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
           className="text-center max-w-3xl mx-auto"
         >
-          <h1 className="text-5xl md:text-7xl font-display font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-[#e6edf3] to-[#8b949e] mb-6 drop-shadow-sm leading-tight">
-            Chirp your code. <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#58a6ff] via-[#a371f7] to-[#58a6ff] animate-gradient-x">
+          <h1 className="text-5xl md:text-7xl font-display font-extrabold tracking-tight leading-[1.07] mb-5">
+            <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-[#8b949e]">
+              Chirp your code.{' '}
+            </span>
+            <br />
+            <span
+              className="text-transparent bg-clip-text"
+              style={{
+                backgroundImage: 'linear-gradient(135deg, #58a6ff 0%, #a371f7 50%, #58a6ff 100%)',
+                backgroundSize: '200% auto',
+                animation: 'shimmer 5s linear infinite',
+              }}
+            >
               Inspire the world.
             </span>
           </h1>
-          <p className="text-[#8b949e] text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed text-balance">
+          <p className="text-[#8b949e] text-lg md:text-xl max-w-xl mx-auto leading-relaxed font-medium">
             KodeChirp is where developers learn together, share knowledge, and grow through real conversations.
           </p>
         </motion.div>
 
-        {/* Bubble CTA Interaction */}
+        {/* ── Bubble CTA ───────────────────────────────── */}
         <FloatingBubble />
 
-        {/* Feature Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-6 max-w-7xl w-full px-4 mt-8">
-          <FeatureCard 
-            title="Solve Problems" 
-            desc="Sharpen your skills with curated challenges designed to level you up." 
-            icon={Code2} 
-            color="#22c55e" 
-            delay={0.6}
-          />
-          <FeatureCard 
-            title="Share Chirps" 
-            desc="Post your thoughts, solutions & ideas for the entire flock to see." 
-            icon={Bird} 
-            color="#a371f7" 
-            delay={0.7}
-          />
-          <FeatureCard 
-            title="Watch Flights" 
-            desc="Learn visually with short, powerful coding videos from top developers." 
-            icon={PlaySquare} 
-            color="#58a6ff" 
-            delay={0.8}
-          />
-          <FeatureCard 
-            title="Join Flocks" 
-            desc="Be part of specialized communities that build and learn together." 
-            icon={Users} 
-            color="#eab308" 
-            delay={0.9}
-          />
-          <FeatureCard 
-            title="Save in Nest" 
-            desc="Bookmark your favorite content & revisit them later in your Nest." 
-            icon={Bookmark} 
-            color="#f43f5e" 
-            delay={1.0}
-          />
-        </div>
-
-        {/* Bottom Quote */}
+        {/* ── Liquid Glass Feature Cards ───────────────── */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1.5 }}
-          className="mt-20 px-8 py-6 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm max-w-2xl text-center relative overflow-hidden"
+          transition={{ delay: 0.5 }}
+          className="w-full max-w-6xl"
         >
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-20 mix-blend-overlay" />
-          <p className="text-[#8b949e] italic text-lg relative z-10">
-            "Code is not just written, it's shared, discussed, and elevated together."
+          <p className="text-center text-[12px] font-bold text-[#484f58] uppercase tracking-widest mb-5">
+            Everything in the ecosystem
           </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
+            {FEATURE_CARDS.map((card, i) => (
+              <LiquidCard key={card.title} {...card} delay={0.55 + i * 0.08} />
+            ))}
+          </div>
         </motion.div>
 
+        {/* ── Quote ────────────────────────────────────── */}
+        <motion.blockquote
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 1.1 }}
+          className="mt-20 max-w-2xl text-center"
+        >
+          <p className="text-[#484f58] italic text-base leading-relaxed">
+            "Code is not just written — it&apos;s shared, discussed, and elevated together."
+          </p>
+        </motion.blockquote>
+
       </div>
+
+      {/* Shimmer keyframe */}
+      <style jsx global>{`
+        @keyframes shimmer {
+          0%   { background-position: 200% center; }
+          100% { background-position: -200% center; }
+        }
+      `}</style>
     </div>
   );
 }

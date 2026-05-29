@@ -39,24 +39,24 @@ export default function ProblemPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row h-[calc(100vh-65px)] overflow-hidden">
+    <div className="flex flex-col md:flex-row flex-1 overflow-hidden" style={{ height: 'calc(100vh - 80px)' }}>
       {/* Left Panel: Problem Info & Chirps */}
-      <div className="w-full md:w-1/2 flex flex-col border-r border-[#21262d] bg-[#0d1117] overflow-y-auto">
+      <div className="w-full md:w-1/2 flex flex-col border-r border-white/[0.05] bg-[#06090e] overflow-y-auto">
         <ProblemDescription problem={currentProblem} />
         <TestCases testCases={currentProblem.testCases} />
         <ChirpsSection problemId={currentProblem.id} />
       </div>
 
       {/* Right Panel: Editor & Console */}
-      <div className="w-full md:w-1/2 flex flex-col bg-[#0d1117] shadow-[-4px_0_24px_rgba(0,0,0,0.5)] z-10 relative">
-        <div className="flex items-center justify-between border-b border-[#30363d] bg-gradient-to-r from-[#0d1117] via-[#161b22] to-[#161b22] h-14">
+      <div className="w-full md:w-1/2 flex flex-col bg-[#06090e] shadow-[-4px_0_32px_rgba(0,0,0,0.6)] z-10 relative">
+        <div className="flex items-center justify-between border-b border-white/[0.06] bg-gradient-to-r from-[#07090f] via-[#0e1420] to-[#0e1420] h-14 shrink-0">
           <LanguageSelector />
           <div className="flex items-center gap-3 pr-5">
             <RunButton />
             <SubmitButton problemId={currentProblem.id} />
           </div>
         </div>
-        
+
         <CodeEditor />
         <ConsolePanel />
       </div>
