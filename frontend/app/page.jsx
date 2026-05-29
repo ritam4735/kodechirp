@@ -79,35 +79,64 @@ function FloatingBubble() {
         aria-label="Explore Problems"
         whileHover={stage === 'idle' ? { scale: 1.04 } : {}}
         whileTap={stage === 'idle' ? { scale: 0.97 } : {}}
-        className="group relative w-56 h-56 rounded-full flex flex-col items-center justify-center cursor-pointer z-10 select-none"
+        className="group relative w-60 h-60 rounded-full flex flex-col items-center justify-center cursor-pointer z-10 select-none"
         style={{
-          background:
-            'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.22), rgba(255,255,255,0.04) 55%, rgba(88,166,255,0.18) 100%)',
-          boxShadow:
-            'inset 0 0 24px rgba(255,255,255,0.18), inset 12px 0 44px rgba(163,113,247,0.25), inset -12px 0 44px rgba(88,166,255,0.25), 0 12px 60px rgba(0,0,0,0.55), 0 0 80px rgba(88,166,255,0.08)',
-          backdropFilter: 'blur(10px)',
-          border: '1.5px solid rgba(255,255,255,0.28)',
+          /* Near-transparent dark interior — you see through the sphere */
+          background: 'radial-gradient(circle at 32% 28%, rgba(100,160,255,0.06) 0%, rgba(5,5,25,0.12) 55%, rgba(0,0,15,0.18) 100%)',
+          backdropFilter: 'blur(6px)',
+          /* Multi-ring neon rim: hard rings stack outward, then soft atmospheric bloom */
+          boxShadow: `
+            /* Hard concentric rim rings (outward) */
+            0 0 0 2px rgba(88,166,255,0.95),
+            0 0 0 4px rgba(120,90,255,0.55),
+            0 0 0 7px rgba(163,113,247,0.35),
+            0 0 0 13px rgba(88,166,255,0.12),
+            /* Outer atmospheric bloom */
+            0 0 45px rgba(88,166,255,0.75),
+            0 0 90px rgba(88,166,255,0.40),
+            0 0 140px rgba(163,113,247,0.30),
+            0 0 200px rgba(88,166,255,0.15),
+            /* Inner edge glow */
+            inset 0 0 0 1.5px rgba(88,166,255,0.55),
+            inset 0 0 0 3px rgba(163,113,247,0.25),
+            inset 0 0 30px rgba(88,166,255,0.08)
+          `,
+          border: 'none',
         }}
       >
-        {/* Specular highlight */}
-        <div className="absolute top-[10%] left-[22%] w-14 h-7 bg-white rounded-[100%] -rotate-45 opacity-40 blur-[1.5px] pointer-events-none" />
+        {/* Concentric ring overlays on the sphere edge — mimics the reference image streaks */}
+        <div className="absolute inset-[4px] rounded-full pointer-events-none"
+          style={{ border: '1px solid rgba(88,166,255,0.22)', boxShadow: 'inset 0 0 8px rgba(88,166,255,0.08)' }} />
+        <div className="absolute inset-[10px] rounded-full pointer-events-none"
+          style={{ border: '1px solid rgba(163,113,247,0.12)' }} />
 
-        <span className="text-xl font-display font-bold text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] mb-2 group-hover:text-[#58a6ff] transition-colors duration-300 text-center leading-tight px-3">
+        {/* Specular highlight — top-left like reference */}
+        <div className="absolute top-[12%] left-[18%] w-16 h-9 bg-white rounded-[100%] -rotate-45 opacity-25 blur-[3px] pointer-events-none" />
+        <div className="absolute top-[8%] left-[22%] w-8 h-4 bg-white rounded-[100%] -rotate-45 opacity-40 blur-[1px] pointer-events-none" />
+
+        <span className="relative z-10 text-xl font-display font-bold text-white drop-shadow-[0_0_12px_rgba(88,166,255,0.8)] mb-2 group-hover:text-[#58a6ff] transition-colors duration-300 text-center leading-tight px-3">
           Explore<br />Problems
         </span>
         <ChevronRight
           size={22}
-          className="text-white/60 group-hover:text-[#58a6ff] group-hover:translate-x-1.5 transition-all duration-300"
+          className="relative z-10 text-white/70 group-hover:text-[#58a6ff] group-hover:translate-x-1.5 transition-all duration-300 drop-shadow-[0_0_8px_rgba(88,166,255,0.7)]"
         />
 
-        {/* Hover inner glow */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-t from-[#58a6ff]/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+        {/* Hover: intensify inner glow */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-t from-[#58a6ff]/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
       </motion.button>
 
-      {/* Platform shadow & ripples */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-40 h-5 bg-[#58a6ff]/20 blur-xl rounded-full pointer-events-none" />
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-44 h-7 rounded-full border border-[#58a6ff]/20 animate-[ping_3.5s_cubic-bezier(0,0,0.2,1)_infinite] pointer-events-none" />
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-56 h-10 rounded-full border border-[#a371f7]/12 animate-[ping_4.5s_cubic-bezier(0,0,0.2,1)_infinite_1.2s] pointer-events-none" />
+      {/* Platform glow pool — like the reference image ground reflection */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-52 h-6 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse, rgba(88,166,255,0.55) 0%, rgba(163,113,247,0.20) 60%, transparent 100%)', filter: 'blur(8px)' }} />
+
+      {/* Neon ripple rings — bright, concentric, like reference */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none"
+        style={{ width: '160px', height: '28px', borderRadius: '50%', border: '1.5px solid rgba(88,166,255,0.7)', boxShadow: '0 0 10px rgba(88,166,255,0.5)', animation: 'ping 3s cubic-bezier(0,0,0.2,1) infinite' }} />
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none"
+        style={{ width: '210px', height: '38px', borderRadius: '50%', border: '1px solid rgba(163,113,247,0.5)', boxShadow: '0 0 12px rgba(163,113,247,0.4)', animation: 'ping 3.8s cubic-bezier(0,0,0.2,1) infinite 0.8s' }} />
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none"
+        style={{ width: '270px', height: '50px', borderRadius: '50%', border: '1px solid rgba(88,166,255,0.3)', boxShadow: '0 0 16px rgba(88,166,255,0.25)', animation: 'ping 4.5s cubic-bezier(0,0,0.2,1) infinite 1.6s' }} />
     </div>
   );
 }
