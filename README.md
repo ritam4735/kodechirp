@@ -14,6 +14,17 @@ We believe that developers learn faster when they learn together. Our goal is to
 
 ---
 
+## ✨ Cinematic UI & Custom Cursor
+
+KodeChirp places a massive emphasis on a **premium, immersive user experience**. We've built an aesthetic that feels more like a living ecosystem than a sterile coding platform:
+
+* **The Bird Cursor**: A fully custom, cinematic floating cursor built with a VP9 transparent WebM video. It features physics-driven momentum, velocity-based rotation, and subtle trailing particle effects powered by a custom requestAnimationFrame loop (zero React state thrashing).
+* **Liquid Glass Cards**: Hovering over features on the landing page reveals deep glassmorphic interactions with specular sheens, reactive corner blooms, and magnetic depth.
+* **Framer Motion Integration**: Smooth, spring-based transitions for page elements, floating CTA bubbles, and responsive UI components.
+* **Ambient Glows**: Real-time CSS-driven animated backgrounds and glowing orbs that sit beneath the platform to provide a dynamic, futuristic feel.
+
+---
+
 ## 🐦 The KodeChirp Ecosystem
 
 Our platform embraces a unique community identity. Here is the terminology you'll see across the ecosystem:
@@ -290,6 +301,7 @@ POST /api/chirps/:chirpId/upvote (Bearer token, toggles)            → { upvote
 | Layer | Tech |
 | :--- | :--- |
 | **Frontend** | Next.js 14 (App Router), Tailwind CSS |
+| **Animations**| Framer Motion, custom `requestAnimationFrame` physics |
 | **Editor** | Monaco Editor (`@monaco-editor/react`) |
 | **Backend** | Node.js, Express |
 | **Database** | PostgreSQL |
