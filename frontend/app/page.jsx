@@ -266,7 +266,7 @@ export default function HomePage() {
   return (
     <div className="relative flex-1 overflow-hidden selection:bg-[#58a6ff]/25">
       {/* Flying bird custom cursor — landing page only */}
-      <BirdCursor size={72} />
+      <BirdCursor />
       <AnimatedBackground variant="default" />
 
       <div className="relative z-10 flex flex-col items-center px-4 pt-12 pb-24">
