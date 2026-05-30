@@ -6,6 +6,7 @@ import { Bird, Code2, Users, PlaySquare, Bookmark, ChevronRight, MessageSquare }
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatedBackground } from '../components/ui/AnimatedBackground';
+import { BirdCursor } from '../components/ui/BirdCursor';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    FLOATING BUBBLE CTA
@@ -264,6 +265,8 @@ const FEATURE_CARDS = [
 export default function HomePage() {
   return (
     <div className="relative flex-1 overflow-hidden selection:bg-[#58a6ff]/25">
+      {/* Flying bird custom cursor — landing page only */}
+      <BirdCursor size={72} />
       <AnimatedBackground variant="default" />
 
       <div className="relative z-10 flex flex-col items-center px-4 pt-12 pb-24">
