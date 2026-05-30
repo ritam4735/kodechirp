@@ -19,17 +19,40 @@ const { v4: uuidv4 } = require('uuid');
 const LANGUAGE_CONFIG = {
   javascript: {
     extension: 'js',
-    run: (filePath) => ({ command: 'node', args: [filePath] }),
+    run: (filePath, tmpDir) => ({
+      command: 'docker',
+      args: ['run', '--rm', '-i', '--memory=64m', '--cpus=0.5', '--network=none', '-v', `${tmpDir}:/app`, '-w', '/app', 'node:18-alpine', 'node', path.basename(filePath)]
+    }),
   },
   python: {
     extension: 'py',
-    run: (filePath) => ({ command: 'python3', args: [filePath] }),
+    run: (filePath, tmpDir) => ({
+      command: 'docker',
+      args: ['run', '--rm', '-i', '--memory=64m', '--cpus=0.5', '--network=none', '-v', `${tmpDir}:/app`, '-w', '/app', 'python:3.10-alpine', 'python3', path.basename(filePath)]
+    }),
   },
   cpp: {
     extension: 'cpp',
-    compile: (srcPath, outPath) => ({ command: 'g++', args: ['-O2', '-o', outPath, srcPath] }),
-    run: (outPath)              => ({ command: outPath, args: [] }),
+    compile: (srcPath, outPath, tmpDir) => ({
+      command: 'docker',
+      args: ['run', '--rm', '--memory=256m', '--cpus=1.0', '--network=none', '-v', `${tmpDir}:/app`, '-w', '/app', 'gcc:latest', 'g++', '-O2', '-o', path.basename(outPath), path.basename(srcPath)]
+    }),
+    run: (outPath, tmpDir) => ({
+      command: 'docker',
+      args: ['run', '--rm', '-i', '--memory=64m', '--cpus=0.5', '--network=none', '-v', `${tmpDir}:/app`, '-w', '/app', 'gcc:latest', `./${path.basename(outPath)}`]
+    }),
   },
+  c: {
+    extension: 'c',
+    compile: (srcPath, outPath, tmpDir) => ({
+      command: 'docker',
+      args: ['run', '--rm', '--memory=256m', '--cpus=1.0', '--network=none', '-v', `${tmpDir}:/app`, '-w', '/app', 'gcc:latest', 'gcc', '-O2', '-o', path.basename(outPath), path.basename(srcPath)]
+    }),
+    run: (outPath, tmpDir) => ({
+      command: 'docker',
+      args: ['run', '--rm', '-i', '--memory=64m', '--cpus=0.5', '--network=none', '-v', `${tmpDir}:/app`, '-w', '/app', 'gcc:latest', `./${path.basename(outPath)}`]
+    }),
+  }
 };
 
 // ── Core executor ─────────────────────────────────────────────────────────────
@@ -114,16 +137,19 @@ exports.runCode = async function runCode(code, language, stdin = '') {
   }
 
   const id       = uuidv4();
-  const tmpDir   = os.tmpdir();
+  const tmpDir   = '/tmp/kodechirp';
+  if (!fs.existsSync(tmpDir)) {
+    fs.mkdirSync(tmpDir, { recursive: true });
+  }
   const srcPath  = path.join(tmpDir, `kc_${id}.${config.extension}`);
   const binPath  = path.join(tmpDir, `kc_${id}`);         // used only for C++
 
   try {
     fs.writeFileSync(srcPath, code, 'utf8');
 
-    // ── C++: compile first ────────────────────────────────────────────────────
-    if (language === 'cpp') {
-      const { command: cc, args: cargs } = config.compile(srcPath, binPath);
+    // ── C/C++: compile first ────────────────────────────────────────────────────
+    if (language === 'cpp' || language === 'c') {
+      const { command: cc, args: cargs } = config.compile(srcPath, binPath, tmpDir);
       const compileResult = await runProcess(cc, cargs, '', 15_000);   // 15s compile budget
       if (compileResult.exitCode !== 0 || compileResult.timedOut) {
         return {
@@ -135,12 +161,12 @@ exports.runCode = async function runCode(code, language, stdin = '') {
         };
       }
       // Run the compiled binary
-      const { command: run, args: rargs } = config.run(binPath);
+      const { command: run, args: rargs } = config.run(binPath, tmpDir);
       return await runProcess(run, rargs, stdin, 5_000);
     }
 
     // ── Interpreted (JS / Python) ─────────────────────────────────────────────
-    const { command, args } = config.run(srcPath);
+    const { command, args } = config.run(srcPath, tmpDir);
     return await runProcess(command, args, stdin, 5_000);
 
   } finally {
