@@ -19,8 +19,20 @@ const executePython = (code, input = '') => {
       // Write code to a temporary file
       fs.writeFileSync(filePath, code);
 
-      // Spawn the python process
-      const process = spawn('python3', [filePath]);
+      // Spawn the python process inside docker
+      const process = spawn('docker', [
+        'run',
+        '--rm',
+        '-i',
+        '--memory=64m',
+        '--cpus=0.5',
+        '--network=none',
+        '-v', `${TEMP_DIR}:/app`,
+        '-w', '/app',
+        'python:3.10-alpine',
+        'python3',
+        filename
+      ]);
 
       let stdout = '';
       let stderr = '';

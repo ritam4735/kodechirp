@@ -19,7 +19,20 @@ const executeCpp = (code, input = '') => {
       fs.writeFileSync(sourceFile, code);
 
       // Compile the C++ code
-      const compileProcess = spawn('g++', [sourceFile, '-o', outFile]);
+      const compileProcess = spawn('docker', [
+        'run',
+        '--rm',
+        '--memory=256m',
+        '--cpus=1.0',
+        '--network=none',
+        '-v', `${TEMP_DIR}:/app`,
+        '-w', '/app',
+        'gcc:latest',
+        'g++',
+        `${jobId}.cpp`,
+        '-o',
+        `${jobId}.out`
+      ]);
       
       let compileStderr = '';
       compileProcess.stderr.on('data', (data) => {
@@ -41,7 +54,18 @@ const executeCpp = (code, input = '') => {
         }
 
         // Execution phase
-        const runProcess = spawn(outFile);
+        const runProcess = spawn('docker', [
+          'run',
+          '--rm',
+          '-i',
+          '--memory=64m',
+          '--cpus=0.5',
+          '--network=none',
+          '-v', `${TEMP_DIR}:/app`,
+          '-w', '/app',
+          'gcc:latest',
+          `./${jobId}.out`
+        ]);
         let stdout = '';
         let stderr = '';
 

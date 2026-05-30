@@ -17,7 +17,19 @@ const executeJs = (code, input = '') => {
     try {
       fs.writeFileSync(filePath, code);
 
-      const process = spawn('node', [filePath]);
+      const process = spawn('docker', [
+        'run',
+        '--rm',
+        '-i',
+        '--memory=64m',
+        '--cpus=0.5',
+        '--network=none',
+        '-v', `${TEMP_DIR}:/app`,
+        '-w', '/app',
+        'node:18-alpine',
+        'node',
+        filename
+      ]);
 
       let stdout = '';
       let stderr = '';
