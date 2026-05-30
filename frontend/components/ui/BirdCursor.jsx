@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 
 /**
  * BirdCursor — Premium cinematic cursor using transparent WebM (VP9 alpha).
@@ -29,8 +29,8 @@ const TRAIL_SPACING = 0.06;    // lerp lag between trail particles
 /* ─── Device capability check ───────────────────────────────────────────── */
 function isCapableDevice() {
   if (typeof window === 'undefined') return false;
-  if ('ontouchstart' in window || navigator.maxTouchPoints > 0) return false; // touch device
-  if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) return false; // low-end
+  // Disable on mobile/small screens as a safe fallback
+  if (window.innerWidth < 768) return false;
   return true;
 }
 
@@ -41,6 +41,7 @@ function lerp(a, b, t) {
 
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 export function BirdCursor() {
+  const [mounted, setMounted] = useState(false);
   const containerRef  = useRef(null);
   const videoRef      = useRef(null);
   const glowRef       = useRef(null);
@@ -148,8 +149,14 @@ export function BirdCursor() {
     }
   }, []);
 
+  // Mount guard — runs only on the client after first paint.
+  // Server always returns null → no hydration mismatch.
   useEffect(() => {
-    if (!isCapableDevice()) return;
+    if (isCapableDevice()) setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
 
     /* ── Hide native cursor ─── */
     document.documentElement.style.cursor = 'none';
@@ -187,9 +194,10 @@ export function BirdCursor() {
       document.removeEventListener('mouseenter', onMouseEnter);
       stopRAF();
     };
-  }, [startRAF, stopRAF]);
+  }, [mounted, startRAF, stopRAF]);
 
-  if (typeof window !== 'undefined' && !isCapableDevice()) return null;
+  // Server render + first client paint → null (matches SSR, no hydration error)
+  if (!mounted) return null;
 
   return (
     <div

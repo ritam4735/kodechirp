@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
 /**
  * AnimatedBackground — layered accent glows that sit above the site-wide
  * background image (set on <body> in layout.jsx).
@@ -27,6 +29,14 @@ export function AnimatedBackground({ variant = 'default' }) {
       </>
     ),
   };
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">

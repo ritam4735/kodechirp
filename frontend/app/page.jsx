@@ -5,8 +5,12 @@ import { motion, useAnimation } from 'framer-motion';
 import { Bird, Code2, Users, PlaySquare, Bookmark, ChevronRight, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { AnimatedBackground } from '../components/ui/AnimatedBackground';
-import { BirdCursor } from '../components/ui/BirdCursor';
+
+const BirdCursor = dynamic(() => import('../components/ui/BirdCursor').then(mod => mod.BirdCursor), {
+  ssr: false,
+});
 
 /* ─────────────────────────────────────────────────────────────────────────────
    FLOATING BUBBLE CTA
