@@ -1,54 +1,45 @@
-# Dependencies
+# ─── Dependencies ────────────────────────────────────────────────────────────
 node_modules/
-.pnp
-.pnp.js
+__pycache__/
+*.pyc
+.venv/
+venv/
 
-# Next.js
-.next/
-out/
-build/
-
-# Testing
-coverage/
-
-# Environment Variables
+# ─── Environment ─────────────────────────────────────────────────────────────
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.env
+.env.production
+*.env.local
 
-# Editor directories and files
-.vscode/
+# ─── Build Output ────────────────────────────────────────────────────────────
+.next/
+dist/
+build/
+*.egg-info/
+
+# ─── IDE ─────────────────────────────────────────────────────────────────────
 .idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+.vscode/
+*.swp
+*.swo
+*~
 
-# OS Files
+# ─── OS ──────────────────────────────────────────────────────────────────────
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Logs
-logs
+# ─── Docker ──────────────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+logs/
 
-# Optional npm cache directory
-.npm
+# ─── Coverage ────────────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+htmlcov/
 
-# Optional eslint cache
-.eslintcache
-
-# Next.js build output
-.vercel
+# ─── Temp ────────────────────────────────────────────────────────────────────
+/tmp/
+*.tmp
