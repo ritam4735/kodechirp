@@ -1,18 +1,22 @@
 {
   "name": "kodechirp",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "KodeChirp — Peer-learning coding platform",
+  "description": "KodeChirp — Production-grade peer-learning coding platform",
   "scripts": {
-    "dev:backend": "cd backend && npm run dev",
+    "dev": "docker-compose up",
+    "dev:gateway": "cd gateway && npm run dev",
+    "dev:worker": "cd workers && uvicorn src.main:app --reload --port 8000",
     "dev:frontend": "cd frontend && npm run dev",
-    "install:all": "cd backend && npm install && cd ../frontend && npm install",
-    "start:backend": "cd backend && npm start",
-    "start:frontend": "cd frontend && npm start"
-  },
-  "dependencies": {
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^3.5.0",
-    "zustand": "^5.0.12"
+    "install:all": "cd gateway && npm install && cd ../frontend && npm install",
+    "build:sandboxes": "bash scripts/build-sandboxes.sh",
+    "init:db": "bash scripts/init-db.sh",
+    "setup": "bash scripts/dev-setup.sh",
+    "health": "bash scripts/health-check.sh",
+    "start": "docker-compose up -d",
+    "stop": "docker-compose down",
+    "logs": "docker-compose logs -f",
+    "logs:gateway": "docker-compose logs -f gateway",
+    "logs:worker": "docker-compose logs -f worker"
   }
 }
