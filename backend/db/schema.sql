@@ -1,14 +1,7 @@
 -- KodeChirp Database Schema
 -- Run this to initialize your PostgreSQL database
 
--- Drop existing tables to avoid schema drift during development
-DROP TABLE IF EXISTS chirp_upvotes CASCADE;
-DROP TABLE IF EXISTS chirps CASCADE;
-DROP TABLE IF EXISTS submissions CASCADE;
-DROP TABLE IF EXISTS test_cases CASCADE;
-DROP TABLE IF EXISTS problems CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
-
+-- Safely create tables without dropping existing ones
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -189,41 +182,43 @@ Third line: n space-separated integers (nums2)',
   '0 ≤ m, n ≤ 200
 1 ≤ m + n ≤ 200
 -10^9 ≤ nums[i] ≤ 10^9'
-);
+) ON CONFLICT (id) DO NOTHING;
 
 -- Sample test cases
-INSERT INTO test_cases (problem_id, input, expected_output, is_sample, explanation, order_index) VALUES
-('11111111-1111-1111-1111-111111111111', '4 9
+INSERT INTO test_cases (id, problem_id, input, expected_output, is_sample, explanation, order_index) VALUES
+('a1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', '4 9
 2 7 11 15', '0 1', TRUE, 'Because nums[0] + nums[1] = 2 + 7 = 9', 0),
-('11111111-1111-1111-1111-111111111111', '3 6
+('b1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', '3 6
 3 2 4', '1 2', TRUE, 'Because nums[1] + nums[2] = 2 + 4 = 6', 1),
-('11111111-1111-1111-1111-111111111111', '2 6
+('c1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', '2 6
 3 3', '0 1', FALSE, 'Hidden test case', 2),
 
-('22222222-2222-2222-2222-222222222222', '()', 'true', TRUE, 'Simple valid parenthesis pair', 0),
-('22222222-2222-2222-2222-222222222222', '()[]{}'  , 'true', TRUE, 'Multiple valid pairs', 1),
-('22222222-2222-2222-2222-222222222222', '(]', 'false', TRUE, 'Mismatched brackets', 2),
+('a2222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', '()', 'true', TRUE, 'Simple valid parenthesis pair', 0),
+('b2222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', '()[]{}'  , 'true', TRUE, 'Multiple valid pairs', 1),
+('c2222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', '(]', 'false', TRUE, 'Mismatched brackets', 2),
 
-('33333333-3333-3333-3333-333333333333', '5
+('a3333333-3333-3333-3333-333333333333', '33333333-3333-3333-3333-333333333333', '5
 1 2 3 4 5', '5 4 3 2 1', TRUE, 'Reverse the list', 0),
-('33333333-3333-3333-3333-333333333333', '2
+('b3333333-3333-3333-3333-333333333333', '33333333-3333-3333-3333-333333333333', '2
 1 2', '2 1', TRUE, 'Reverse two-element list', 1),
 
-('44444444-4444-4444-4444-444444444444', '2', '2', TRUE, 'Either 1+1 or 2 steps', 0),
-('44444444-4444-4444-4444-444444444444', '3', '3', TRUE, '1+1+1, 1+2, or 2+1', 1),
+('a4444444-4444-4444-4444-444444444444', '44444444-4444-4444-4444-444444444444', '2', '2', TRUE, 'Either 1+1 or 2 steps', 0),
+('b4444444-4444-4444-4444-444444444444', '44444444-4444-4444-4444-444444444444', '3', '3', TRUE, '1+1+1, 1+2, or 2+1', 1),
 
-('55555555-5555-5555-5555-555555555555', '9
+('a5555555-5555-5555-5555-555555555555', '55555555-5555-5555-5555-555555555555', '9
 -2 1 -3 4 -1 2 1 -5 4', '6', TRUE, 'Subarray [4,-1,2,1] has the largest sum = 6', 0),
-('55555555-5555-5555-5555-555555555555', '1
+('b5555555-5555-5555-5555-555555555555', '55555555-5555-5555-5555-555555555555', '1
 1', '1', TRUE, 'Single element', 1),
 
-('66666666-6666-6666-6666-666666666666', '3 3
+('a6666666-6666-6666-6666-666666666666', '66666666-6666-6666-6666-666666666666', '3 3
 1 2 3
-2 5 6', '1 2 2 3 5 6', TRUE, 'Merge two sorted arrays', 0);
+2 5 6', '1 2 2 3 5 6', TRUE, 'Merge two sorted arrays', 0)
+ON CONFLICT (id) DO NOTHING;
 
 -- Sample chirps
-INSERT INTO chirps (problem_id, user_id, content, code_snippet, approach_tag, upvote_count) VALUES
+INSERT INTO chirps (id, problem_id, user_id, content, code_snippet, approach_tag, upvote_count) VALUES
 (
+  'c1111111-1111-1111-1111-111111111111',
   '11111111-1111-1111-1111-111111111111',
   NULL,
   'The key insight is to use a HashMap to store each number and its index. For each element, check if (target - current) exists in the map. This gives us O(n) time complexity instead of the naive O(n²) approach.',
@@ -238,6 +233,7 @@ INSERT INTO chirps (problem_id, user_id, content, code_snippet, approach_tag, up
   42
 ),
 (
+  'c2222222-1111-1111-1111-111111111111',
   '11111111-1111-1111-1111-111111111111',
   NULL,
   'Think of it like this: you''re walking through an array with a "buddy list". For each number you meet, you check if its perfect partner (target minus itself) is already in the list. If yes, you''ve found your pair! Otherwise, add yourself to the list for future numbers to find.',
@@ -246,6 +242,7 @@ INSERT INTO chirps (problem_id, user_id, content, code_snippet, approach_tag, up
   28
 ),
 (
+  'c3333333-1111-1111-1111-111111111111',
   '22222222-2222-2222-2222-222222222222',
   NULL,
   'Classic stack problem! Push opening brackets onto the stack. When you see a closing bracket, check if the top of the stack matches. If not, invalid. At the end, stack should be empty.',
@@ -262,4 +259,4 @@ INSERT INTO chirps (problem_id, user_id, content, code_snippet, approach_tag, up
     return not stack',
   'stack',
   35
-);
+) ON CONFLICT (id) DO NOTHING;
