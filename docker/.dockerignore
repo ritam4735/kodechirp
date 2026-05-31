@@ -1,0 +1,10 @@
+node_modules
+.next
+logs
+kc_run_*
+.git
+.gitignore
+.env*
+build/
+dist/
+*.log
