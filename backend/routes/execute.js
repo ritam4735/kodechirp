@@ -1,13 +1,16 @@
 const express = require('express');
 const router = express.Router();
+const { body } = require('express-validator');
+const { validateRequest } = require('../utils/validate');
 const { runCode } = require('../services/codeRunner');
 
-router.post('/', async (req, res) => {
+router.post('/', 
+  body('code').isString().notEmpty().withMessage('Code is required'),
+  body('language').isString().notEmpty().withMessage('Language is required'),
+  body('input').optional().isString(),
+  validateRequest,
+  async (req, res) => {
   const { code, language, input } = req.body;
-
-  if (!code || !language) {
-    return res.status(400).json({ success: false, error: 'Code and language are required' });
-  }
 
   // Normalize language for codeRunner
   let normalizedLang = language.toLowerCase();

@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('express-validator');
+const { query, param } = require('express-validator');
 const problemController = require('../controllers/problemController');
 const { validateRequest } = require('../utils/validate');
 
@@ -12,6 +12,11 @@ router.get(
   problemController.getAllProblems
 );
 
-router.get('/:slug', problemController.getProblem);
+router.get(
+  '/:slug',
+  param('slug').isString().notEmpty().withMessage('Problem slug is required'),
+  validateRequest,
+  problemController.getProblem
+);
 
 module.exports = router;

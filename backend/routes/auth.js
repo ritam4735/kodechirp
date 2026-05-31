@@ -8,8 +8,9 @@ const router = express.Router();
 
 router.post(
   '/signup',
-  body('email').isEmail(),
-  body('password').isLength({ min: 6 }),
+  body('email').isEmail().withMessage('Valid email is required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('username').optional().isString().isLength({ min: 3, max: 50 }).withMessage('Username must be between 3 and 50 characters'),
   validateRequest,
   authController.signup
 );
