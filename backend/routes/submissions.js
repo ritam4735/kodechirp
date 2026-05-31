@@ -9,8 +9,9 @@ const router = express.Router();
 router.post(
   '/run',
   optionalAuth,
-  body('code').isString().notEmpty(),
-  body('language').isString().notEmpty(),
+  body('code').isString().notEmpty().withMessage('Code is required'),
+  body('language').isString().notEmpty().withMessage('Language is required'),
+  body('stdin').optional().isString(),
   validateRequest,
   submissionController.runCode
 );
@@ -18,9 +19,9 @@ router.post(
 router.post(
   '/submit',
   optionalAuth,
-  body('code').isString().notEmpty(),
-  body('language').isString().notEmpty(),
-  body('problem_id').isString().notEmpty(),
+  body('code').isString().notEmpty().withMessage('Code is required'),
+  body('language').isString().notEmpty().withMessage('Language is required'),
+  body('problem_id').isUUID().withMessage('Invalid problem ID format'),
   validateRequest,
   submissionController.submitCode
 );
