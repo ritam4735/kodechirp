@@ -16,42 +16,77 @@ const { v4: uuidv4 } = require('uuid');
 
 // ── Language configuration ────────────────────────────────────────────────────
 
+function buildDockerArgs(imageName, command, fileTarget, tmpDir, user, isReadOnly = true) {
+  const args = [
+    'run', '--rm', '-i',
+    '--network=none',
+    '--memory=64m',
+    '--cpus=0.5',
+    '--pids-limit=64',
+    '--cap-drop=ALL',
+    '--read-only',
+    '--tmpfs', '/tmp:size=16m'
+  ];
+
+  if (user) {
+    args.push('--user', user);
+  }
+
+  const mountOpts = isReadOnly ? 'ro,z' : 'z';
+
+  args.push(
+    '-v', `${tmpDir}:/app:${mountOpts}`,
+    '-w', '/app',
+    imageName,
+    command
+  );
+  if (fileTarget) {
+    args.push(fileTarget);
+  }
+  
+  return { command: 'docker', args };
+}
+
 const LANGUAGE_CONFIG = {
   javascript: {
     extension: 'js',
-    run: (filePath, tmpDir) => ({
-      command: 'docker',
-      args: ['run', '--rm', '-i', '--memory=64m', '--cpus=0.5', '--network=none', '-v', `${tmpDir}:/app`, '-w', '/app', 'node:18-alpine', 'node', path.basename(filePath)]
-    }),
+    run: (filePath, tmpDir) => buildDockerArgs(
+      'node:18-alpine', 'node', path.basename(filePath), tmpDir, null, true
+    ),
   },
   python: {
     extension: 'py',
-    run: (filePath, tmpDir) => ({
-      command: 'docker',
-      args: ['run', '--rm', '-i', '--memory=64m', '--cpus=0.5', '--network=none', '-v', `${tmpDir}:/app`, '-w', '/app', 'python:3.10-alpine', 'python3', path.basename(filePath)]
-    }),
+    run: (filePath, tmpDir) => buildDockerArgs(
+      'kodechirp-python-sandbox', 'python3', path.basename(filePath), tmpDir, 'sandbox', true
+    ),
   },
   cpp: {
     extension: 'cpp',
     compile: (srcPath, outPath, tmpDir) => ({
       command: 'docker',
-      args: ['run', '--rm', '--memory=256m', '--cpus=1.0', '--network=none', '-v', `${tmpDir}:/app`, '-w', '/app', 'gcc:latest', 'g++', '-O2', '-o', path.basename(outPath), path.basename(srcPath)]
+      args: [
+        'run', '--rm', '--memory=256m', '--cpus=1.0', '--network=none',
+        '-v', `${tmpDir}:/app:z`, '-w', '/app', 'gcc:latest',
+        'g++', '-O2', '-o', path.basename(outPath), path.basename(srcPath)
+      ]
     }),
-    run: (outPath, tmpDir) => ({
-      command: 'docker',
-      args: ['run', '--rm', '-i', '--memory=64m', '--cpus=0.5', '--network=none', '-v', `${tmpDir}:/app`, '-w', '/app', 'gcc:latest', `./${path.basename(outPath)}`]
-    }),
+    run: (outPath, tmpDir) => buildDockerArgs(
+      'gcc:latest', `./${path.basename(outPath)}`, null, tmpDir, null, true
+    ),
   },
   c: {
     extension: 'c',
     compile: (srcPath, outPath, tmpDir) => ({
       command: 'docker',
-      args: ['run', '--rm', '--memory=256m', '--cpus=1.0', '--network=none', '-v', `${tmpDir}:/app`, '-w', '/app', 'gcc:latest', 'gcc', '-O2', '-o', path.basename(outPath), path.basename(srcPath)]
+      args: [
+        'run', '--rm', '--memory=256m', '--cpus=1.0', '--network=none',
+        '-v', `${tmpDir}:/app:z`, '-w', '/app', 'gcc:latest',
+        'gcc', '-O2', '-o', path.basename(outPath), path.basename(srcPath)
+      ]
     }),
-    run: (outPath, tmpDir) => ({
-      command: 'docker',
-      args: ['run', '--rm', '-i', '--memory=64m', '--cpus=0.5', '--network=none', '-v', `${tmpDir}:/app`, '-w', '/app', 'gcc:latest', `./${path.basename(outPath)}`]
-    }),
+    run: (outPath, tmpDir) => buildDockerArgs(
+      'gcc:latest', `./${path.basename(outPath)}`, null, tmpDir, null, true
+    ),
   }
 };
 
@@ -137,12 +172,12 @@ exports.runCode = async function runCode(code, language, stdin = '') {
   }
 
   const id       = uuidv4();
-  const tmpDir   = '/tmp/kodechirp';
+  const tmpDir   = path.join('/tmp/kodechirp', id);
   if (!fs.existsSync(tmpDir)) {
     fs.mkdirSync(tmpDir, { recursive: true });
   }
-  const srcPath  = path.join(tmpDir, `kc_${id}.${config.extension}`);
-  const binPath  = path.join(tmpDir, `kc_${id}`);         // used only for C++
+  const srcPath  = path.join(tmpDir, `main.${config.extension}`);
+  const binPath  = path.join(tmpDir, `main.out`);         // used only for C/C++
 
   try {
     fs.writeFileSync(srcPath, code, 'utf8');
@@ -170,8 +205,11 @@ exports.runCode = async function runCode(code, language, stdin = '') {
     return await runProcess(command, args, stdin, 5_000);
 
   } finally {
-    // Always clean up temp files — never leave user code on disk
-    try { fs.unlinkSync(srcPath); } catch (_) { /* ignore */ }
-    try { fs.unlinkSync(binPath); } catch (_) { /* ignore */ }
+    // Always clean up temp directory — completely remove the isolated directory
+    try {
+      if (fs.existsSync(tmpDir)) {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    } catch (_) { /* ignore */ }
   }
 };
