@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const submissionService = require('../services/submissionService');
-
+const { query } = require('../db');
 // ── POST /api/submissions/run ─────────────────────────────────────────────────
 // Execute code once with optional stdin; return raw stdout/stderr.
 // Used by the "Run Code" button (no test-case comparison).
@@ -55,6 +55,21 @@ exports.submitCode = async (req, res, next) => {
 // ── GET /api/submissions/user ─────────────────────────────────────────────────
 // Placeholder — intentionally not yet implemented.
 
-exports.getUserSubmissions = (req, res) => {
-  res.status(501).json({ success: false, error: 'Not implemented' });
+exports.getUserSubmissions = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    const userId = req.user.id;
+    const result = await query(
+      'SELECT * FROM submissions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50;',
+      [userId]
+    );
+
+    return res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error('[Submissions] Get user submissions error:', err);
+    next(err);
+  }
 };
