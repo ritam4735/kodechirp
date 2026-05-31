@@ -22,7 +22,12 @@ async function request(path, options = {}) {
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(data.error || `HTTP ${res.status}`);
+    let errorMessage = data.error || `HTTP ${res.status}`;
+    if (data.details && Array.isArray(data.details)) {
+      const detailsStr = data.details.map(d => `${d.path || d.param}: ${d.msg}`).join(', ');
+      errorMessage += ` - ${detailsStr}`;
+    }
+    throw new Error(errorMessage);
   }
 
   return data;

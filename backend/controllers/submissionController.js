@@ -43,12 +43,16 @@ exports.submitCode = async (req, res, next) => {
       success: true,
       data:    result,
     });
-  } catch (err) {
-    // If the error is "no test cases found", return 404 rather than 500
-    if (err.message && err.message.startsWith('No test cases found')) {
-      return res.status(404).json({ success: false, error: err.message });
+  } catch (error) {
+    if (error.message && error.message.startsWith('No test cases found')) {
+      return res.status(404).json({ success: false, error: error.message });
     }
-    next(err);
+    console.error("Submission error:", error.message);
+
+    return res.status(400).json({
+      success: false,
+      error: error.message || 'An error occurred during submission',
+    });
   }
 };
 

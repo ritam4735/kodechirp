@@ -145,9 +145,13 @@ function runProcess(command, args, stdin = '', timeoutMs = 5000) {
       if (!settled && !timedOut) {
         settled = true;
 
+        const podmanWarningRegex = /Emulate Docker CLI using podman\. Create \/etc\/containers\/nodocker to quiet msg\.\s*/g;
+        const filteredStdout = stdout.replace(podmanWarningRegex, '').trim();
+        const filteredStderr = stderr.replace(podmanWarningRegex, '').trim();
+
         resolve({
-          stdout: stdout.trim(),
-          stderr: stderr.trim(),
+          stdout: filteredStdout,
+          stderr: filteredStderr,
           exitCode: code ?? 0,
           timedOut: false
         });

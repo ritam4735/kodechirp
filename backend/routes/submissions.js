@@ -21,7 +21,7 @@ router.post(
   optionalAuth,
   body('code').isString().notEmpty().withMessage('Code is required'),
   body('language').isString().notEmpty().withMessage('Language is required'),
-  body('problem_id').isUUID().withMessage('Invalid problem ID format'),
+  body('problem_id').isString().isLength({ min: 36, max: 36 }).withMessage('Invalid problem ID format'),
   validateRequest,
   submissionController.submitCode
 );
