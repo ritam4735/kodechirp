@@ -8,10 +8,10 @@
 // Supported languages:  javascript (Node.js), python (Python 3), cpp (g++)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const { spawn }  = require('child_process');
-const fs         = require('fs');
-const path       = require('path');
-const os         = require('os');
+const { spawn } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const { v4: uuidv4 } = require('uuid');
 
 // ── Language configuration ────────────────────────────────────────────────────
@@ -19,17 +19,36 @@ const { v4: uuidv4 } = require('uuid');
 const LANGUAGE_CONFIG = {
   javascript: {
     extension: 'js',
-    run: (filePath) => ({ command: 'node', args: [filePath] }),
+    image: 'kodechirp-node-sandbox',
+    memory: '64m',
+    cpus: '0.5',
+    tmpfsSize: '16m',
+    runCommand: 'node main.js'
   },
   python: {
     extension: 'py',
-    run: (filePath) => ({ command: 'python3', args: [filePath] }),
+    image: 'kodechirp-python-sandbox',
+    memory: '64m',
+    cpus: '0.5',
+    tmpfsSize: '16m',
+    runCommand: 'python main.py'
   },
   cpp: {
     extension: 'cpp',
-    compile: (srcPath, outPath) => ({ command: 'g++', args: ['-O2', '-o', outPath, srcPath] }),
-    run: (outPath)              => ({ command: outPath, args: [] }),
+    image: 'kodechirp-cpp-sandbox',
+    memory: '256m',
+    cpus: '1',
+    tmpfsSize: '32m',
+    runCommand: 'g++ main.cpp -O2 -std=c++17 -o main && ./main'
   },
+  c: {
+    extension: 'c',
+    image: 'kodechirp-c-sandbox',
+    memory: '256m',
+    cpus: '1',
+    tmpfsSize: '32m',
+    runCommand: 'gcc main.c -O2 -std=c11 -o main && ./main'
+  }
 };
 
 // ── Core executor ─────────────────────────────────────────────────────────────
@@ -45,10 +64,10 @@ const LANGUAGE_CONFIG = {
  */
 function runProcess(command, args, stdin = '', timeoutMs = 5000) {
   return new Promise((resolve) => {
-    let stdout    = '';
-    let stderr    = '';
-    let settled   = false;
-    let timedOut  = false;
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+    let timedOut = false;
 
     const proc = spawn(command, args, {
       // Restrict environment to only what is needed
@@ -79,8 +98,8 @@ function runProcess(command, args, stdin = '', timeoutMs = 5000) {
       if (!settled && !timedOut) {
         settled = true;
         resolve({
-          stdout:   stdout.trim(),
-          stderr:   stderr.trim(),
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
           exitCode: code ?? 0,
           timedOut: false,
         });
@@ -113,39 +132,47 @@ exports.runCode = async function runCode(code, language, stdin = '') {
     return { stdout: '', stderr: `Unsupported language: ${language}`, exitCode: -1, timedOut: false };
   }
 
-  const id       = uuidv4();
-  const tmpDir   = os.tmpdir();
-  const srcPath  = path.join(tmpDir, `kc_${id}.${config.extension}`);
-  const binPath  = path.join(tmpDir, `kc_${id}`);         // used only for C++
+  const id = uuidv4();
+  const tmpBase = os.tmpdir();
+  const runDir = path.join(tmpBase, `kc_run_${id}`);
+
+  // Create isolated execution directory
+  fs.mkdirSync(runDir, { recursive: true });
+  // Ensure the directory is fully accessible by the Docker sandbox user
+  fs.chmodSync(runDir, 0o777);
+
+  const srcPath = path.join(runDir, `main.${config.extension}`);
 
   try {
     fs.writeFileSync(srcPath, code, 'utf8');
+    fs.chmodSync(srcPath, 0o666);
 
-    // ── C++: compile first ────────────────────────────────────────────────────
-    if (language === 'cpp') {
-      const { command: cc, args: cargs } = config.compile(srcPath, binPath);
-      const compileResult = await runProcess(cc, cargs, '', 15_000);   // 15s compile budget
-      if (compileResult.exitCode !== 0 || compileResult.timedOut) {
-        return {
-          stdout:   '',
-          stderr:   compileResult.stderr || 'Compilation failed',
-          exitCode: compileResult.exitCode,
-          timedOut: compileResult.timedOut,
-          compilationError: true,
-        };
-      }
-      // Run the compiled binary
-      const { command: run, args: rargs } = config.run(binPath);
-      return await runProcess(run, rargs, stdin, 5_000);
-    }
-
-    // ── Interpreted (JS / Python) ─────────────────────────────────────────────
-    const { command, args } = config.run(srcPath);
-    return await runProcess(command, args, stdin, 5_000);
+    // ── Unified Docker Sandbox Execution ──────────────────────────────────────
+    const dockerArgs = [
+      'run', '--rm',
+      '--network=none',
+      `--memory=${config.memory}`,
+      `--cpus=${config.cpus}`,
+      '--pids-limit=64',
+      '--cap-drop=ALL',
+      '--security-opt=no-new-privileges',
+      '--read-only',
+      '--tmpfs', `/tmp:size=${config.tmpfsSize},exec`,
+      '--user', 'sandbox',
+      '-v', `${runDir}:/app:Z`,
+      '-w', '/app',
+      config.image,
+      'sh', '-c', config.runCommand
+    ];
+    
+    // Give compiled languages 15s budget, interpreted 5s budget
+    const timeoutMs = (language === 'cpp' || language === 'c') ? 15_000 : 5_000;
+    
+    const result = await runProcess('docker', dockerArgs, stdin, timeoutMs);
+    return result;
 
   } finally {
-    // Always clean up temp files — never leave user code on disk
-    try { fs.unlinkSync(srcPath); } catch (_) { /* ignore */ }
-    try { fs.unlinkSync(binPath); } catch (_) { /* ignore */ }
+    // Always clean up temp directory recursively — never leave user code on disk
+    try { fs.rmSync(runDir, { recursive: true, force: true }); } catch (_) { /* ignore */ }
   }
 };
