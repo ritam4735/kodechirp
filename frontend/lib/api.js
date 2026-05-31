@@ -7,8 +7,15 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 async function request(path, options = {}) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('kc_token') : null;
+  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
+    headers,
     ...options,
   });
 
