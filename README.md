@@ -46,66 +46,36 @@ Our platform embraces a unique community identity. Here is the terminology you'l
 ```text
 kodechirp/
 ├── backend/                    # Node.js + Express API
-│   ├── db/
-│   │   ├── index.js            # PostgreSQL connection
-│   │   └── schema.sql          # Full DB schema
-│   ├── scripts/
-│   │   └── seedDb.js           # Database seed script
-│   ├── middleware/
-│   │   └── auth.js             # JWT auth middleware
-│   ├── routes/
-│   │   ├── auth.js             # POST /signup, /login, GET /me
-│   │   ├── problems.js         # GET /problems, GET /problems/:slug
-│   │   ├── submissions.js      # POST /run, POST /submit, GET /user
-│   │   └── chirps.js           # GET /:problemId, POST /, POST /:chirpId/upvote
+│   ├── controllers/            # Route controllers
+│   ├── db/                     # PostgreSQL connection pool & schema
+│   ├── executors/              # Docker execution wrappers (C, C++, Node, Python)
+│   ├── middleware/             # JWT auth middleware
+│   ├── models/                 # Database models (User, Problem, Submission, Chirp)
+│   ├── routes/                 # API endpoint routers
+│   ├── scripts/                # Database seed scripts
+│   ├── services/               # Business logic & CodeRunner
+│   ├── utils/                  # Helper utilities
 │   └── server.js               # Entry point
+│
+├── docker/                     # Hardened Execution Sandboxes
+│   ├── c-sandbox/              # Minimal C executor
+│   ├── cpp-sandbox/            # Minimal C++ executor
+│   ├── node-sandbox/           # Node.js executor
+│   ├── python-sandbox/         # Python 3 executor
+│   └── scripts/                # Docker build/cleanup scripts
 │
 └── frontend/                   # Next.js 14 + Tailwind MVP
     ├── app/
-    │   ├── layout.jsx          # Root layout + Providers
-    │   ├── page.jsx            # Home: problem listing
-    │   ├── auth/
-    │   │   └── page.jsx        # Sign in / Sign up
-    │   ├── problems/
-    │   │   └── [id]/
-    │   │       └── page.jsx    # Problem workspace (editor + console + chirps)
-    │   └── profile/
-    │       └── page.jsx        # User profile
-    ├── components/
-    │   ├── chirps/             # Peer explanations components
-    │   │   ├── ChirpCard.jsx
-    │   │   ├── ChirpInput.jsx
-    │   │   └── ChirpsSection.jsx
-    │   ├── editor/             # Monaco editor & execution components
-    │   │   ├── CodeEditor.jsx
-    │   │   ├── ConsolePanel.jsx
-    │   │   ├── LanguageSelector.jsx
-    │   │   ├── RunButton.jsx
-    │   │   └── SubmitButton.jsx
-    │   ├── layout/             # Global layout components
-    │   │   ├── Navbar.jsx
-    │   │   └── Sidebar.jsx
-    │   ├── problem/            # Problem description & test cases
-    │   │   ├── ProblemDescription.jsx
-    │   │   └── TestCases.jsx
-    │   └── ui/                 # Reusable UI components
+    │   ├── auth/               # Sign in / Sign up
+    │   ├── coming-soon/        # Feature placeholders
+    │   ├── problems/           # Problem listing & workspace
+    │   ├── profile/            # User profile
+    │   └── questions/          # Community questions (Skyfeed)
+    ├── components/             # React components (editor, ui, layout)
     ├── hooks/                  # Custom React hooks
-    │   ├── useAuth.js
-    │   ├── useEditor.js
-    │   └── useProblem.js
-    ├── lib/                    # API wrappers, constants & helpers
-    │   ├── api.js
-    │   ├── constants.js
-    │   └── helpers.js
-    ├── store/                  # Zustand global state management
-    │   ├── authStore.js
-    │   ├── editorStore.js
-    │   └── problemStore.js
-    ├── styles/                 # Global styles + CSS variables
-    │   └── globals.css
-    ├── next.config.js
-    ├── tailwind.config.js
-    └── tsconfig.json
+    ├── lib/                    # API wrappers & helpers
+    ├── store/                  # Zustand global state
+    └── styles/                 # Global CSS & Tailwind config
 ```
 
 ---
@@ -157,7 +127,16 @@ npm run seed
 
 *Note: The `npm run seed` command creates the database schema, seeds starter problems, and prepares your local development environment.*
 
-### 3. Frontend
+### 3. Docker Sandboxes
+
+KodeChirp requires local Docker sandbox images to execute code. Build them before testing submissions:
+
+```bash
+cd docker
+./scripts/build-all.sh
+```
+
+### 4. Frontend
 
 ```bash
 cd frontend
@@ -196,25 +175,24 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 
 ---
 
-## 🔌 Local Code Execution
+## 🛡️ Hardened Docker Execution
 
-KodeChirp uses a robust local execution environment via Node.js `child_process.spawn()`. Submissions run locally on the host machine.
+KodeChirp uses a production-grade, hardened Docker sandbox architecture for executing untrusted user code.
 
-**Supported execution languages (MVP):**
+**Supported languages:**
 * JavaScript (Node.js)
 * Python 3
+* C (GCC)
+* C++ (G++)
 
 **Sandbox details:**
-Submissions execute with strict timeout and cleanup logic to prevent runaway processes. Ensure `node` and `python3` are accessible in the environment where the backend is running.
-
-> ⚠️ **WARNING:** 
-> Local code execution is intended ONLY for development. Running untrusted code directly on the host machine is NOT secure for production deployments.
-> 
-> Production-grade deployments should use isolated sandboxing solutions such as:
-> * Docker containers
-> * Firecracker microVMs
-> * Judge0
-> * gVisor
+Our Docker-based executor dynamically provisions a minimal Alpine-based container for each submission. We defend against malicious code through multiple security layers:
+* **Non-Root Execution:** Code runs as an unprivileged user inside the container.
+* **Network Isolation:** `--network=none` prevents inbound/outbound requests.
+* **Resource Constraints:** Strict limits on memory, CPU, and process count (pids-limit).
+* **Capability Dropping:** All unnecessary root capabilities are dropped (`--cap-drop=ALL`).
+* **Read-Only Filesystem:** Prevents modifications to the container environment.
+* **Ephemeral Storage:** An isolated, temporary host directory is mounted per execution and securely wiped upon completion.
 
 ---
 
@@ -306,7 +284,7 @@ POST /api/chirps/:chirpId/upvote (Bearer token, toggles)            → { upvote
 | **Backend** | Node.js, Express |
 | **Database** | PostgreSQL |
 | **Auth** | JWT (`jsonwebtoken`, `bcryptjs`) |
-| **Code Exec** | Local (`child_process.spawn`) |
+| **Code Exec** | Hardened Docker Sandboxes |
 | **Markdown** | `react-markdown` + `remark-gfm` |
 
 ---
