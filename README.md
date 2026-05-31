@@ -1,296 +1,511 @@
+<div align="center">
+
 # 🐦 KodeChirp
 
-**A collaborative developer social-learning ecosystem.**
+### Production-Grade Distributed Code Execution Platform
 
-KodeChirp is more than just a coding practice platform. It's a creator-friendly environment where developers learn socially through peer explanations ("Chirps"), collaborative problem-solving, and a thriving community. Because birds of a feather flock together.
+A scalable online judge built with a hybrid microservices architecture — featuring async execution pipelines, Docker-sandboxed code isolation, Redis-backed job queues, and real-time WebSocket updates.
 
----
+[![Node.js](https://img.shields.io/badge/Gateway-Node.js_20-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![FastAPI](https://img.shields.io/badge/Workers-FastAPI_0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Redis](https://img.shields.io/badge/Queue-Redis_7-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
+[![Docker](https://img.shields.io/badge/Sandbox-Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL_16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgresql.org)
+[![Socket.IO](https://img.shields.io/badge/Realtime-Socket.IO-010101?style=for-the-badge&logo=socketdotio&logoColor=white)](https://socket.io)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-## 💡 Why KodeChirp Exists
-
-Most coding platforms focus entirely on the solitary act of solving problems. KodeChirp focuses on **collaborative learning**. 
-
-We believe that developers learn faster when they learn together. Our goal is to make DSA and interview prep a social, creator-driven experience. Instead of just looking at accepted code, you learn the *why* and *how* through curated, community-driven insights.
-
----
-
-## ✨ Cinematic UI & Custom Cursor
-
-KodeChirp places a massive emphasis on a **premium, immersive user experience**. We've built an aesthetic that feels more like a living ecosystem than a sterile coding platform:
-
-* **The Bird Cursor**: A fully custom, cinematic floating cursor built with a VP9 transparent WebM video. It features physics-driven momentum, velocity-based rotation, and subtle trailing particle effects powered by a custom requestAnimationFrame loop (zero React state thrashing).
-* **Liquid Glass Cards**: Hovering over features on the landing page reveals deep glassmorphic interactions with specular sheens, reactive corner blooms, and magnetic depth.
-* **Framer Motion Integration**: Smooth, spring-based transitions for page elements, floating CTA bubbles, and responsive UI components.
-* **Ambient Glows**: Real-time CSS-driven animated backgrounds and glowing orbs that sit beneath the platform to provide a dynamic, futuristic feel.
+</div>
 
 ---
 
-## 🐦 The KodeChirp Ecosystem
+## 📋 Table of Contents
 
-Our platform embraces a unique community identity. Here is the terminology you'll see across the ecosystem:
+- [Architecture Overview](#-architecture-overview)
+- [Key Features](#-key-features)
+- [Tech Stack](#-tech-stack)
+- [Project Structure](#-project-structure)
+- [Getting Started](#-getting-started)
+- [Real-Time Execution Flow](#-real-time-execution-flow)
+- [Security Model](#-security-model)
+- [API Reference](#-api-reference)
+- [Infrastructure & DevOps](#-infrastructure--devops)
+- [Roadmap](#-roadmap)
 
-| Platform Term | Meaning |
+---
+
+## 🏗 Architecture Overview
+
+KodeChirp follows a **gateway-worker architecture** — separating API routing, authentication, and real-time delivery (Node.js) from compute-heavy code execution (Python/FastAPI). Redis serves as the async message broker between the two layers.
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           NGINX REVERSE PROXY                          │
+│                    SSL · Rate Limiting · Load Balancing                 │
+└────────────────┬──────────────────────┬────────────────────┬────────────┘
+                 │                      │                    │
+          /api/* │               /socket.io/*          /* (static)
+                 ▼                      ▼                    ▼
+┌─────────────────────────┐  ┌──────────────────┐  ┌────────────────────┐
+│   NODE.JS API GATEWAY   │  │   SOCKET.IO      │  │   NEXT.JS 14       │
+│                         │  │   WebSocket Hub  │  │   React Frontend   │
+│  • Express 4            │  │                  │  │                    │
+│  • JWT Auth + RBAC      │  │  • Real-time     │  │  • Monaco Editor   │
+│  • Request Validation   │  │    updates       │  │  • Zustand State   │
+│  • BullMQ Producer      │  │  • Submission    │  │  • Tailwind CSS    │
+│  • Rate Limiting        │  │    tracking      │  └────────────────────┘
+│  • Structured Logging   │  │  • Per-user      │
+│                         │  │    channels      │
+└────────┬────────────────┘  └────────▲─────────┘
+         │                            │
+         │  Enqueue Job               │  Publish Result
+         ▼                            │
+┌─────────────────────────────────────┴──────────────────────────────────┐
+│                         REDIS 7 (Alpine)                               │
+│                                                                        │
+│   BullMQ Job Queue          Pub/Sub Events          Session Cache       │
+│   ┌─────────────┐          ┌──────────────┐        ┌──────────────┐    │
+│   │ submissions │   ───▶   │ result:*     │        │ rate-limits  │    │
+│   │ (FIFO)      │          │ channels     │        │ tokens       │    │
+│   └─────────────┘          └──────────────┘        └──────────────┘    │
+└────────────────────────────────┬───────────────────────────────────────┘
+                                 │
+                    Poll / BRPOP │
+                                 ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                     FASTAPI EXECUTION WORKERS                          │
+│                                                                        │
+│   • Async queue consumer (configurable concurrency)                    │
+│   • Docker SDK integration for sandbox orchestration                   │
+│   • Per-test-case evaluation with metrics collection                   │
+│   • Result publishing to Redis Pub/Sub                                 │
+│   • Health checks + Prometheus-compatible metrics endpoint             │
+│                                                                        │
+│   ┌─────────────────────────────────────────────────────────────────┐  │
+│   │              DOCKER SANDBOX CONTAINERS                          │  │
+│   │                                                                 │  │
+│   │   ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐  │  │
+│   │   │   C    │  │  C++   │  │ Python │  │ Node   │  │  Java  │  │  │
+│   │   │ (GCC)  │  │ (G++)  │  │   3    │  │  20    │  │  21    │  │  │
+│   │   └────────┘  └────────┘  └────────┘  └────────┘  └────────┘  │  │
+│   │                                                                 │  │
+│   │   • Non-root execution    • Read-only filesystem                │  │
+│   │   • Network disabled      • Memory + CPU + PID limits           │  │
+│   │   • Capabilities dropped  • Ephemeral tmpfs per execution       │  │
+│   └─────────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                        POSTGRESQL 16 (Alpine)                          │
+│                                                                        │
+│   Users · Problems · Test Cases · Submissions · Execution Metrics      │
+│   Chirps · Contests · Leaderboards · Refresh Tokens · Audit Logs       │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### Component Responsibilities
+
+| Component | Role |
 | :--- | :--- |
-| **Bird** | Developer / User |
-| **Chirp** | Peer explanation post (text + code snippet) |
-| **Flight** | Short-form explanation video |
-| **Flock** | Community / Group learning |
-| **Nest** | Saved content |
-| **Skyfeed** | Discovery / Trending feed |
-| **Hatchling** | New learner |
+| **API Gateway** | Authentication, routing, request validation, job dispatch, WebSocket management |
+| **FastAPI Workers** | Queue consumption, Docker sandbox orchestration, test case evaluation, result publishing |
+| **Redis** | BullMQ job queue, Pub/Sub event bus, rate-limit counters, session cache |
+| **Docker Sandboxes** | Isolated, ephemeral containers for untrusted code execution |
+| **Nginx** | Reverse proxy, SSL termination, rate limiting, WebSocket upgrade handling |
+| **PostgreSQL** | Persistent storage — users, problems, submissions, metrics, contests |
 
 ---
 
-## 🗂️ Project Structure
+## ⚡ Key Features
 
-```text
-kodechirp/
-├── backend/                    # Node.js + Express API
-│   ├── controllers/            # Route controllers
-│   ├── db/                     # PostgreSQL connection pool & schema
-│   ├── executors/              # Docker execution wrappers (C, C++, Node, Python)
-│   ├── middleware/             # JWT auth middleware
-│   ├── models/                 # Database models (User, Problem, Submission, Chirp)
-│   ├── routes/                 # API endpoint routers
-│   ├── scripts/                # Database seed scripts
-│   ├── services/               # Business logic & CodeRunner
-│   ├── utils/                  # Helper utilities
-│   └── server.js               # Entry point
-│
-├── docker/                     # Hardened Execution Sandboxes
-│   ├── c-sandbox/              # Minimal C executor
-│   ├── cpp-sandbox/            # Minimal C++ executor
-│   ├── node-sandbox/           # Node.js executor
-│   ├── python-sandbox/         # Python 3 executor
-│   └── scripts/                # Docker build/cleanup scripts
-│
-└── frontend/                   # Next.js 14 + Tailwind MVP
-    ├── app/
-    │   ├── auth/               # Sign in / Sign up
-    │   ├── coming-soon/        # Feature placeholders
-    │   ├── problems/           # Problem listing & workspace
-    │   ├── profile/            # User profile
-    │   └── questions/          # Community questions (Skyfeed)
-    ├── components/             # React components (editor, ui, layout)
-    ├── hooks/                  # Custom React hooks
-    ├── lib/                    # API wrappers & helpers
-    ├── store/                  # Zustand global state
-    └── styles/                 # Global CSS & Tailwind config
-```
+### Execution Pipeline
+- 🔄 **Async Execution Pipeline** — Submissions are queued via BullMQ and processed by independent FastAPI workers
+- 🐳 **Docker Sandboxing** — Every execution runs in a hardened, ephemeral Alpine container with strict resource limits
+- 🌐 **Multi-Language Support** — C, C++, Python 3, Node.js, and Java with dedicated sandbox images
+- 📊 **Per-Test-Case Metrics** — Runtime, memory, exit code, and output tracked for each test case
 
----
+### Real-Time System
+- ⚡ **WebSocket Updates** — Submission status pushed instantly via Socket.IO (queued → processing → completed)
+- 📡 **Redis Pub/Sub** — Workers publish results to Redis channels, gateway broadcasts to connected clients
+- 🔔 **Per-User Channels** — Each authenticated user receives updates only for their own submissions
 
-## 🧭 User Flow
+### Authentication & Security
+- 🔐 **JWT Authentication** — Access + refresh token rotation with secure httpOnly cookies
+- 👥 **Role-Based Access Control** — `user`, `admin`, `moderator` roles with route-level enforcement
+- 🛡️ **Rate Limiting** — Nginx-level + application-level rate limiting with violation auditing
 
-1. **Browse** coding problems in the discovery feed.
-2. **Solve** problems directly in the browser-based editor.
-3. **Run or Submit** your code against real test cases.
-4. **Read** community Chirps to understand different approaches.
-5. **Share** your own explanation and help Hatchlings.
-6. **Learn** collaboratively with your Flock.
-
----
-
-## 🧱 Requirements
-
-Before you begin, ensure you have the following installed:
-
-* Node.js 18+
-* PostgreSQL 14+
-* Python 3
-* npm
-
----
-
-## 🚀 Quick Start
-
-### 1. Backend
-
-```bash
-cd backend
-cp .env.example .env          # Edit with your settings
-npm install
-npm run dev                   # Starts on http://localhost:4000
-```
-
-> **Database Required!** You MUST set `DATABASE_URL` in `.env` to use PostgreSQL.
-
-### 2. PostgreSQL Setup
-
-PostgreSQL is mandatory for the KodeChirp backend to function. To set up your local database and populate it with starter problems:
-
-```bash
-psql -U postgres -c "CREATE DATABASE kodechirp;"
-cd backend
-npm run seed
-```
-
-*Note: The `npm run seed` command creates the database schema, seeds starter problems, and prepares your local development environment.*
-
-### 3. Docker Sandboxes
-
-KodeChirp requires local Docker sandbox images to execute code. Build them before testing submissions:
-
-```bash
-cd docker
-./scripts/build-all.sh
-```
-
-### 4. Frontend
-
-```bash
-cd frontend
-cp .env.local.example .env.local
-npm install
-npm run dev                   # Starts on http://localhost:3000
-```
-
----
-
-## ⚙️ Environment Variables
-
-### Backend (`backend/.env`)
-
-```env
-PORT=4000
-DATABASE_URL=postgresql://postgres:password@localhost:5432/kodechirp
-JWT_SECRET=your-super-secret-key
-```
-
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `PORT` | API server port | `4000` |
-| `DATABASE_URL` | PostgreSQL connection string | **Required** |
-| `JWT_SECRET` | Secret for signing tokens | `dev-secret` |
-
-### Frontend (`frontend/.env.local`)
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:4000
-```
-
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `NEXT_PUBLIC_API_URL` | Backend API base URL | `http://localhost:4000` |
-
----
-
-## 🛡️ Hardened Docker Execution
-
-KodeChirp uses a production-grade, hardened Docker sandbox architecture for executing untrusted user code.
-
-**Supported languages:**
-* JavaScript (Node.js)
-* Python 3
-* C (GCC)
-* C++ (G++)
-
-**Sandbox details:**
-Our Docker-based executor dynamically provisions a minimal Alpine-based container for each submission. We defend against malicious code through multiple security layers:
-* **Non-Root Execution:** Code runs as an unprivileged user inside the container.
-* **Network Isolation:** `--network=none` prevents inbound/outbound requests.
-* **Resource Constraints:** Strict limits on memory, CPU, and process count (pids-limit).
-* **Capability Dropping:** All unnecessary root capabilities are dropped (`--cap-drop=ALL`).
-* **Read-Only Filesystem:** Prevents modifications to the container environment.
-* **Ephemeral Storage:** An isolated, temporary host directory is mounted per execution and securely wiped upon completion.
-
----
-
-## 🗣️ Chirps — The Core Feature
-
-Chirps are short peer explanations posted under each problem. They empower the community to share knowledge and discover trending approaches on the Skyfeed.
-
-* **Text explanation** (required, 20–2000 chars)
-* **Code snippet** (optional)
-* **Approach tag**: hash-map, dp, greedy, stack, two-pointers, etc.
-* **Upvote system** — logged-in Birds can upvote once per Chirp
-
-**API:**
-```http
-GET  /api/chirps/:problemId?sort=helpful|recent
-POST /api/chirps                    (requires auth)
-POST /api/chirps/:chirpId/upvote    (requires auth, toggles)
-```
-
----
-
-## 🔮 Future Feature Placeholders
-
-These are visible in the UI but disabled. Here's where each plugs in to the KodeChirp ecosystem:
-
-| Feature | Location | Notes |
-| :--- | :--- | :--- |
-| 🧠 **Explain My Mistake** | `ConsolePanel.jsx` (submit result) | Add AI call after failed submission |
-| 🗺️ **Personalized Roadmap** | `profile/page.jsx` | Add `/api/roadmap` endpoint |
-| ⚔️ **Coding Battles** | `Navbar.jsx` | Add `/battles` route |
-| 🎯 **Interview Prep** | `Navbar.jsx` | Add `/interview` route |
-| 📊 **Tests (Institutes)** | `Navbar.jsx` | Add `/tests` route with roles |
-| 🐙 **GitHub OAuth** | `auth/page.jsx` | Add NextAuth or Passport.js |
-
----
-
-## 📡 API Reference
-
-### Auth
-Authentication uses JWT Bearer tokens, and passwords are encrypted via `bcryptjs`.
-```http
-POST /api/auth/signup   { username, email, password }  → { token, user }
-POST /api/auth/login    { email, password }            → { token, user }
-GET  /api/auth/me       (Bearer token)                 → { user }
-```
-
-### Problems
-```http
-GET /api/problems               → { problems: [...] }
-GET /api/problems/:problemId    → { problem: { ...full, sample_test_cases } }
-```
-
-### Submissions
-```http
-POST /api/submissions/run       { code, language, stdin }           → { stdout, stderr, status, time }
-POST /api/submissions/submit    { code, language, problemId }       → { status, runtime_ms, failed_test }
-GET  /api/submissions/user      (Bearer token)                      → { submissions }
-```
-
-### Chirps
-```http
-GET  /api/chirps/:problemId?sort=helpful|recent                     → { chirps }
-POST /api/chirps                { problemId, content, codeSnippet?, approachTag? } → { chirp }
-POST /api/chirps/:chirpId/upvote (Bearer token, toggles)            → { upvoteCount, userUpvoted }
-```
-
----
-
-## 🛣️ Phase 2 Roadmap
-
-* **AI-powered "Explain My Mistake"** via Claude API
-* **Personalized learning roadmap** based on solved problems
-* **Coding Battles** (1v1 real-time)
-* **Interview Prep mode** with company tags
-* **Institute test mode** with time limits and proctoring
-* **GitHub OAuth**
-* **Problem difficulty ratings** (community-voted)
-* **Discussion threads** on Chirps
+### Platform
+- 🏆 **Contest Infrastructure** — Rated contests with scoring, penalty time, and live leaderboards
+- 🐦 **Chirps** — Community-driven peer explanations with upvoting (the social layer)
+- 📈 **Execution Analytics** — Detailed metrics for every submission and test case execution
+- 🧩 **Scalable Workers** — Horizontally scale execution workers via Docker Compose replicas
 
 ---
 
 ## 🧰 Tech Stack
 
-| Layer | Tech |
-| :--- | :--- |
-| **Frontend** | Next.js 14 (App Router), Tailwind CSS |
-| **Animations**| Framer Motion, custom `requestAnimationFrame` physics |
-| **Editor** | Monaco Editor (`@monaco-editor/react`) |
-| **Backend** | Node.js, Express |
-| **Database** | PostgreSQL |
-| **Auth** | JWT (`jsonwebtoken`, `bcryptjs`) |
-| **Code Exec** | Hardened Docker Sandboxes |
-| **Markdown** | `react-markdown` + `remark-gfm` |
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend** | Next.js 14, React, Tailwind CSS, Zustand | App Router SSR, state management, responsive UI |
+| **Code Editor** | Monaco Editor | VS Code-grade in-browser editing experience |
+| **API Gateway** | Node.js 20, Express 4, Helmet | Request routing, auth, validation, middleware |
+| **Job Queue** | BullMQ 5, Redis 7 | Async submission dispatch, FIFO processing |
+| **Workers** | Python 3.12, FastAPI, Uvicorn | Async queue consumption, Docker orchestration |
+| **Sandboxing** | Docker Engine, Alpine Linux | Isolated, resource-limited code execution |
+| **Database** | PostgreSQL 16, pgcrypto | UUID primary keys, relational schema, triggers |
+| **Realtime** | Socket.IO 4, Redis Pub/Sub | Bidirectional WebSocket + event broadcasting |
+| **Auth** | JWT, bcryptjs, cookie-parser | Token rotation, password hashing, RBAC |
+| **Proxy** | Nginx | Reverse proxy, rate limiting, WebSocket upgrade |
+| **Logging** | Pino (Node.js), python-json-logger | Structured JSON logging across services |
+| **Infra** | Docker Compose, shell scripts | Single-command orchestration, health checks |
 
 ---
 
-## 🚀 Planned Deployment Stack
+## 📁 Project Structure
 
-* **Frontend:** Vercel
-* **Backend:** Railway or Render
-* **Database:** Neon PostgreSQL
+```
+kodechirp/
+│
+├── gateway/                    # Node.js API Gateway (Express + Socket.IO)
+│   ├── src/
+│   │   ├── config/             # App config, database pool, Redis client
+│   │   ├── controllers/        # Route handlers (auth, problems, submissions)
+│   │   ├── middleware/         # JWT auth, rate limiter, error handler, logger
+│   │   ├── models/             # Database query models
+│   │   ├── queue/              # BullMQ producer + Redis Pub/Sub event listener
+│   │   ├── routes/             # Express routers (auth, problems, contests, health)
+│   │   ├── services/           # Business logic layer
+│   │   ├── utils/              # Logger (Pino), helpers
+│   │   ├── websocket/          # Socket.IO initialization + event handlers
+│   │   └── server.js           # HTTP server + graceful shutdown
+│   ├── tests/                  # Jest + Supertest integration tests
+│   └── Dockerfile              # Gateway container image
+│
+├── workers/                    # Python FastAPI Execution Workers
+│   ├── src/
+│   │   ├── api/                # Health check + metrics endpoints
+│   │   ├── models/             # Pydantic request/response schemas
+│   │   ├── services/           # Redis, PostgreSQL, Docker SDK services
+│   │   ├── utils/              # Logger, constants, language configs
+│   │   ├── worker/             # Queue consumer + test case evaluator
+│   │   ├── config.py           # Pydantic settings (env-driven)
+│   │   └── main.py             # FastAPI app + lifespan management
+│   ├── tests/                  # Worker test suite
+│   ├── requirements.txt        # Python dependencies
+│   └── Dockerfile              # Worker container image
+│
+├── sandboxes/                  # Docker Sandbox Images (per language)
+│   ├── c/                      # GCC Alpine sandbox
+│   ├── cpp/                    # G++ Alpine sandbox
+│   ├── python/                 # Python 3 Alpine sandbox
+│   ├── node/                   # Node.js Alpine sandbox
+│   └── java/                   # OpenJDK 21 Alpine sandbox
+│
+├── nginx/                      # Reverse Proxy Configuration
+│   └── nginx.conf              # Rate limiting zones, WebSocket proxy, security headers
+│
+├── database/                   # Database Layer
+│   ├── schema.sql              # Production schema (12+ tables, indexes, triggers)
+│   ├── migrations/             # Incremental migration scripts
+│   └── seeds/                  # Development seed data
+│
+├── scripts/                    # DevOps & Automation
+│   ├── dev-setup.sh            # One-command local environment setup
+│   ├── build-sandboxes.sh      # Build all Docker sandbox images
+│   ├── init-db.sh              # Database initialization + seeding
+│   └── health-check.sh         # Service health verification
+│
+├── monitoring/                 # Observability
+│   └── grafana/                # Grafana dashboard configurations
+│
+├── docker-compose.yml          # Full-stack orchestration (5 services)
+├── .env.example                # Environment variable template
+└── package.json                # Root scripts (dev, build, setup, health)
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Docker Engine 24+ & Docker Compose v2
+- Node.js 20+ and npm
+- Python 3.11+ and pip
+- Git
+
+### Quick Start (Docker Compose)
+
+The fastest way to run the full stack:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/ritam4735/kodechirp.git
+cd kodechirp
+
+# 2. Configure environment
+cp .env.example .env
+# Edit .env with your secrets (JWT keys, DB password, etc.)
+
+# 3. Build sandbox images
+npm run build:sandboxes
+
+# 4. Launch the entire stack
+npm run dev
+# → PostgreSQL  :5432
+# → Redis       :6379
+# → Gateway     :4000
+# → Worker      :8000
+# → Frontend    :3000
+```
+
+### Local Development (Without Docker Compose)
+
+For rapid iteration on individual services:
+
+```bash
+# ── Terminal 1: Redis ──────────────────────────────
+redis-server
+
+# ── Terminal 2: PostgreSQL ─────────────────────────
+# Ensure PostgreSQL is running, then:
+npm run init:db
+
+# ── Terminal 3: API Gateway ────────────────────────
+npm run dev:gateway
+
+# ── Terminal 4: FastAPI Worker ─────────────────────
+npm run dev:worker
+
+# ── Terminal 5: Frontend ───────────────────────────
+npm run dev:frontend
+```
+
+### Building Sandbox Images
+
+Each supported language has a dedicated, hardened Docker image:
+
+```bash
+npm run build:sandboxes
+# Builds: kodechirp-c-sandbox, kodechirp-cpp-sandbox,
+#         kodechirp-python-sandbox, kodechirp-node-sandbox,
+#         kodechirp-java-sandbox
+```
+
+### Health Check
+
+Verify all services are operational:
+
+```bash
+npm run health
+```
+
+---
+
+## 🔁 Real-Time Execution Flow
+
+The submission pipeline is fully asynchronous with real-time status tracking:
+
+```
+ Client                Gateway              Redis               Worker              Docker
+   │                     │                    │                    │                    │
+   │  POST /submit       │                    │                    │                    │
+   ├────────────────────▶│                    │                    │                    │
+   │                     │  Validate + Store  │                    │                    │
+   │                     │  (PostgreSQL)      │                    │                    │
+   │                     │                    │                    │                    │
+   │                     │  BullMQ.add()      │                    │                    │
+   │                     ├───────────────────▶│                    │                    │
+   │                     │                    │                    │                    │
+   │  { submissionId,    │                    │                    │                    │
+   │    status: queued } │                    │                    │                    │
+   │◀────────────────────┤                    │                    │                    │
+   │                     │                    │  BRPOP (dequeue)   │                    │
+   │                     │                    │◀───────────────────┤                    │
+   │                     │                    │                    │                    │
+   │                     │                    │  PUB processing    │                    │
+   │  WS: processing     │  SUB result:*     │◀───────────────────┤                    │
+   │◀────────────────────┤◀───────────────────┤                    │                    │
+   │                     │                    │                    │  docker.run()      │
+   │                     │                    │                    ├───────────────────▶│
+   │                     │                    │                    │                    │
+   │                     │                    │                    │  { stdout, stderr, │
+   │                     │                    │                    │    exitCode, time } │
+   │                     │                    │                    │◀───────────────────┤
+   │                     │                    │                    │                    │
+   │                     │                    │  PUB completed     │                    │
+   │  WS: accepted ✓     │  SUB result:*     │◀───────────────────┤                    │
+   │◀────────────────────┤◀───────────────────┤                    │                    │
+   │                     │                    │                    │                    │
+```
+
+### Status Lifecycle
+
+| Status | Description |
+| :--- | :--- |
+| `queued` | Submission stored in DB, job added to BullMQ |
+| `processing` | Worker dequeued the job, execution starting |
+| `running` | Code is executing inside Docker sandbox |
+| `accepted` | All test cases passed |
+| `wrong_answer` | Output mismatch on one or more test cases |
+| `time_limit_exceeded` | Execution exceeded the configured timeout |
+| `runtime_error` | Non-zero exit code or crash during execution |
+| `compilation_error` | Failed to compile (C/C++/Java) |
+
+---
+
+## 🛡 Security Model
+
+KodeChirp treats every code submission as **untrusted input**. The security architecture implements defense-in-depth across multiple layers:
+
+### Container Isolation
+
+| Control | Implementation |
+| :--- | :--- |
+| **Non-root execution** | All code runs as an unprivileged `runner` user inside the container |
+| **Network disabled** | `--network=none` — no inbound or outbound connections |
+| **Read-only filesystem** | Container filesystem is mounted read-only |
+| **Capability dropping** | `--cap-drop=ALL` removes every Linux capability |
+| **Memory limits** | Configurable per-container memory ceiling (default 256MB) |
+| **CPU limits** | Restricted CPU shares to prevent resource starvation |
+| **PID limits** | `--pids-limit` prevents fork bombs |
+| **Execution timeout** | Hard timeout enforced by the worker (default 10s) |
+| **Ephemeral storage** | Unique tmpfs mounted per execution, securely wiped after |
+
+### Application-Level Security
+
+| Control | Implementation |
+| :--- | :--- |
+| **JWT authentication** | Short-lived access tokens + rotating refresh tokens |
+| **Password hashing** | bcryptjs with configurable salt rounds |
+| **Rate limiting** | Nginx zone-based limiting (20 req/s API, 3 req/s auth) |
+| **Input validation** | express-validator on all gateway routes |
+| **CORS enforcement** | Allowlisted origins only, credentials enabled |
+| **Security headers** | Helmet.js (X-Frame-Options, CSP, XSS Protection) |
+| **Audit logging** | Rate-limit violations tracked in PostgreSQL |
+| **Refresh token families** | Rotation detection — compromised family revocation |
+
+---
+
+## 📡 API Reference
+
+### Authentication
+
+```http
+POST /api/auth/signup       # Register → { accessToken, refreshToken, user }
+POST /api/auth/login        # Login    → { accessToken, refreshToken, user }
+POST /api/auth/refresh      # Rotate   → { accessToken, refreshToken }
+POST /api/auth/logout       # Revoke refresh token family
+GET  /api/auth/me           # Current user profile (Bearer required)
+```
+
+### Problems
+
+```http
+GET  /api/problems              # List all problems (paginated)
+GET  /api/problems/:id          # Problem detail + sample test cases
+```
+
+### Submissions
+
+```http
+POST /api/submissions/run       # Synchronous code execution (Run button)
+POST /api/submissions/submit    # Async judge submission (Submit button)
+GET  /api/submissions/user      # User's submission history (Bearer required)
+```
+
+### Contests
+
+```http
+GET  /api/contests              # List contests
+GET  /api/contests/:id          # Contest details + problems
+```
+
+### Leaderboard
+
+```http
+GET  /api/leaderboard           # Global leaderboard
+GET  /api/leaderboard/:contestId # Contest-specific rankings
+```
+
+### Health
+
+```http
+GET  /health                    # Gateway health (DB + Redis connectivity)
+GET  /api/execute               # Worker health (root endpoint)
+```
+
+---
+
+## 🏗 Infrastructure & DevOps
+
+### Docker Compose Services
+
+```yaml
+services:
+  postgres       # PostgreSQL 16 Alpine — persistent data volume, health checks
+  redis          # Redis 7 Alpine — AOF persistence, LRU eviction, 256MB limit
+  gateway        # Node.js API Gateway — port 4000, depends on postgres + redis
+  worker         # FastAPI Worker — Docker socket mount, resource limits (2 CPU, 1GB)
+  frontend       # Next.js 14 — port 3000, depends on gateway
+```
+
+### Scaling Workers
+
+```bash
+# Scale to 4 worker instances
+docker compose up -d --scale worker=4
+```
+
+### Networking
+
+All services communicate over an internal `kodechirp-net` bridge network. Only the gateway (`:4000`), frontend (`:3000`), and database (`:5432`) expose ports externally.
+
+### Environment Configuration
+
+See [`.env.example`](.env.example) for the full configuration reference. Key variables:
+
+| Variable | Service | Description |
+| :--- | :--- | :--- |
+| `POSTGRES_PASSWORD` | PostgreSQL | Database password |
+| `JWT_SECRET` | Gateway | Access token signing key |
+| `JWT_REFRESH_SECRET` | Gateway | Refresh token signing key |
+| `REDIS_URL` | Gateway, Worker | Redis connection string |
+| `WORKER_CONCURRENCY` | Worker | Parallel job processing slots |
+| `EXECUTION_TIMEOUT` | Worker | Max execution time in seconds |
+| `FRONTEND_URL` | Gateway | CORS allowed origin |
+
+---
+
+## 🗺 Roadmap
+
+### In Progress
+- [ ] Distributed worker deployment across multiple hosts
+- [ ] Contest mode with live standings and timed submissions
+
+### Planned
+- [ ] Kubernetes manifests + Helm charts for production deployment
+- [ ] Execution analytics dashboard (runtime distributions, language stats)
+- [ ] Prometheus + Grafana monitoring stack
+- [ ] Plagiarism detection (MOSS / token-based similarity)
+- [ ] AI-assisted debugging ("Explain My Mistake" via LLM API)
+- [ ] GitHub OAuth + social login
+- [ ] Problem difficulty voting (community-rated)
+- [ ] Discussion threads on Chirps
+- [ ] Horizontal auto-scaling based on queue depth
+
+### Architecture Goals
+- [ ] Service mesh with mutual TLS between gateway and workers
+- [ ] Event sourcing for submission lifecycle audit trail
+- [ ] CDN-backed static asset delivery
+- [ ] Multi-region Redis replication for low-latency WebSocket delivery
+
+---
+
+<div align="center">
+
+**Built with ♥ by [Ritam](https://github.com/ritam4735)**
+
+*KodeChirp — Where developers learn together.*
+
+</div>
