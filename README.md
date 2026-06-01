@@ -166,6 +166,14 @@ KodeChirp follows a **gateway-worker architecture** — separating API routing, 
 ```
 kodechirp/
 │
+├── frontend/                   # Next.js 14 React Frontend
+│   ├── app/                    # App Router pages and layouts
+│   ├── components/             # Reusable UI components and editor
+│   ├── hooks/                  # Custom React hooks (useAuth, useEditor)
+│   ├── lib/                    # API clients, socket connections
+│   ├── store/                  # Zustand global state
+│   └── styles/                 # Tailwind global CSS
+│
 ├── gateway/                    # Node.js API Gateway (Express + Socket.IO)
 │   ├── src/
 │   │   ├── config/             # App config, database pool, Redis client
@@ -217,6 +225,15 @@ kodechirp/
 │
 ├── monitoring/                 # Observability
 │   └── grafana/                # Grafana dashboard configurations
+│
+├── backend/                    # Legacy monolithic Node.js backend (Deprecated)
+│   ├── controllers/            # Legacy route controllers
+│   ├── executors/              # Legacy code execution logic
+│   ├── models/                 # Legacy database models
+│   ├── routes/                 # Legacy express routes
+│   └── server.js               # Legacy server entrypoint
+│
+├── docker/                     # Legacy sandbox configurations (Deprecated)
 │
 ├── docker-compose.yml          # Full-stack orchestration (5 services)
 ├── .env.example                # Environment variable template
