@@ -24,7 +24,7 @@ async function request(path, options = {}) {
   if (!res.ok) {
     let errorMessage = data.error || `HTTP ${res.status}`;
     if (data.details && Array.isArray(data.details)) {
-      const detailsStr = data.details.map(d => `${d.path || d.param}: ${d.msg}`).join(', ');
+      const detailsStr = data.details.map(d => `${d.field || d.path || d.param}: ${d.message || d.msg}`).join(', ');
       errorMessage += ` - ${detailsStr}`;
     }
     throw new Error(errorMessage);

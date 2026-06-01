@@ -32,6 +32,7 @@ services:
     container_name: kodechirp-redis
     command: >
       redis-server
+      
         --appendonly yes
         --maxmemory 256mb
         --maxmemory-policy allkeys-lru

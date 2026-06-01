@@ -52,7 +52,7 @@ const config = {
 
   // ── Queue ──────────────────────────────────────────────────────────────────
   queue: {
-    submissionQueue: 'kodechirp:submissions',
+    submissionQueue: 'kodechirp-submissions',
     resultChannel: 'kodechirp:results',
     defaultJobOptions: {
       attempts: 3,

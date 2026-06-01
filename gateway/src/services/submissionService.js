@@ -4,7 +4,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const { v4: uuidv4 } = require('uuid');
+const fetch = require('node-fetch');
 const db = require('../config/database');
+const config = require('../config');
 const { enqueueSubmission } = require('../queue/producer');
 const logger = require('../utils/logger');
 const { STATUS } = require('../utils/constants');
@@ -95,10 +97,9 @@ async function submitCode({ problemId, code, language, userId }) {
  * This is still synchronous via HTTP to the worker service.
  */
 async function runCode({ code, language, stdin }) {
-  // For the "Run" button, we call the worker HTTP API directly
-  // rather than queuing (user expects immediate feedback)
-  const fetch = (await import('node-fetch')).default;
-  const config = require('../config');
+  // Strategy: try the Python worker HTTP API first.
+  // If it's unavailable (local dev without worker), fall back to
+  // direct Docker/Podman sandbox execution via codeRunner.
 
   try {
     const response = await fetch(`${config.worker.apiUrl}/api/execute`, {
@@ -114,6 +115,18 @@ async function runCode({ code, language, stdin }) {
 
     return await response.json();
   } catch (err) {
+    // If worker is not reachable, fall back to local execution
+    const isNetworkError = err.code === 'ECONNREFUSED' || err.type === 'system'
+      || err.message?.includes('reason:') || err.message?.includes('ECONNREFUSED')
+      || err.message?.includes('fetch failed');
+
+    if (isNetworkError) {
+      logger.info('[Submission] Worker unavailable, falling back to local Docker execution');
+      const { executeLocal } = require('./codeRunner');
+      const result = await executeLocal(code, language, stdin);
+      return result;
+    }
+
     logger.error({ err }, '[Submission] Run code failed');
     return {
       stdout: '',

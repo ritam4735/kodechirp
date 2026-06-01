@@ -30,7 +30,7 @@ router.post(
   submitJudgeLimiter,
   body('code').isString().notEmpty().withMessage('Code is required'),
   body('language').isString().isIn(LANGUAGES).withMessage(`Supported languages: ${LANGUAGES.join(', ')}`),
-  body('problem_id').isUUID().withMessage('Valid problem ID is required'),
+  body('problem_id').matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i).withMessage('Valid problem ID is required'),
   validateRequest,
   submissionController.submitCode
 );
@@ -49,7 +49,7 @@ router.get(
 router.get(
   '/:id',
   optionalAuth,
-  param('id').isUUID().withMessage('Valid submission ID is required'),
+  param('id').matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i).withMessage('Valid submission ID is required'),
   validateRequest,
   submissionController.getSubmission
 );
