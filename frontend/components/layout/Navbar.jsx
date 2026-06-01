@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useAuth } from '../../hooks/useAuth';
-import { Bird, ChevronDown, LogOut, User } from 'lucide-react';
+import { Bird, ChevronDown, LogOut, Code2 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 const NAV_ITEMS = [
@@ -43,7 +43,7 @@ export const Navbar = () => {
         "
       >
         {/* ── Logo ────────────────────────────────────── */}
-        <Link href="/" className="flex items-center gap-2.5 group shrink-0 mr-4">
+        <Link href="/" className="flex items-center gap-2 group shrink-0 mr-4">
           <div className="
             w-8 h-8 rounded-full flex items-center justify-center
             bg-gradient-to-br from-[#58a6ff] to-[#a371f7]
@@ -52,7 +52,7 @@ export const Navbar = () => {
             group-hover:scale-105
             transition-all duration-300
           ">
-            <Bird size={15} className="text-white" />
+            <Code2 size={15} className="text-white" />
           </div>
           <span className="font-display font-bold text-[17px] tracking-tight text-white">
             Kode<span className="text-[#58a6ff] group-hover:text-[#a371f7] transition-colors duration-300">Chirp</span>

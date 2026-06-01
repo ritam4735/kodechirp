@@ -13,10 +13,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kodechirp_dev}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./database/seeds:/docker-entrypoint-initdb.d/seeds
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:Z
+      - ./database/seeds:/docker-entrypoint-initdb.d/seeds:Z
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U kodechirp -d kodechirp"]
       interval: 5s
@@ -38,7 +38,7 @@ services:
         --save 60 1000
         --loglevel warning
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -73,7 +73,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./gateway/src:/app/src:ro
+      - ./gateway/src:/app/src:z
     restart: unless-stopped
     networks:
       - kodechirp-net
@@ -97,8 +97,8 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /tmp/kodechirp:/tmp/kodechirp
+      - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:z
+      - /tmp/kodechirp:/tmp/kodechirp:z
     deploy:
       replicas: 1
       resources:

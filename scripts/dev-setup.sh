@@ -43,7 +43,7 @@ cd "$PROJECT_ROOT/workers" && pip install -r requirements.txt 2>/dev/null || \
 echo ""
 echo "  🏗️  Starting infrastructure (PostgreSQL + Redis)..."
 cd "$PROJECT_ROOT"
-docker-compose up -d postgres redis
+docker compose up -d postgres redis
 
 echo ""
 echo "  ⏳ Waiting for services to be healthy..."
@@ -58,4 +58,4 @@ echo "  Worker:   cd workers && uvicorn src.main:app --reload --port 8000"
 echo "  Frontend: cd frontend && npm run dev"
 echo ""
 echo "Or use Docker Compose:"
-echo "  docker-compose up"
+echo "  docker compose up"

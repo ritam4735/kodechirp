@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { motion, useAnimation } from 'framer-motion';
-import { Bird, Code2, Users, PlaySquare, Bookmark, ChevronRight, MessageSquare } from 'lucide-react';
+import { Bird, Code2, Users, Play, Bookmark, ChevronRight, MessageSquare, Leaf } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -242,8 +242,8 @@ const FEATURE_CARDS = [
   },
   {
     title: 'Watch Flights',
-    desc:  'Bite-sized video walkthroughs from brilliant developers.',
-    icon:  PlaySquare,
+    desc:  'Learn visually with short, powerful coding videos from top developers.',
+    icon:  Play,
     color: '#58a6ff',
     rgb:   '88,166,255',
     href:  '/coming-soon/flights',
@@ -258,8 +258,8 @@ const FEATURE_CARDS = [
   },
   {
     title: 'Save in Nest',
-    desc:  'Bookmark your favorite content and revisit them in your personal Nest.',
-    icon:  Bookmark,
+    desc:  'Bookmark your favorite content & revisit them later in your Nest.',
+    icon:  Leaf,
     color: '#f43f5e',
     rgb:   '244,63,94',
     href:  '/coming-soon/nest',
@@ -336,17 +336,45 @@ export default function HomePage() {
           </div>
         </motion.div>
 
-        {/* ── Quote ────────────────────────────────────── */}
-        <motion.blockquote
+        {/* ── Quote Section ────────────────────────────── */}
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 1.1 }}
-          className="mt-20 max-w-2xl text-center"
+          className="mt-20 max-w-2xl w-full"
         >
-          <p className="text-[#484f58] italic text-base leading-relaxed">
-            "Code is not just written — it&apos;s shared, discussed, and elevated together."
-          </p>
-        </motion.blockquote>
+          <div
+            className="rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-center gap-6"
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              backdropFilter: 'blur(12px)',
+            }}
+          >
+            {/* Quote mark */}
+            <span className="text-5xl font-display font-extrabold text-[#58a6ff]/30 leading-none select-none shrink-0">
+              &ldquo;&rdquo;
+            </span>
+            <div className="flex-1 text-center sm:text-left">
+              <p className="text-[#c9d1d9] text-base leading-relaxed mb-2">
+                Code is not just written, it&apos;s shared, discussed, and elevated together.
+              </p>
+            </div>
+            <Link
+              href="/questions"
+              className="
+                flex items-center gap-2 px-5 py-2.5 rounded-full
+                text-[13px] font-semibold text-white
+                bg-white/[0.06] border border-white/[0.1]
+                hover:bg-white/[0.12] hover:border-white/[0.2]
+                transition-all duration-200 shrink-0
+              "
+            >
+              About KodeChirp
+              <ChevronRight size={14} />
+            </Link>
+          </div>
+        </motion.div>
 
       </div>
 

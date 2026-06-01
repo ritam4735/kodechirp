@@ -3,11 +3,12 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { AnimatedBackground } from '../../../components/ui/AnimatedBackground';
-import { Bird, Home, ChevronRight } from 'lucide-react';
+import { Bird, Home, ChevronRight, MessageSquare, Play, Users, Leaf } from 'lucide-react';
+import { use } from 'react';
 
 const COMING_SOON_CONFIG = {
   chirps: {
-    icon: '💬',
+    icon: MessageSquare,
     accent: '#a371f7',
     accentRgb: '163,113,247',
     title: 'Chirps',
@@ -15,7 +16,7 @@ const COMING_SOON_CONFIG = {
     description: "We're crafting a beautiful space where your thoughts, solutions, and discoveries can fly free — and inspire the whole flock.",
   },
   flights: {
-    icon: '▶️',
+    icon: Play,
     accent: '#58a6ff',
     accentRgb: '88,166,255',
     title: 'Flights',
@@ -23,7 +24,7 @@ const COMING_SOON_CONFIG = {
     description: 'Bite-sized video walkthroughs from brilliant minds. Learn concepts at the speed of flight.',
   },
   flocks: {
-    icon: '🐦',
+    icon: Users,
     accent: '#eab308',
     accentRgb: '234,179,8',
     title: 'Flocks',
@@ -31,7 +32,7 @@ const COMING_SOON_CONFIG = {
     description: 'Find your flock. Build with purpose. Grow alongside developers who share your curiosity.',
   },
   nest: {
-    icon: '🪺',
+    icon: Leaf,
     accent: '#22c55e',
     accentRgb: '34,197,94',
     title: 'Nest',
@@ -41,7 +42,9 @@ const COMING_SOON_CONFIG = {
 };
 
 export default function ComingSoonPage({ params }) {
-  const slug = params?.feature;
+  // Next.js 15+ passes params as a Promise — unwrap it
+  const resolvedParams = use(params);
+  const slug = resolvedParams?.feature;
   const config = COMING_SOON_CONFIG[slug];
 
   if (!config) {
@@ -56,7 +59,7 @@ export default function ComingSoonPage({ params }) {
     );
   }
 
-  const { icon, accent, accentRgb, title, tagline, description } = config;
+  const { icon: FeatureIcon, accent, accentRgb, title, tagline, description } = config;
 
   // Floating particle dots
   const particles = Array.from({ length: 16 }, (_, i) => ({
@@ -85,7 +88,7 @@ export default function ComingSoonPage({ params }) {
               backgroundColor: accent,
               boxShadow: `0 0 ${p.size * 2}px ${accent}`,
             }}
-            animate={{ y: [0, -window?.innerHeight - 40 ?? -800] }}
+            animate={{ y: [0, -900] }}
             transition={{
               duration: p.duration,
               delay: p.delay,
@@ -110,7 +113,7 @@ export default function ComingSoonPage({ params }) {
           className="flex justify-center mb-8"
         >
           <div
-            className="w-24 h-24 rounded-full flex items-center justify-center text-4xl"
+            className="w-24 h-24 rounded-full flex items-center justify-center"
             style={{
               background: `radial-gradient(circle at 35% 35%, rgba(255,255,255,0.15), rgba(${accentRgb},0.15) 70%)`,
               boxShadow: `0 0 40px rgba(${accentRgb},0.3), inset 0 0 20px rgba(255,255,255,0.08)`,
@@ -118,7 +121,7 @@ export default function ComingSoonPage({ params }) {
               backdropFilter: 'blur(8px)',
             }}
           >
-            {icon}
+            <FeatureIcon size={38} style={{ color: accent }} />
           </div>
         </motion.div>
 
@@ -173,6 +176,15 @@ export default function ComingSoonPage({ params }) {
             className="text-[#8b949e] text-sm leading-relaxed mb-8"
           >
             {description}
+          </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.85 }}
+            className="text-[#484f58] text-xs italic mb-8"
+          >
+            We&apos;re crafting something amazing. Stay tuned!
           </motion.p>
 
           <motion.div
