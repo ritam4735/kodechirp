@@ -12,7 +12,7 @@ A scalable online judge built with a hybrid microservices architecture — featu
 [![Docker](https://img.shields.io/badge/Sandbox-Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL_16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgresql.org)
 [![Socket.IO](https://img.shields.io/badge/Realtime-Socket.IO-010101?style=for-the-badge&logo=socketdotio&logoColor=white)](https://socket.io)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+
 
 </div>
 
@@ -166,6 +166,14 @@ KodeChirp follows a **gateway-worker architecture** — separating API routing, 
 ```
 kodechirp/
 │
+├── frontend/                   # Next.js 14 React Frontend
+│   ├── app/                    # App Router pages and layouts
+│   ├── components/             # Reusable UI components and editor
+│   ├── hooks/                  # Custom React hooks (useAuth, useEditor)
+│   ├── lib/                    # API clients, socket connections
+│   ├── store/                  # Zustand global state
+│   └── styles/                 # Tailwind global CSS
+│
 ├── gateway/                    # Node.js API Gateway (Express + Socket.IO)
 │   ├── src/
 │   │   ├── config/             # App config, database pool, Redis client
@@ -217,6 +225,15 @@ kodechirp/
 │
 ├── monitoring/                 # Observability
 │   └── grafana/                # Grafana dashboard configurations
+│
+├── backend/                    # Legacy monolithic Node.js backend (Deprecated)
+│   ├── controllers/            # Legacy route controllers
+│   ├── executors/              # Legacy code execution logic
+│   ├── models/                 # Legacy database models
+│   ├── routes/                 # Legacy express routes
+│   └── server.js               # Legacy server entrypoint
+│
+├── docker/                     # Legacy sandbox configurations (Deprecated)
 │
 ├── docker-compose.yml          # Full-stack orchestration (5 services)
 ├── .env.example                # Environment variable template
