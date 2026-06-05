@@ -31,11 +31,11 @@ export const ChirpsSection = ({ problemId }) => {
   };
 
   return (
-    <div className="p-6 border-t border-[#21262d] bg-[#0d1117]">
+    <div className="p-6">
       <div className="flex items-center gap-2 mb-6">
         <MessageCircle size={18} className="text-[#58a6ff]" />
-        <h3 className="text-lg font-bold text-[#e6edf3]">Chirps</h3>
-        <span className="bg-[#161b22] text-[#8b949e] text-xs px-2 py-0.5 rounded-full ml-2">
+        <h3 className="text-lg font-bold font-display text-[#e6edf3]">Community Chirps</h3>
+        <span className="bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/20 text-xs px-2 py-0.5 rounded-full ml-2">
           {chirps.length}
         </span>
       </div>
@@ -45,11 +45,11 @@ export const ChirpsSection = ({ problemId }) => {
       {isLoading ? (
         <div className="text-sm text-[#8b949e] text-center py-4">Loading chirps...</div>
       ) : chirps.length === 0 ? (
-        <div className="text-sm text-[#8b949e] text-center py-8 border border-dashed border-[#30363d] rounded-lg">
+        <div className="text-sm text-[#8b949e] text-center py-8 border border-dashed border-white/10 rounded-xl bg-white/5 backdrop-blur-sm mt-4">
           No chirps yet. Be the first to share your approach!
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 mt-6">
           {chirps.map(chirp => (
             <ChirpCard key={chirp.id} chirp={chirp} />
           ))}
