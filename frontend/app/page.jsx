@@ -1,390 +1,369 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
-import { motion, useAnimation } from 'framer-motion';
-import { Bird, Code2, Users, Play, Bookmark, ChevronRight, MessageSquare, Leaf } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { AnimatedBackground } from '../components/ui/AnimatedBackground';
+import { api } from '../lib/api';
 
 const BirdCursor = dynamic(() => import('../components/ui/BirdCursor').then(mod => mod.BirdCursor), {
   ssr: false,
 });
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   FLOATING BUBBLE CTA
-───────────────────────────────────────────────────────────────────────────── */
-function FloatingBubble() {
-  const controls  = useAnimation();
-  const [popped, setPopped]   = useState(false);
-  const [stage, setStage]     = useState('idle'); // idle | bird-incoming | popping
+function HeroSection() {
   const router = useRouter();
-
-  // Continuous gentle float
-  useEffect(() => {
-    if (stage !== 'idle') return;
-    controls.start({
-      y: [0, -14, 0],
-      rotate: [0, 1.5, -1.5, 0],
-      scale: [1, 1.015, 0.985, 1],
-      transition: { duration: 6, repeat: Infinity, ease: 'easeInOut' },
-    });
-  }, [controls, stage]);
-
-  const handleClick = () => {
-    if (stage !== 'idle') return;
-    setStage('bird-incoming');
-
-    // Bird arrives → bubble pops → navigate
-    setTimeout(() => {
-      setStage('popping');
-      controls.start({
-        scaleX: [1, 1.12, 0.88, 1.4, 0],
-        scaleY: [1, 0.88, 1.12, 1.4, 0],
-        opacity: [1, 1, 0.8, 0],
-        filter: ['blur(0px)', 'blur(0px)', 'blur(3px)', 'blur(14px)'],
-        transition: { duration: 0.55, ease: 'easeInOut' },
-      }).then(() => {
-        setPopped(true);
-        router.push('/questions');
-      });
-    }, 650);
-  };
-
-  if (popped) return null;
-
   return (
-    <div className="relative flex justify-center items-center h-72 mt-6 mb-10">
-
-      {/* Bird that flies in on click */}
-      <motion.div
-        className="absolute z-20 pointer-events-none"
-        style={{ left: '50%', top: '50%', marginLeft: '-24px', marginTop: '-24px' }}
-        initial={{ x: 260, y: -140, opacity: 0 }}
-        animate={
-          stage === 'bird-incoming' || stage === 'popping'
-            ? { x: 90, y: -60, opacity: 1 }
-            : { x: 260, y: -140, opacity: 0 }
-        }
-        transition={{ type: 'spring', stiffness: 130, damping: 16 }}
-      >
-        <Bird
-          size={46}
-          className="drop-shadow-[0_0_18px_rgba(163,113,247,0.9)] -scale-x-100"
-          style={{ color: '#a371f7' }}
-          fill="currentColor"
-        />
-      </motion.div>
-
-      {/* Glass sphere */}
-      <motion.button
-        animate={controls}
-        onClick={handleClick}
-        aria-label="Explore Problems"
-        whileHover={stage === 'idle' ? { scale: 1.04 } : {}}
-        whileTap={stage === 'idle' ? { scale: 0.97 } : {}}
-        className="group relative w-60 h-60 rounded-full flex flex-col items-center justify-center cursor-pointer z-10 select-none"
-        style={{
-          /* Near-transparent dark interior — you see through the sphere */
-          background: 'radial-gradient(circle at 32% 28%, rgba(100,160,255,0.06) 0%, rgba(5,5,25,0.12) 55%, rgba(0,0,15,0.18) 100%)',
-          backdropFilter: 'blur(6px)',
-          /* Multi-ring neon rim: hard rings stack outward, then soft atmospheric bloom */
-          boxShadow: `
-            /* Hard concentric rim rings (outward) */
-            0 0 0 2px rgba(88,166,255,0.95),
-            0 0 0 4px rgba(120,90,255,0.55),
-            0 0 0 7px rgba(163,113,247,0.35),
-            0 0 0 13px rgba(88,166,255,0.12),
-            /* Outer atmospheric bloom */
-            0 0 45px rgba(88,166,255,0.75),
-            0 0 90px rgba(88,166,255,0.40),
-            0 0 140px rgba(163,113,247,0.30),
-            0 0 200px rgba(88,166,255,0.15),
-            /* Inner edge glow */
-            inset 0 0 0 1.5px rgba(88,166,255,0.55),
-            inset 0 0 0 3px rgba(163,113,247,0.25),
-            inset 0 0 30px rgba(88,166,255,0.08)
-          `,
-          border: 'none',
-        }}
-      >
-        {/* Concentric ring overlays on the sphere edge — mimics the reference image streaks */}
-        <div className="absolute inset-[4px] rounded-full pointer-events-none"
-          style={{ border: '1px solid rgba(88,166,255,0.22)', boxShadow: 'inset 0 0 8px rgba(88,166,255,0.08)' }} />
-        <div className="absolute inset-[10px] rounded-full pointer-events-none"
-          style={{ border: '1px solid rgba(163,113,247,0.12)' }} />
-
-        {/* Specular highlight — top-left like reference */}
-        <div className="absolute top-[12%] left-[18%] w-16 h-9 bg-white rounded-[100%] -rotate-45 opacity-25 blur-[3px] pointer-events-none" />
-        <div className="absolute top-[8%] left-[22%] w-8 h-4 bg-white rounded-[100%] -rotate-45 opacity-40 blur-[1px] pointer-events-none" />
-
-        <span className="relative z-10 text-xl font-display font-bold text-white drop-shadow-[0_0_12px_rgba(88,166,255,0.8)] mb-2 group-hover:text-[#58a6ff] transition-colors duration-300 text-center leading-tight px-3">
-          Explore<br />Problems
-        </span>
-        <ChevronRight
-          size={22}
-          className="relative z-10 text-white/70 group-hover:text-[#58a6ff] group-hover:translate-x-1.5 transition-all duration-300 drop-shadow-[0_0_8px_rgba(88,166,255,0.7)]"
-        />
-
-        {/* Hover: intensify inner glow */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-t from-[#58a6ff]/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-      </motion.button>
-
-      {/* Platform glow pool — like the reference image ground reflection */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-52 h-6 rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse, rgba(88,166,255,0.55) 0%, rgba(163,113,247,0.20) 60%, transparent 100%)', filter: 'blur(8px)' }} />
-
-      {/* Neon ripple rings — bright, concentric, like reference */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none"
-        style={{ width: '160px', height: '28px', borderRadius: '50%', border: '1.5px solid rgba(88,166,255,0.7)', boxShadow: '0 0 10px rgba(88,166,255,0.5)', animation: 'ping 3s cubic-bezier(0,0,0.2,1) infinite' }} />
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none"
-        style={{ width: '210px', height: '38px', borderRadius: '50%', border: '1px solid rgba(163,113,247,0.5)', boxShadow: '0 0 12px rgba(163,113,247,0.4)', animation: 'ping 3.8s cubic-bezier(0,0,0.2,1) infinite 0.8s' }} />
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none"
-        style={{ width: '270px', height: '50px', borderRadius: '50%', border: '1px solid rgba(88,166,255,0.3)', boxShadow: '0 0 16px rgba(88,166,255,0.25)', animation: 'ping 4.5s cubic-bezier(0,0,0.2,1) infinite 1.6s' }} />
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   LIQUID GLASS FEATURE CARD
-───────────────────────────────────────────────────────────────────────────── */
-function LiquidCard({ title, desc, icon: Icon, color, rgb, href, delay }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 28 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.75, delay, ease: [0.22, 1, 0.36, 1] }}
-    >
-      <Link
-        href={href}
-        className="group block h-full relative rounded-2xl p-5 cursor-pointer overflow-hidden"
-        style={{
-          background: `linear-gradient(135deg, rgba(255,255,255,0.055) 0%, rgba(${rgb},0.06) 100%)`,
-          border: `1px solid rgba(${rgb},0.18)`,
-          boxShadow: `0 4px 24px rgba(0,0,0,0.35), 0 0 0 0px rgba(${rgb},0)`,
-          backdropFilter: 'blur(14px)',
-          transition: 'box-shadow 0.35s ease, transform 0.2s ease, border-color 0.3s ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.boxShadow = `0 8px 40px rgba(0,0,0,0.45), 0 0 30px rgba(${rgb},0.15), inset 0 1px 0 rgba(255,255,255,0.1)`;
-          e.currentTarget.style.transform = 'translateY(-6px)';
-          e.currentTarget.style.borderColor = `rgba(${rgb},0.4)`;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.boxShadow = `0 4px 24px rgba(0,0,0,0.35)`;
-          e.currentTarget.style.transform = 'translateY(0px)';
-          e.currentTarget.style.borderColor = `rgba(${rgb},0.18)`;
-        }}
-      >
-        {/* Top specular sheen */}
-        <div
-          className="absolute top-0 left-0 right-0 h-px opacity-40 pointer-events-none"
-          style={{ background: `linear-gradient(90deg, transparent, rgba(${rgb},0.5), transparent)` }}
-        />
-
-        {/* Ambient corner glow */}
-        <div
-          className="absolute top-0 right-0 w-20 h-20 rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none blur-xl"
-          style={{ background: `rgba(${rgb},1)` }}
-        />
-
-        {/* Icon */}
-        <div
-          className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110"
-          style={{
-            background: `rgba(${rgb},0.12)`,
-            border: `1px solid rgba(${rgb},0.22)`,
-            boxShadow: `0 0 16px rgba(${rgb},0.1)`,
-          }}
-        >
-          <Icon size={20} style={{ color }} />
-        </div>
-
-        <h3 className="text-white font-display font-bold text-base mb-1.5 group-hover:text-white transition-colors">
-          {title}
-        </h3>
-        <p className="text-[#8b949e] text-[13px] leading-relaxed">
-          {desc}
-        </p>
-
-        {/* Bottom arrow */}
-        <div
-          className="mt-4 flex items-center gap-1 text-[12px] font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0"
-          style={{ color }}
-        >
-          Explore <ChevronRight size={12} />
-        </div>
-      </Link>
-    </motion.div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   LANDING PAGE
-───────────────────────────────────────────────────────────────────────────── */
-const FEATURE_CARDS = [
-  {
-    title: 'Solve Problems',
-    desc:  'Sharpen your skills with curated challenges designed to level you up.',
-    icon:  Code2,
-    color: '#22c55e',
-    rgb:   '34,197,94',
-    href:  '/questions',
-  },
-  {
-    title: 'Share Chirps',
-    desc:  'Post your thoughts, solutions & ideas for the entire flock to see.',
-    icon:  MessageSquare,
-    color: '#a371f7',
-    rgb:   '163,113,247',
-    href:  '/coming-soon/chirps',
-  },
-  {
-    title: 'Watch Flights',
-    desc:  'Learn visually with short, powerful coding videos from top developers.',
-    icon:  Play,
-    color: '#58a6ff',
-    rgb:   '88,166,255',
-    href:  '/coming-soon/flights',
-  },
-  {
-    title: 'Join Flocks',
-    desc:  'Be part of specialized communities that build and learn together.',
-    icon:  Users,
-    color: '#eab308',
-    rgb:   '234,179,8',
-    href:  '/coming-soon/flocks',
-  },
-  {
-    title: 'Save in Nest',
-    desc:  'Bookmark your favorite content & revisit them later in your Nest.',
-    icon:  Leaf,
-    color: '#f43f5e',
-    rgb:   '244,63,94',
-    href:  '/coming-soon/nest',
-  },
-];
-
-export default function HomePage() {
-  return (
-    <div className="relative flex-1 overflow-hidden selection:bg-[#58a6ff]/25">
-      {/* Flying bird custom cursor — landing page only */}
-      <BirdCursor />
-      <AnimatedBackground variant="default" />
-
-      <div className="relative z-10 flex flex-col items-center px-4 pt-12 pb-24">
-
-        {/* ── Badge ────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: -14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/[0.04] backdrop-blur-md mb-8"
-        >
-          <Bird size={13} className="text-[#a371f7]" />
-          <span className="text-[11px] font-bold text-[#c9d1d9] tracking-[0.18em] uppercase">
-            Learn. Share. Grow.
-          </span>
-        </motion.div>
-
-        {/* ── Hero headline ─────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
-          className="text-center max-w-3xl mx-auto"
-        >
-          <h1 className="text-5xl md:text-7xl font-display font-extrabold tracking-tight leading-[1.07] mb-5">
-            <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-[#8b949e]">
-              Chirp your code.{' '}
-            </span>
-            <br />
-            <span
-              className="text-transparent bg-clip-text"
-              style={{
-                backgroundImage: 'linear-gradient(135deg, #58a6ff 0%, #a371f7 50%, #58a6ff 100%)',
-                backgroundSize: '200% auto',
-                animation: 'shimmer 5s linear infinite',
-              }}
-            >
-              Inspire the world.
-            </span>
-          </h1>
-          <p className="text-[#8b949e] text-lg md:text-xl max-w-xl mx-auto leading-relaxed font-medium">
-            KodeChirp is where developers learn together, share knowledge, and grow through real conversations.
-          </p>
-        </motion.div>
-
-        {/* ── Bubble CTA ───────────────────────────────── */}
-        <FloatingBubble />
-
-        {/* ── Liquid Glass Feature Cards ───────────────── */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="w-full max-w-6xl"
-        >
-          <p className="text-center text-[12px] font-bold text-[#484f58] uppercase tracking-widest mb-5">
-            Everything in the ecosystem
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
-            {FEATURE_CARDS.map((card, i) => (
-              <LiquidCard key={card.title} {...card} delay={0.55 + i * 0.08} />
-            ))}
-          </div>
-        </motion.div>
-
-        {/* ── Quote Section ────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1.1 }}
-          className="mt-20 max-w-2xl w-full"
-        >
-          <div
-            className="rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-center gap-6"
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              backdropFilter: 'blur(12px)',
-            }}
-          >
-            {/* Quote mark */}
-            <span className="text-5xl font-display font-extrabold text-[#58a6ff]/30 leading-none select-none shrink-0">
-              &ldquo;&rdquo;
-            </span>
-            <div className="flex-1 text-center sm:text-left">
-              <p className="text-[#c9d1d9] text-base leading-relaxed mb-2">
-                Code is not just written, it&apos;s shared, discussed, and elevated together.
-              </p>
-            </div>
-            <Link
-              href="/questions"
-              className="
-                flex items-center gap-2 px-5 py-2.5 rounded-full
-                text-[13px] font-semibold text-white
-                bg-white/[0.06] border border-white/[0.1]
-                hover:bg-white/[0.12] hover:border-white/[0.2]
-                transition-all duration-200 shrink-0
-              "
-            >
-              About KodeChirp
-              <ChevronRight size={14} />
-            </Link>
-          </div>
-        </motion.div>
-
+    <section className="hero" id="home">
+      <div className="bird-mascot" aria-hidden="true">
+        <svg viewBox="0 0 280 320" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="bodyGrad" cx="40%" cy="40%" r="60%">
+              <stop offset="0%" stopColor="#a78bfa"/>
+              <stop offset="50%" stopColor="#6366f1"/>
+              <stop offset="100%" stopColor="#1e1b4b"/>
+            </radialGradient>
+            <radialGradient id="wingGrad" cx="30%" cy="30%" r="70%">
+              <stop offset="0%" stopColor="#7dd3fc"/>
+              <stop offset="40%" stopColor="#3b82f6"/>
+              <stop offset="100%" stopColor="#1e3a8a"/>
+            </radialGradient>
+            <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="rgba(99,102,241,0.6)"/>
+              <stop offset="100%" stopColor="rgba(99,102,241,0)"/>
+            </radialGradient>
+            <filter id="birdGlow">
+              <feGaussianBlur stdDeviation="6" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+          </defs>
+          <ellipse cx="140" cy="160" rx="100" ry="80" fill="url(#glowGrad)" opacity="0.5"/>
+          <path d="M140,140 Q80,80 20,110 Q60,130 80,155 Q110,145 140,155 Z" fill="url(#wingGrad)" opacity="0.85"/>
+          <path d="M155,130 Q200,60 260,40 Q240,90 230,120 Q210,135 200,150 Q180,145 165,155 Z" fill="url(#wingGrad)" opacity="0.9"/>
+          <path d="M130,195 Q110,230 90,255 Q120,240 140,225 Q155,240 175,258 Q158,230 155,200 Z" fill="url(#wingGrad)" opacity="0.7"/>
+          <ellipse cx="148" cy="165" rx="38" ry="46" fill="url(#bodyGrad)" filter="url(#birdGlow)"/>
+          <ellipse cx="145" cy="178" rx="22" ry="26" fill="rgba(220,210,255,0.15)"/>
+          <circle cx="150" cy="120" r="30" fill="url(#bodyGrad)"/>
+          <circle cx="158" cy="116" r="7" fill="#1e1b4b"/>
+          <circle cx="158" cy="116" r="4" fill="#ffffff"/>
+          <circle cx="160" cy="114" r="2" fill="#1e1b4b"/>
+          <circle cx="162" cy="112" r="1" fill="rgba(255,255,255,0.8)"/>
+          <path d="M168,124 L185,130 L168,136 Z" fill="#fbbf24"/>
+          <path d="M168,124 L185,130 L176,130 Z" fill="#f59e0b"/>
+          <path d="M142,92 Q148,72 155,85 Q150,78 145,90 Z" fill="url(#wingGrad)" opacity="0.8"/>
+          <path d="M148,88 Q155,68 162,82 Q157,74 151,86 Z" fill="url(#wingGrad)" opacity="0.7"/>
+          <circle cx="148" cy="230" r="22" fill="none" stroke="rgba(147,197,253,0.4)" strokeWidth="1.5"/>
+          <circle cx="148" cy="230" r="18" fill="radial-gradient(circle, rgba(99,102,241,0.6), transparent)"/>
+          <circle cx="148" cy="230" r="16" fill="rgba(30,27,75,0.6)"/>
+          <circle cx="148" cy="230" r="10" fill="rgba(99,102,241,0.4)"/>
+          <circle cx="143" cy="225" r="4" fill="rgba(255,255,255,0.25)" style={{ rx: '50%' }}/>
+          <g opacity="0.8">
+            <circle cx="55" cy="95" r="2" fill="#a78bfa"/>
+            <circle cx="240" cy="75" r="2.5" fill="#7dd3fc"/>
+            <circle cx="250" cy="170" r="1.5" fill="#c4b5fd"/>
+            <circle cx="38" cy="155" r="1.5" fill="#93c5fd"/>
+            <path d="M70,70 L72,66 L74,70 L78,72 L74,74 L72,78 L70,74 L66,72 Z" fill="#e0e7ff" opacity="0.6"/>
+            <path d="M230,100 L232,96 L234,100 L238,102 L234,104 L232,108 L230,104 L226,102 Z" fill="#bfdbfe" opacity="0.5"/>
+          </g>
+        </svg>
       </div>
 
-      {/* Shimmer keyframe */}
-      <style jsx global>{`
-        @keyframes shimmer {
-          0%   { background-position: 200% center; }
-          100% { background-position: -200% center; }
-        }
-      `}</style>
+      <div className="hero-badge">
+        <span className="hero-badge-icon">🌿</span>
+        Learn. Share. Grow.
+      </div>
+
+      <h1 className="hero-headline">
+        <span className="word-chirp">Chirp</span> your code.<br/>
+        <span className="word-inspire">Inspire</span> the world.
+      </h1>
+
+      <p className="hero-subtext">
+        KodeChirp is where developers learn together, share knowledge,
+        and grow through real conversations.
+      </p>
+
+      <div className="hero-cta-row">
+        <Link href="/questions" className="btn btn-primary">
+          🚀 Start Solving
+        </Link>
+        <Link href="#about" className="btn btn-ghost">
+          About KodeChirp →
+        </Link>
+      </div>
+
+      <div className="hero-orb-container" id="heroOrb">
+        <div className="orb-glow-ring"></div>
+        <div className="orb-glow-ring"></div>
+        <div className="orb-glow-ring"></div>
+        <div className="hero-orb" onClick={() => router.push('/questions')}>
+          <span className="hero-orb-text">Explore<br/>Problems</span>
+          <span className="hero-orb-arrow">→</span>
+        </div>
+      </div>
+
+      <div className="hero-ground-glow"></div>
+    </section>
+  );
+}
+
+function StatsSection() {
+  return (
+    <section className="stats-section animate-in visible" id="statsSection">
+      <div className="stats-bar">
+        <div className="stat-item">
+          <span className="stat-number">1200+</span>
+          <div className="stat-label">Problems to Solve</div>
+        </div>
+        <div className="stat-item">
+          <span className="stat-number">48k</span>
+          <div className="stat-label">Developers Chirping</div>
+        </div>
+        <div className="stat-item">
+          <span className="stat-number">3600</span>
+          <div className="stat-label">Solutions Shared</div>
+        </div>
+        <div className="stat-item">
+          <span className="stat-number">92%</span>
+          <div className="stat-label">Satisfaction Rate</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FeaturesSection() {
+  const router = useRouter();
+  return (
+    <section className="features-section" id="features">
+      <div className="features-grid">
+        <div className="feature-card card-problems" style={{ '--card-delay': '0.05s' }} onClick={() => router.push('/questions')}>
+          <div className="feature-icon-wrap icon-problems">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <polyline points="16,18 22,12 16,6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <polyline points="8,6 2,12 8,18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div className="feature-title">Solve Problems</div>
+          <div className="feature-desc">Sharpen your skills with curated challenges designed to level you up.</div>
+        </div>
+        <div className="feature-card card-chirps" style={{ '--card-delay': '0.10s' }} onClick={() => router.push('/coming-soon/chirps')}>
+          <div className="feature-icon-wrap icon-chirps">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div className="feature-title">Share Chirps</div>
+          <div className="feature-desc">Post your thoughts, solutions & ideas for the entire flock to see.</div>
+        </div>
+        <div className="feature-card card-flights" style={{ '--card-delay': '0.15s' }} onClick={() => router.push('/coming-soon/flights')}>
+          <div className="feature-icon-wrap icon-flights">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.2"/>
+              <polygon points="10,8 16,12 10,16 10,8" fill="currentColor"/>
+            </svg>
+          </div>
+          <div className="feature-title">Watch Flights</div>
+          <div className="feature-desc">Learn visually with short, powerful coding videos from top developers.</div>
+        </div>
+        <div className="feature-card card-flocks" style={{ '--card-delay': '0.20s' }} onClick={() => router.push('/coming-soon/flocks')}>
+          <div className="feature-icon-wrap icon-flocks">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+              <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2.2"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <div className="feature-title">Join Flocks</div>
+          <div className="feature-desc">Be part of specialized communities that build and learn together.</div>
+        </div>
+        <div className="feature-card card-nest" style={{ '--card-delay': '0.25s' }} onClick={() => router.push('/coming-soon/nest')}>
+          <div className="feature-icon-wrap icon-nest">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div className="feature-title">Save in Nest</div>
+          <div className="feature-desc">Bookmark your favorite content & revisit them later in your Nest.</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ProblemsSection({ problems }) {
+  const router = useRouter();
+
+  const renderDifficulty = (diff) => {
+    if (diff === 'Easy') return <span className="problem-difficulty diff-easy">Easy</span>;
+    if (diff === 'Hard') return <span className="problem-difficulty diff-hard">Hard</span>;
+    return <span className="problem-difficulty diff-medium">Medium</span>;
+  };
+
+  return (
+    <section className="problems-section" id="questions">
+      <div className="section-header animate-in visible">
+        <div className="section-badge">⚡ Challenge Yourself</div>
+        <h2 className="section-title">Curated <span style={{ background: 'linear-gradient(90deg,var(--neon-blue),var(--neon-cyan))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Problems</span></h2>
+        <p className="section-subtitle">Battle-tested challenges across algorithms, data structures, and system design.</p>
+      </div>
+
+      <div className="problems-container">
+        <div className="problems-list animate-in visible">
+          {problems.map((prob) => (
+            <div className="problem-row" key={prob.id} onClick={() => router.push(`/problems/${prob.slug}`)}>
+              <div className="problem-status"></div>
+              <div className="problem-title-col">
+                <div className="problem-name">{prob.title}</div>
+                <div className="problem-tags">
+                  <span className="problem-tag">Algorithm</span>
+                </div>
+              </div>
+              {renderDifficulty(prob.difficulty)}
+              <span className="problem-acceptance">{prob.acceptance_rate ? parseFloat(prob.acceptance_rate).toFixed(1) : 0}%</span>
+            </div>
+          ))}
+          {problems.length === 0 && <p className="text-center text-gray-500 py-8">Loading problems...</p>}
+        </div>
+
+        {/* Sidebar */}
+        <div className="problems-sidebar animate-in visible" style={{ transitionDelay: '0.15s' }}>
+          <div className="sidebar-card">
+            <div className="sidebar-card-title">Your Progress</div>
+            <div className="progress-item">
+              <div className="progress-label">
+                <span style={{ color: '#4ade80' }}>Easy</span>
+                <span style={{ color: '#4ade80' }}>42 / 120</span>
+              </div>
+              <div className="progress-bar">
+                <div className="progress-fill pf-easy" style={{ width: '35%' }}></div>
+              </div>
+            </div>
+            <div className="progress-item">
+              <div className="progress-label">
+                <span style={{ color: 'var(--neon-gold)' }}>Medium</span>
+                <span style={{ color: 'var(--neon-gold)' }}>18 / 340</span>
+              </div>
+              <div className="progress-bar">
+                <div className="progress-fill pf-medium" style={{ width: '5.3%' }}></div>
+              </div>
+            </div>
+            <div className="progress-item">
+              <div className="progress-label">
+                <span style={{ color: '#f87171' }}>Hard</span>
+                <span style={{ color: '#f87171' }}>3 / 180</span>
+              </div>
+              <div className="progress-bar">
+                <div className="progress-fill pf-hard" style={{ width: '1.7%' }}></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="sidebar-card">
+            <div className="sidebar-card-title">Daily Challenge</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: '1.6' }}>
+              Minimum Window Substring — <span style={{ color: '#f87171', fontWeight: 600 }}>Hard</span>
+            </div>
+            <Link href="/questions" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', fontSize: '13px', padding: '10px' }}>
+              Attempt Today's Challenge 🎯
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FooterSection() {
+  return (
+    <footer className="footer">
+      <div className="footer-inner">
+        <div>
+          <div className="footer-brand-title">KodeChirp</div>
+          <div className="footer-brand-desc">
+            A premium peer-to-peer coding platform. Learn, share, and grow with the developer flock.
+          </div>
+          <div className="footer-social">
+            <a href="#" className="social-btn">🐦</a>
+            <a href="#" className="social-btn">🐙</a>
+            <a href="#" className="social-btn">💼</a>
+          </div>
+        </div>
+        <div>
+          <div className="footer-col-title">Platform</div>
+          <div className="footer-links">
+            <Link href="/questions" className="footer-link">Problems</Link>
+            <Link href="/coming-soon/chirps" className="footer-link">Chirps</Link>
+            <Link href="/coming-soon/flights" className="footer-link">Flights</Link>
+            <Link href="/coming-soon/flocks" className="footer-link">Flocks</Link>
+          </div>
+        </div>
+        <div>
+          <div className="footer-col-title">Resources</div>
+          <div className="footer-links">
+            <Link href="/about" className="footer-link">About</Link>
+            <Link href="/blog" className="footer-link">Blog</Link>
+            <Link href="/careers" className="footer-link">Careers</Link>
+          </div>
+        </div>
+        <div>
+          <div className="footer-col-title">Legal</div>
+          <div className="footer-links">
+            <Link href="/privacy" className="footer-link">Privacy Policy</Link>
+            <Link href="/terms" className="footer-link">Terms of Service</Link>
+          </div>
+        </div>
+      </div>
+      <div className="footer-bottom">
+        <div className="footer-copy">© 2026 KodeChirp. All rights reserved.</div>
+        <div className="footer-bottom-links">
+          <Link href="#" className="footer-bottom-link">Status</Link>
+          <Link href="#" className="footer-bottom-link">Security</Link>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+export default function HomePage() {
+  const [problems, setProblems] = useState([]);
+
+  useEffect(() => {
+    // Fetch top 8 problems
+    api.getProblems().then(data => {
+      if (data && data.problems) {
+        setProblems(data.problems.slice(0, 8));
+      }
+    }).catch(console.error);
+  }, []);
+
+  return (
+    <div className="landing-page-wrapper">
+      <BirdCursor />
+      
+      <div className="scroll-progress" id="scrollProgress"></div>
+      <div className="cursor-glow" id="cursorGlow"></div>
+
+      <div className="bg-universe">
+        <div className="bg-gradient-mesh"></div>
+        <div className="star-field" id="starField"></div>
+        <div className="nebula nebula-1"></div>
+        <div className="nebula nebula-2"></div>
+        <div className="nebula nebula-3"></div>
+        <svg className="mountain-silhouette" viewBox="0 0 1440 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M0,280 L0,200 L80,180 L140,150 L200,160 L280,100 L360,130 L420,80 L500,110 L560,60 L620,90 L680,50 L740,80 L800,40 L860,70 L920,30 L980,60 L1040,90 L1100,55 L1160,85 L1220,120 L1280,140 L1360,160 L1440,150 L1440,280 Z" fill="rgba(10,15,50,0.6)"/>
+          <path d="M0,280 L0,230 L60,220 L120,200 L200,210 L280,170 L350,185 L420,145 L500,160 L580,130 L640,150 L720,110 L800,130 L880,105 L940,120 L1020,90 L1100,110 L1180,140 L1260,160 L1360,175 L1440,165 L1440,280 Z" fill="rgba(5,8,25,0.7)"/>
+        </svg>
+        <div className="water-reflection"></div>
+      </div>
+
+      <div className="bubbles-container" id="bubblesContainer"></div>
+
+      <HeroSection />
+      <StatsSection />
+      <FeaturesSection />
+      <ProblemsSection problems={problems} />
+      <FooterSection />
     </div>
   );
 }
