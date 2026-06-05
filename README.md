@@ -46,7 +46,7 @@ KodeChirp follows a **gateway-worker architecture** — separating API routing, 
           /api/* │               /socket.io/*          /* (static)
                  ▼                      ▼                    ▼
 ┌─────────────────────────┐  ┌──────────────────┐  ┌────────────────────┐
-│   NODE.JS API GATEWAY   │  │   SOCKET.IO      │  │   NEXT.JS 14       │
+│   NODE.JS API GATEWAY   │  │   SOCKET.IO      │  │   NEXT.JS 16       │
 │                         │  │   WebSocket Hub  │  │   React Frontend   │
 │  • Express 4            │  │                  │  │                    │
 │  • JWT Auth + RBAC      │  │  • Real-time     │  │  • Monaco Editor   │
@@ -134,6 +134,12 @@ KodeChirp follows a **gateway-worker architecture** — separating API routing, 
 - 👥 **Role-Based Access Control** — `user`, `admin`, `moderator` roles with route-level enforcement
 - 🛡️ **Rate Limiting** — Nginx-level + application-level rate limiting with violation auditing
 
+### Frontend & UI/UX
+- 🎨 **Dark Fantasy Cyber Aesthetic** — Premium glassmorphism design with backdrop blurs, dynamic mesh gradients, and polished modern typography.
+- 💻 **Professional IDE Workspace** — Integrated `react-resizable-panels` for a true VS Code / LeetCode style split-pane coding environment.
+- 🎛️ **Resizable & Persistent Layouts** — Drag-and-drop horizontal and vertical panel boundaries with automatic local storage state persistence.
+- 📱 **Responsive Degradation** — Multi-pane desktop workspace gracefully collapses into an optimized tabbed experience on mobile devices.
+
 ### Platform
 - 🏆 **Contest Infrastructure** — Rated contests with scoring, penalty time, and live leaderboards
 - 🐦 **Chirps** — Community-driven peer explanations with upvoting (the social layer)
@@ -146,7 +152,7 @@ KodeChirp follows a **gateway-worker architecture** — separating API routing, 
 
 | Layer | Technology | Purpose |
 | :--- | :--- | :--- |
-| **Frontend** | Next.js 14, React, Tailwind CSS, Zustand | App Router SSR, state management, responsive UI |
+| **Frontend** | Next.js 16, React, Tailwind CSS, Zustand | App Router SSR, state management, responsive UI |
 | **Code Editor** | Monaco Editor | VS Code-grade in-browser editing experience |
 | **API Gateway** | Node.js 20, Express 4, Helmet | Request routing, auth, validation, middleware |
 | **Job Queue** | BullMQ 5, Redis 7 | Async submission dispatch, FIFO processing |
@@ -166,7 +172,7 @@ KodeChirp follows a **gateway-worker architecture** — separating API routing, 
 ```
 kodechirp/
 │
-├── frontend/                   # Next.js 14 React Frontend
+├── frontend/                   # Next.js 16 React Frontend
 │   ├── app/                    # App Router pages and layouts
 │   ├── components/             # Reusable UI components and editor
 │   ├── hooks/                  # Custom React hooks (useAuth, useEditor)
@@ -464,7 +470,7 @@ services:
   redis          # Redis 7 Alpine — AOF persistence, LRU eviction, 256MB limit
   gateway        # Node.js API Gateway — port 4000, depends on postgres + redis
   worker         # FastAPI Worker — Docker socket mount, resource limits (2 CPU, 1GB)
-  frontend       # Next.js 14 — port 3000, depends on gateway
+  frontend       # Next.js 16 — port 3000, depends on gateway
 ```
 
 ### Scaling Workers
