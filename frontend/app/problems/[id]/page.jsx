@@ -51,8 +51,59 @@ export default function ProblemPage() {
 
   const showConsole = !!(output || verdict);
 
-  // Left Panel Content (Problem Description)
-  const LeftPanelContent = () => (
+  return (
+    <div className="flex-1 flex flex-col p-4 pt-[84px] bg-transparent min-h-screen">
+      
+      <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden bg-[#050812]">
+        <div className="absolute top-[-10%] left-[10%] w-[500px] h-[500px] bg-[#58a6ff]/5 rounded-full blur-[120px] mix-blend-screen" />
+        <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] bg-[#a371f7]/5 rounded-full blur-[120px] mix-blend-screen" />
+      </div>
+
+      <div className="w-full h-[calc(100vh-100px)] min-h-[600px] mb-8">
+        {isMobile ? (
+          <div className="flex flex-col h-full overflow-hidden gap-4">
+            <div className="flex gap-2 bg-white/[0.02] p-1.5 rounded-xl border border-white/10 shrink-0">
+              <button onClick={() => setActiveTab('description')} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'description' ? 'bg-[#58a6ff]/20 text-white' : 'text-[#8b949e] hover:bg-white/5'}`}>Problem</button>
+              <button onClick={() => setActiveTab('editor')} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'editor' ? 'bg-[#58a6ff]/20 text-white' : 'text-[#8b949e] hover:bg-white/5'}`}>Code</button>
+              <button onClick={() => setActiveTab('tests')} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'tests' ? 'bg-[#58a6ff]/20 text-white' : 'text-[#8b949e] hover:bg-white/5'}`}>Tests</button>
+            </div>
+            <div className="flex-1 min-h-0">
+              {activeTab === 'description' && <LeftPanelContent currentProblem={currentProblem} />}
+              {activeTab === 'editor' && <EditorContent problemId={currentProblem.id} />}
+              {activeTab === 'tests' && <BottomContent testCases={currentProblem.testCases} showConsole={showConsole} />}
+            </div>
+          </div>
+        ) : (
+          <PanelGroup id="kodechirp-ide-layout-main" orientation="horizontal" className="h-full w-full">
+            <Panel defaultSize={40} minSize={25} className="flex flex-col min-h-0">
+              <LeftPanelContent currentProblem={currentProblem} />
+            </Panel>
+
+            <ResizeHandle direction="horizontal" />
+
+            <Panel minSize={40} className="flex flex-col min-h-0">
+              <PanelGroup id="kodechirp-ide-layout-right" orientation="vertical">
+                <Panel defaultSize={75} minSize={30} className="flex flex-col min-h-0">
+                  <EditorContent problemId={currentProblem.id} />
+                </Panel>
+
+                <ResizeHandle direction="vertical" />
+
+                <Panel defaultSize={25} minSize={15} className="flex flex-col min-h-0">
+                  <BottomContent testCases={currentProblem.testCases} showConsole={showConsole} />
+                </Panel>
+              </PanelGroup>
+            </Panel>
+          </PanelGroup>
+        )}
+      </div>
+
+    </div>
+  );
+}
+
+// Left Panel Content (Problem Description)
+const LeftPanelContent = ({ currentProblem }) => (
     <div className="flex flex-col h-full overflow-hidden min-h-0 bg-transparent gap-4">
       {/* Header Card */}
       <div className="shrink-0 bg-white/[0.02] border border-white/10 rounded-2xl p-5 backdrop-blur-xl shadow-lg flex flex-col gap-3">
@@ -97,8 +148,8 @@ export default function ProblemPage() {
     </div>
   );
 
-  // Editor Content
-  const EditorContent = () => (
+// Editor Content
+const EditorContent = ({ problemId }) => (
     <div className="flex flex-col h-full bg-[#0d1117]/80 border border-white/10 rounded-2xl backdrop-blur-xl shadow-lg overflow-hidden min-h-0">
       <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
         <div className="flex items-center gap-2">
@@ -107,7 +158,7 @@ export default function ProblemPage() {
         </div>
         <div className="flex items-center gap-3">
           <RunButton />
-          <SubmitButton problemId={currentProblem.id} />
+          <SubmitButton problemId={problemId} />
         </div>
       </div>
       <div className="flex-1 min-h-0 flex flex-col">
@@ -116,8 +167,8 @@ export default function ProblemPage() {
     </div>
   );
 
-  // Bottom Content (Tests & Console)
-  const BottomContent = () => (
+// Bottom Content (Tests & Console)
+const BottomContent = ({ testCases, showConsole }) => (
     <div className="flex flex-col h-full bg-[#0d1117]/80 border border-white/10 rounded-2xl backdrop-blur-xl shadow-lg overflow-hidden min-h-0">
       <div className="flex items-center gap-6 px-4 py-3 border-b border-white/10 bg-white/[0.02] shrink-0">
         <div className="flex items-center gap-2">
@@ -130,7 +181,7 @@ export default function ProblemPage() {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-5 flex flex-col gap-6">
-        <TestCases testCases={currentProblem.testCases} />
+        <TestCases testCases={testCases} />
         {showConsole && (
           <div className="border-t border-white/10 pt-4 mt-2">
             <ConsolePanel />
@@ -140,63 +191,13 @@ export default function ProblemPage() {
     </div>
   );
 
-  const ResizeHandle = ({ direction }) => (
-    <PanelResizeHandle className={`group flex items-center justify-center transition-colors ${
-      direction === 'horizontal' ? 'w-3 cursor-col-resize mx-0' : 'h-3 cursor-row-resize my-0'
-    }`}>
-      <div className={`rounded-full transition-all bg-white/10 group-hover:bg-[#58a6ff]/80 ${
-        direction === 'horizontal' ? 'w-1 h-8 group-hover:h-12' : 'h-1 w-8 group-hover:w-12'
-      }`} />
-    </PanelResizeHandle>
-  );
 
-  return (
-    <div className="flex-1 flex flex-col p-4 pt-[84px] bg-transparent min-h-screen">
-      
-      <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden bg-[#050812]">
-        <div className="absolute top-[-10%] left-[10%] w-[500px] h-[500px] bg-[#58a6ff]/5 rounded-full blur-[120px] mix-blend-screen" />
-        <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] bg-[#a371f7]/5 rounded-full blur-[120px] mix-blend-screen" />
-      </div>
-
-      <div className="w-full h-[calc(100vh-100px)] min-h-[600px] mb-8">
-        {isMobile ? (
-          <div className="flex flex-col h-full overflow-hidden gap-4">
-            <div className="flex gap-2 bg-white/[0.02] p-1.5 rounded-xl border border-white/10 shrink-0">
-              <button onClick={() => setActiveTab('description')} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'description' ? 'bg-[#58a6ff]/20 text-white' : 'text-[#8b949e] hover:bg-white/5'}`}>Problem</button>
-              <button onClick={() => setActiveTab('editor')} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'editor' ? 'bg-[#58a6ff]/20 text-white' : 'text-[#8b949e] hover:bg-white/5'}`}>Code</button>
-              <button onClick={() => setActiveTab('tests')} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'tests' ? 'bg-[#58a6ff]/20 text-white' : 'text-[#8b949e] hover:bg-white/5'}`}>Tests</button>
-            </div>
-            <div className="flex-1 min-h-0">
-              {activeTab === 'description' && <LeftPanelContent />}
-              {activeTab === 'editor' && <EditorContent />}
-              {activeTab === 'tests' && <BottomContent />}
-            </div>
-          </div>
-        ) : (
-          <PanelGroup autoSaveId="kodechirp-ide-layout-main" orientation="horizontal" className="h-full w-full">
-            <Panel defaultSize={40} minSize={25} className="flex flex-col min-h-0">
-              <LeftPanelContent />
-            </Panel>
-
-            <ResizeHandle direction="horizontal" />
-
-            <Panel minSize={40} className="flex flex-col min-h-0">
-              <PanelGroup autoSaveId="kodechirp-ide-layout-right" orientation="vertical">
-                <Panel defaultSize={75} minSize={30} className="flex flex-col min-h-0">
-                  <EditorContent />
-                </Panel>
-
-                <ResizeHandle direction="vertical" />
-
-                <Panel defaultSize={25} minSize={15} className="flex flex-col min-h-0">
-                  <BottomContent />
-                </Panel>
-              </PanelGroup>
-            </Panel>
-          </PanelGroup>
-        )}
-      </div>
-
-    </div>
-  );
-}
+const ResizeHandle = ({ direction }) => (
+  <PanelResizeHandle className={`group flex items-center justify-center transition-colors ${
+    direction === 'horizontal' ? 'w-3 cursor-col-resize mx-0' : 'h-3 cursor-row-resize my-0'
+  }`}>
+    <div className={`rounded-full transition-all bg-white/10 group-hover:bg-[#58a6ff]/80 ${
+      direction === 'horizontal' ? 'w-1 h-8 group-hover:h-12' : 'h-1 w-8 group-hover:w-12'
+    }`} />
+  </PanelResizeHandle>
+);

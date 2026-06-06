@@ -14,7 +14,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:Z
-      - ./database/seeds:/docker-entrypoint-initdb.d/seeds:Z
+      - ./database/seeds/01-seed-data.sql:/docker-entrypoint-initdb.d/02-seed-data.sql:Z
     ports:
       - "5433:5432"
     healthcheck:
@@ -35,7 +35,7 @@ services:
       
         --appendonly yes
         --maxmemory 256mb
-        --maxmemory-policy allkeys-lru
+        --maxmemory-policy noeviction
         --save 60 1000
         --loglevel warning
     ports:
@@ -107,6 +107,7 @@ services:
           cpus: '2.0'
           memory: 1G
     restart: unless-stopped
+    privileged: true
     networks:
       - kodechirp-net
 
