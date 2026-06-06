@@ -9,7 +9,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 async function request(path, options = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('kc_token') : null;
   const headers = { 'Content-Type': 'application/json', ...options.headers };
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -70,20 +70,39 @@ export const api = {
     };
   },
 
-  // BUG FIX: was a mock using Math.random() > 0.3 — always "passed"
-  //          Also: was missing `language` in the payload.
   submitCode: async (problemId, code, language) => {
     const data = await request('/api/submissions/submit', {
       method: 'POST',
       body: JSON.stringify({ problem_id: problemId, code, language }),
     });
-    // Backend returns { success, data: { verdict, passed, total, ... } }
+    
+    // Backend returns { success, data: { submissionId, status, testCasesTotal, queueId } }
     const result = data.data;
+    
+    let currentStatus = result.status;
+    let submission = result;
+    
+    // Poll until status is not queued or running
+    while (currentStatus === 'queued' || currentStatus === 'running' || currentStatus === 'processing') {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const pollData = await request(`/api/submissions/${result.submissionId}`);
+      submission = pollData.data;
+      currentStatus = submission.status;
+    }
+
     return {
-      verdict: result.verdict,                              // 'Accepted' | 'Wrong Answer' | 'Runtime Error' | 'Time Limit Exceeded'
-      runtime: result.runtime || 'N/A',
-      memory: result.memory || 'N/A',
-      details: buildDetails(result),
+      verdict: submission.status,
+      runtime: submission.runtime_ms ? `${submission.runtime_ms} ms` : 'N/A',
+      memory: submission.memory_kb ? `${(submission.memory_kb / 1024).toFixed(1)} MB` : 'N/A',
+      details: buildDetails({
+        verdict: submission.status,
+        passed: submission.test_cases_passed || 0,
+        total: submission.test_cases_total || 0,
+        error: submission.error_message,
+        failedInput: submission.failed_test_input,
+        failedExpected: submission.failed_test_expected,
+        failedActual: submission.failed_test_actual,
+      }),
     };
   },
 
@@ -113,9 +132,9 @@ function buildDetails(result) {
   if (result.verdict === 'Wrong Answer') {
     return [
       `Failed on test case ${result.passed + 1} of ${result.total}.`,
-      result.failedInput    ? `\nInput:    ${result.failedInput}`    : '',
+      result.failedInput ? `\nInput:    ${result.failedInput}` : '',
       result.failedExpected ? `\nExpected: ${result.failedExpected}` : '',
-      result.failedActual   ? `\nGot:      ${result.failedActual}`   : '',
+      result.failedActual ? `\nGot:      ${result.failedActual}` : '',
     ].join('');
   }
 

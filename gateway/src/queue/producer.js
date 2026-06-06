@@ -43,7 +43,6 @@ async function enqueueSubmission(job, options = {}) {
 
   const bullJob = await queue.add('execute', job, {
     jobId: job.submissionId,
-    priority: options.priority || 1,
     ...options,
   });
 
