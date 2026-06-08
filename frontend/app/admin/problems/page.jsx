@@ -131,8 +131,10 @@ export default function AdminProblems() {
         </select>
         <select className="admin-select" value={status} onChange={e => { setStatus(e.target.value); setPage(0); }}>
           <option value="">All Status</option>
-          <option value="published">Published</option>
-          <option value="unpublished">Drafts</option>
+          <option value="Published">Published</option>
+          <option value="Draft">Draft</option>
+          <option value="Review">Review</option>
+          <option value="Archived">Archived</option>
         </select>
       </div>
 
@@ -152,8 +154,8 @@ export default function AdminProblems() {
               <th className={sortBy === 'difficulty' ? 'sorted' : ''} onClick={() => handleSort('difficulty')}>
                 Difficulty {sortBy === 'difficulty' && (sortOrder === 'asc' ? '↑' : '↓')}
               </th>
-              <th>Tags</th>
               <th>Status</th>
+              <th>Tests</th>
               <th>Source</th>
               <th className={sortBy === 'total_submissions' ? 'sorted' : ''} onClick={() => handleSort('total_submissions')}>
                 Subs {sortBy === 'total_submissions' && (sortOrder === 'asc' ? '↑' : '↓')}
@@ -174,15 +176,27 @@ export default function AdminProblems() {
                   <span className={`admin-badge badge-${p.difficulty?.toLowerCase()}`}>{p.difficulty}</span>
                 </td>
                 <td>
-                  {(Array.isArray(p.tags) ? p.tags : []).slice(0, 3).map((t, i) =>
-                    <span key={i} className="admin-tag">{t}</span>
-                  )}
-                  {Array.isArray(p.tags) && p.tags.length > 3 && <span className="admin-tag">+{p.tags.length - 3}</span>}
-                </td>
-                <td>
-                  <span className={`admin-badge ${p.status === 'Published' ? 'badge-published' : 'badge-draft'}`}>
+                  <span className={`admin-badge ${
+                    p.status === 'Published' ? 'badge-published' :
+                    p.status === 'Review' ? 'badge-review' :
+                    p.status === 'Archived' ? 'badge-archived' : 'badge-draft'
+                  }`}>
                     {p.status}
                   </span>
+                </td>
+                <td>
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: p.test_count > 0 ? '#4ade80' : '#f85149',
+                  }}>
+                    {p.test_count || 0}
+                  </span>
+                  {p.test_count > 0 && (
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginLeft: '4px' }}>
+                      ({p.public_tests}p/{p.private_tests}h)
+                    </span>
+                  )}
                 </td>
                 <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{p.source || 'kodechirp'}</td>
                 <td style={{ fontSize: '12px' }}>{p.total_submissions || 0}</td>

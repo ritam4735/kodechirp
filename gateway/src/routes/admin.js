@@ -29,6 +29,12 @@ router.post('/problems/:id/test-cases/bulk', adminController.bulkImportTestCases
 router.put('/test-cases/:id', adminController.updateTestCase);
 router.delete('/test-cases/:id', adminController.deleteTestCase);
 
+// Problem validation (pre-publish check)
+router.get('/problems/:id/validate', adminController.validateProblem);
+
+// Test Case Report (audit)
+router.get('/reports/test-cases', adminController.getTestCaseReport);
+
 // User management
 router.get('/users', adminController.getUsers);
 router.put('/users/:id/role', adminController.updateUserRole);

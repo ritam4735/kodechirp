@@ -11,31 +11,34 @@ export default function EditProblem() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(null);
+  const [validation, setValidation] = useState(null);
 
   useEffect(() => {
-    adminApi.getProblem(id)
-      .then(res => {
-        const p = res.data;
-        setForm({
-          title: p.title || '',
-          description: p.description || '',
-          difficulty: p.difficulty || 'Medium',
-          input_format: p.input_format || '',
-          output_format: p.output_format || '',
-          constraints: p.constraints || '',
-          tags: Array.isArray(p.tags) ? p.tags.join(', ') : '',
-          time_limit_ms: p.time_limit_ms || 2000,
-          memory_limit_mb: p.memory_limit_mb || 256,
-          source: p.source || 'kodechirp',
-          status: p.status,
-          slug: p.slug || '',
-        });
-        setLoading(false);
-      })
-      .catch(err => {
-        alert('Failed to load: ' + err.message);
-        router.push('/admin/problems');
+    Promise.all([
+      adminApi.getProblem(id),
+      adminApi.validateProblem(id).catch(() => null),
+    ]).then(([probRes, valRes]) => {
+      const p = probRes.data;
+      setForm({
+        title: p.title || '',
+        description: p.description || '',
+        difficulty: p.difficulty || 'Medium',
+        input_format: p.input_format || '',
+        output_format: p.output_format || '',
+        constraints: p.constraints || '',
+        tags: Array.isArray(p.tags) ? p.tags.join(', ') : '',
+        time_limit_ms: p.time_limit_ms || 2000,
+        memory_limit_mb: p.memory_limit_mb || 256,
+        source: p.source || 'kodechirp',
+        status: p.status,
+        slug: p.slug || '',
       });
+      if (valRes) setValidation(valRes);
+      setLoading(false);
+    }).catch(err => {
+      alert('Failed to load: ' + err.message);
+      router.push('/admin/problems');
+    });
   }, [id, router]);
 
   if (loading || !form) {
@@ -53,6 +56,12 @@ export default function EditProblem() {
       };
       if (publish !== null) payload.status = publish ? 'Published' : 'Draft';
       await adminApi.updateProblem(id, payload);
+      // Re-validate after save
+      const valRes = await adminApi.validateProblem(id).catch(() => null);
+      if (valRes) setValidation(valRes);
+      if (publish !== null) {
+        setForm(f => ({ ...f, status: publish ? 'Published' : 'Draft' }));
+      }
       alert('Saved successfully');
     } catch (err) {
       alert('Failed: ' + err.message);
@@ -60,6 +69,8 @@ export default function EditProblem() {
       setSaving(false);
     }
   };
+
+  const canPublish = validation?.valid === true;
 
   return (
     <div>
@@ -82,10 +93,50 @@ export default function EditProblem() {
           {form.status === 'Published' ? (
             <button className="admin-btn admin-btn-danger" onClick={() => handleSave(false)} disabled={saving}>Unpublish</button>
           ) : (
-            <button className="admin-btn admin-btn-primary" onClick={() => handleSave(true)} disabled={saving}>Publish</button>
+            <button
+              className="admin-btn admin-btn-primary"
+              onClick={() => handleSave(true)}
+              disabled={saving || !canPublish}
+              title={canPublish ? 'Publish this problem' : 'Fix validation errors before publishing'}
+            >
+              Publish
+            </button>
           )}
         </div>
       </div>
+
+      {/* Publish Validation Status */}
+      {validation && !validation.valid && form.status !== 'Published' && (
+        <div style={{
+          background: 'rgba(248,81,73,0.08)',
+          border: '1px solid rgba(248,81,73,0.2)',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '20px',
+          fontSize: '13px',
+        }}>
+          <div style={{ color: '#f85149', fontWeight: 600, marginBottom: '6px' }}>⚠️ Cannot Publish — Fix the following:</div>
+          <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)' }}>
+            {validation.errors.map((err, i) => (
+              <li key={i} style={{ marginBottom: '2px' }}>{err}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {validation && validation.valid && form.status !== 'Published' && (
+        <div style={{
+          background: 'rgba(74,222,128,0.08)',
+          border: '1px solid rgba(74,222,128,0.2)',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '20px',
+          fontSize: '13px',
+          color: '#4ade80',
+        }}>
+          ✅ This problem is ready to be published.
+        </div>
+      )}
 
       <div className="admin-grid-2">
         <div>

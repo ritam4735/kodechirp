@@ -89,6 +89,9 @@ export default function TestCaseManager() {
     return <div className="admin-loading"><div className="admin-spinner"></div>Loading test cases...</div>;
   }
 
+  const publicCount = testCases.filter(tc => tc.is_sample).length;
+  const privateCount = testCases.filter(tc => !tc.is_sample).length;
+
   return (
     <div>
       <div className="admin-page-header">
@@ -104,6 +107,45 @@ export default function TestCaseManager() {
           <button className="admin-btn admin-btn-primary" onClick={() => setShowAdd(!showAdd)}>+ Add Test Case</button>
         </div>
       </div>
+
+      {/* Test Case Stats */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+        <div className="admin-section-card" style={{ flex: 1, textAlign: 'center', padding: '16px' }}>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>{testCases.length}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Total Tests</div>
+        </div>
+        <div className="admin-section-card" style={{ flex: 1, textAlign: 'center', padding: '16px' }}>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: '#4ade80' }}>{publicCount}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Public</div>
+        </div>
+        <div className="admin-section-card" style={{ flex: 1, textAlign: 'center', padding: '16px' }}>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: '#f59e0b' }}>{privateCount}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Hidden</div>
+        </div>
+        <div className="admin-section-card" style={{ flex: 1, textAlign: 'center', padding: '16px' }}>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: publicCount > 0 && privateCount > 0 ? '#4ade80' : '#f85149' }}>
+            {publicCount > 0 && privateCount > 0 ? '✓' : '✗'}
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Publish Ready</div>
+        </div>
+      </div>
+
+      {/* Validation Warnings */}
+      {(publicCount === 0 || privateCount === 0) && (
+        <div style={{
+          background: 'rgba(248,81,73,0.08)',
+          border: '1px solid rgba(248,81,73,0.2)',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '20px',
+          fontSize: '13px',
+          color: '#f85149',
+        }}>
+          ⚠️ <strong>Cannot publish:</strong>{' '}
+          {publicCount === 0 && 'At least one public test case is required. '}
+          {privateCount === 0 && 'At least one hidden (private) test case is required.'}
+        </div>
+      )}
 
       {/* Bulk Import */}
       {showBulk && (
@@ -165,7 +207,7 @@ export default function TestCaseManager() {
           </thead>
           <tbody>
             {testCases.length === 0 ? (
-              <tr><td colSpan="5"><div className="admin-empty"><div className="admin-empty-icon">📋</div><div className="admin-empty-text">No test cases yet</div></div></td></tr>
+              <tr><td colSpan="5"><div className="admin-empty"><div className="admin-empty-icon">📋</div><div className="admin-empty-text">No test cases yet. Add one to get started.</div></div></td></tr>
             ) : testCases.map((tc, idx) => (
               <TestCaseRow
                 key={tc.id}

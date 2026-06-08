@@ -83,7 +83,7 @@ export default function AdminDashboard() {
             <Link href="/admin/problems/new" className="admin-btn admin-btn-primary" style={{ justifyContent: 'center' }}>
               + Create New Problem
             </Link>
-            <Link href="/admin/problems?status=unpublished" className="admin-btn admin-btn-ghost" style={{ justifyContent: 'center' }}>
+            <Link href="/admin/problems?status=Draft" className="admin-btn admin-btn-ghost" style={{ justifyContent: 'center' }}>
               Review Drafts ({stats.totalProblems - stats.publishedProblems})
             </Link>
             <Link href="/admin/users" className="admin-btn admin-btn-ghost" style={{ justifyContent: 'center' }}>

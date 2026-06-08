@@ -94,4 +94,10 @@ export const adminApi = {
     if (params.language) qs.set('language', params.language);
     return requestAdmin(`/submissions?${qs.toString()}`);
   },
+
+  // ── Validation ────────────────────────────────────────────────────────────
+  validateProblem: (id) => requestAdmin(`/problems/${id}/validate`),
+
+  // ── Reports ───────────────────────────────────────────────────────────────
+  getTestCaseReport: () => requestAdmin('/reports/test-cases'),
 };

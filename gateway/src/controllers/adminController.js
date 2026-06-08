@@ -5,6 +5,40 @@
 
 const db = require('../config/database');
 
+// ── Publish Validation Helper ───────────────────────────────────────────────
+// Validates a problem meets all requirements before publishing
+async function validatePublish(problemId) {
+  const errors = [];
+
+  // Check problem fields
+  const probResult = await db.query(
+    'SELECT title, description, constraints FROM problems WHERE id = $1',
+    [problemId]
+  );
+  if (probResult.rowCount === 0) {
+    return { valid: false, errors: ['Problem not found'] };
+  }
+  const prob = probResult.rows[0];
+  if (!prob.title || !prob.title.trim()) errors.push('Title is required');
+  if (!prob.description || !prob.description.trim()) errors.push('Description is required');
+
+  // Check test cases
+  const tcResult = await db.query(
+    `SELECT 
+       COUNT(*)::int as total,
+       COUNT(CASE WHEN is_sample = TRUE THEN 1 END)::int as public_count,
+       COUNT(CASE WHEN is_sample = FALSE THEN 1 END)::int as private_count
+     FROM test_cases WHERE problem_id = $1`,
+    [problemId]
+  );
+  const tc = tcResult.rows[0];
+  if (tc.total === 0) errors.push('At least one test case is required');
+  if (tc.public_count === 0) errors.push('At least one public test case is required');
+  if (tc.private_count === 0) errors.push('At least one private (hidden) test case is required');
+
+  return { valid: errors.length === 0, errors };
+}
+
 // ── Dashboard Stats ─────────────────────────────────────────────────────────
 
 exports.getStats = async (req, res, next) => {
@@ -174,7 +208,7 @@ exports.getProblems = async (req, res, next) => {
     const offset = parseInt(req.query.offset) || 0;
     const search = req.query.search || '';
     const difficulty = req.query.difficulty || '';
-    const status = req.query.status || ''; // 'published' | 'unpublished'
+    const status = req.query.status || '';
     const source = req.query.source || '';
     const sortBy = req.query.sortBy || 'created_at';
     const sortOrder = req.query.sortOrder === 'asc' ? 'ASC' : 'DESC';
@@ -188,43 +222,53 @@ exports.getProblems = async (req, res, next) => {
     let paramIndex = 1;
 
     if (search) {
-      whereClause += ` AND (title ILIKE $${paramIndex} OR slug ILIKE $${paramIndex})`;
+      whereClause += ` AND (p.title ILIKE $${paramIndex} OR p.slug ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
       paramIndex++;
     }
 
     if (difficulty) {
-      whereClause += ` AND difficulty = $${paramIndex}`;
+      whereClause += ` AND p.difficulty = $${paramIndex}`;
       params.push(difficulty);
       paramIndex++;
     }
 
     if (status) {
-      whereClause += ` AND status = $${paramIndex}`;
+      whereClause += ` AND p.status = $${paramIndex}`;
       params.push(status);
       paramIndex++;
     }
 
     if (source) {
-      whereClause += ` AND source = $${paramIndex}`;
+      whereClause += ` AND p.source = $${paramIndex}`;
       params.push(source);
       paramIndex++;
     }
 
     if (tags) {
-      whereClause += ` AND tags @> $${paramIndex}::jsonb`;
+      whereClause += ` AND p.tags @> $${paramIndex}::jsonb`;
       params.push(JSON.stringify([tags]));
       paramIndex++;
     }
 
-    const countQuery = `SELECT COUNT(*) FROM problems ${whereClause}`;
+    const countQuery = `SELECT COUNT(*) FROM problems p ${whereClause}`;
     const dataQuery = `
-      SELECT id, title, slug, difficulty, source, status, tags,
-             total_submissions, total_accepted, acceptance_rate,
-             created_at, updated_at
-      FROM problems
+      SELECT p.id, p.title, p.slug, p.difficulty, p.source, p.status, p.tags,
+             p.total_submissions, p.total_accepted, p.acceptance_rate,
+             p.created_at, p.updated_at,
+             COALESCE(tc_stats.test_count, 0)::int as test_count,
+             COALESCE(tc_stats.public_tests, 0)::int as public_tests,
+             COALESCE(tc_stats.private_tests, 0)::int as private_tests
+      FROM problems p
+      LEFT JOIN (
+        SELECT problem_id,
+               COUNT(*)::int as test_count,
+               COUNT(CASE WHEN is_sample = TRUE THEN 1 END)::int as public_tests,
+               COUNT(CASE WHEN is_sample = FALSE THEN 1 END)::int as private_tests
+        FROM test_cases GROUP BY problem_id
+      ) tc_stats ON tc_stats.problem_id = p.id
       ${whereClause}
-      ORDER BY ${safeSortBy} ${sortOrder}
+      ORDER BY p.${safeSortBy} ${sortOrder}
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
     params.push(limit, offset);
@@ -296,6 +340,18 @@ exports.updateProblem = async (req, res, next) => {
       time_limit_ms, memory_limit_mb, tags, metadata, slug, source
     } = req.body;
 
+    // Validate publish requirements if transitioning to Published
+    if (status === 'Published') {
+      const validation = await validatePublish(req.params.id);
+      if (!validation.valid) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot publish: ' + validation.errors.join('; '),
+          validationErrors: validation.errors,
+        });
+      }
+    }
+
     const result = await db.query(`
       UPDATE problems
       SET title = COALESCE($1, title),
@@ -348,6 +404,19 @@ exports.deleteProblem = async (req, res, next) => {
 exports.toggleProblemStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
+
+    // Validate publish requirements if transitioning to Published
+    if (status === 'Published') {
+      const validation = await validatePublish(req.params.id);
+      if (!validation.valid) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot publish: ' + validation.errors.join('; '),
+          validationErrors: validation.errors,
+        });
+      }
+    }
+
     const result = await db.query(
       'UPDATE problems SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
       [status, req.params.id]
@@ -376,6 +445,23 @@ exports.bulkAction = async (req, res, next) => {
 
     let result;
     if (action === 'publish') {
+      // Validate each problem before bulk publishing
+      const failures = [];
+      for (const id of ids) {
+        const validation = await validatePublish(id);
+        if (!validation.valid) {
+          const probRes = await db.query('SELECT title FROM problems WHERE id = $1', [id]);
+          const title = probRes.rows[0]?.title || id;
+          failures.push({ id, title, errors: validation.errors });
+        }
+      }
+      if (failures.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: `${failures.length} problem(s) cannot be published due to validation errors`,
+          failures,
+        });
+      }
       result = await db.query(
         "UPDATE problems SET status = 'Published', updated_at = NOW() WHERE id = ANY($1::uuid[]) RETURNING id",
         [ids]
@@ -706,6 +792,60 @@ exports.getSubmissions = async (req, res, next) => {
         limit,
         offset,
       }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Publish Validation Endpoint ─────────────────────────────────────────────
+
+exports.validateProblem = async (req, res, next) => {
+  try {
+    const validation = await validatePublish(req.params.id);
+    res.status(200).json({ success: true, ...validation });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Test Case Report ────────────────────────────────────────────────────────
+
+exports.getTestCaseReport = async (req, res, next) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        p.id, p.title, p.slug, p.status, p.difficulty, p.source,
+        COALESCE(tc.total, 0)::int as total_tests,
+        COALESCE(tc.public_count, 0)::int as public_tests,
+        COALESCE(tc.private_count, 0)::int as private_tests
+      FROM problems p
+      LEFT JOIN (
+        SELECT 
+          problem_id,
+          COUNT(*)::int as total,
+          COUNT(CASE WHEN is_sample = TRUE THEN 1 END)::int as public_count,
+          COUNT(CASE WHEN is_sample = FALSE THEN 1 END)::int as private_count
+        FROM test_cases
+        GROUP BY problem_id
+      ) tc ON tc.problem_id = p.id
+      ORDER BY tc.total ASC NULLS FIRST, p.created_at DESC
+    `);
+
+    const summary = {
+      totalProblems: result.rows.length,
+      problemsWithTests: result.rows.filter(r => r.total_tests > 0).length,
+      problemsMissingTests: result.rows.filter(r => r.total_tests === 0).length,
+      totalPublicTests: result.rows.reduce((sum, r) => sum + r.public_tests, 0),
+      totalPrivateTests: result.rows.reduce((sum, r) => sum + r.private_tests, 0),
+      totalTests: result.rows.reduce((sum, r) => sum + r.total_tests, 0),
+      publishedWithoutTests: result.rows.filter(r => r.status === 'Published' && r.total_tests === 0).length,
+    };
+
+    res.status(200).json({
+      success: true,
+      summary,
+      problems: result.rows,
     });
   } catch (err) {
     next(err);
