@@ -315,6 +315,78 @@ body {
   margin-left: 2px;
 }
 
+/* ── Profile Dropdown ── */
+.nav-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: rgba(10, 14, 26, 0.95);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 20px rgba(80,120,255,0.08);
+  z-index: 200;
+  animation: dropdownFadeIn 0.15s ease;
+  overflow: hidden;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.nav-dropdown-header {
+  padding: 12px 16px;
+}
+.nav-dropdown-username {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.nav-dropdown-email {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.nav-dropdown-divider {
+  height: 1px;
+  background: var(--border-glass);
+  margin: 0;
+}
+
+.nav-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.nav-dropdown-item:hover {
+  background: rgba(80, 120, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.nav-dropdown-logout {
+  color: #f87171;
+}
+.nav-dropdown-logout:hover {
+  background: rgba(248, 81, 73, 0.1);
+  color: #f87171;
+}
+
 /* ============================================
    HERO SECTION
    ============================================ */
