@@ -26,8 +26,8 @@ router.post(
 router.post(
   '/login',
   authLoginLimiter,
-  body('email').isEmail().normalizeEmail(),
-  body('password').notEmpty(),
+  body('identifier').notEmpty().withMessage('Email or username is required'),
+  body('password').notEmpty().withMessage('Password is required'),
   validateRequest,
   authController.login
 );

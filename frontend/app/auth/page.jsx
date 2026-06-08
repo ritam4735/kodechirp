@@ -4,25 +4,38 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
 
+import { api } from '../../lib/api';
+
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const { handleLogin } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Mock Authentication
-    const mockUser = {
-      id: '123',
-      name: isLogin ? 'DemoUser' : name,
-      email: email,
-    };
-    const mockToken = 'mock_jwt_token_xyz';
-    handleLogin(mockUser, mockToken);
-    router.push('/');
+    setError('');
+    try {
+      let data;
+      if (isLogin) {
+        data = await api.login(identifier, password);
+      } else {
+        data = await api.signup(identifier, password, name);
+      }
+      
+      handleLogin(data.user, data.accessToken);
+      
+      if (data.user.role === 'admin') {
+        router.push('/admin');
+      } else {
+        router.push('/');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -31,6 +44,7 @@ export default function AuthPage() {
         <h2 className="text-2xl font-bold text-[#e6edf3] mb-6 text-center">
           {isLogin ? 'Welcome Back' : 'Create an Account'}
         </h2>
+        {error && <div className="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded mb-4 text-sm">{error}</div>}
         
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
@@ -46,12 +60,14 @@ export default function AuthPage() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-[#8b949e] mb-1">Email</label>
+            <label className="block text-sm font-medium text-[#8b949e] mb-1">
+              {isLogin ? 'Username or Email' : 'Email'}
+            </label>
             <input
               required
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type={isLogin ? "text" : "email"}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               className="w-full bg-[#0d1117] border border-[#30363d] text-[#e6edf3] rounded p-2 focus:border-[#58a6ff] focus:outline-none transition-colors"
             />
           </div>

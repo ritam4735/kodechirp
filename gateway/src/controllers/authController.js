@@ -36,9 +36,9 @@ exports.signup = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { identifier, password } = req.body;
 
-    const result = await authService.login({ email, password });
+    const result = await authService.login({ identifier, password });
 
     // Set refresh token as HTTP-only cookie
     res.cookie('refreshToken', result.refreshToken, REFRESH_COOKIE_OPTIONS);

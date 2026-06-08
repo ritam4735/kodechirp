@@ -52,10 +52,10 @@ async function signup({ email, password, username }) {
 /**
  * Authenticate user and issue tokens.
  */
-async function login({ email, password }) {
+async function login({ identifier, password }) {
   const result = await db.query(
-    'SELECT * FROM users WHERE email = $1 AND is_active = TRUE',
-    [email]
+    'SELECT * FROM users WHERE (email = $1 OR username = $1) AND is_active = TRUE',
+    [identifier]
   );
 
   if (result.rows.length === 0) {
