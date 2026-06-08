@@ -108,9 +108,9 @@ KodeChirp follows a **gateway-worker architecture** — separating API routing, 
 | Component | Role |
 | :--- | :--- |
 | **API Gateway** | Authentication, routing, request validation, job dispatch, WebSocket management |
-| **FastAPI Workers** | Queue consumption, Docker sandbox orchestration, test case evaluation, result publishing |
+| **FastAPI Workers** | Queue consumption, Docker/Podman sandbox orchestration, test case evaluation, result publishing |
 | **Redis** | BullMQ job queue, Pub/Sub event bus, rate-limit counters, session cache |
-| **Docker Sandboxes** | Isolated, ephemeral containers for untrusted code execution |
+| **Docker/Podman Sandboxes** | Isolated, ephemeral containers for untrusted code execution |
 | **Nginx** | Reverse proxy, SSL termination, rate limiting, WebSocket upgrade handling |
 | **PostgreSQL** | Persistent storage — users, problems, submissions, metrics, contests |
 
@@ -120,14 +120,18 @@ KodeChirp follows a **gateway-worker architecture** — separating API routing, 
 
 ### Execution Pipeline
 - 🔄 **Async Execution Pipeline** — Submissions are queued via BullMQ and processed by independent FastAPI workers
-- 🐳 **Docker Sandboxing** — Every execution runs in a hardened, ephemeral Alpine container with strict resource limits
+- 🐳 **Docker/Podman Sandboxing** — Every execution runs in a hardened, ephemeral Alpine container with strict resource limits
 - 🌐 **Multi-Language Support** — C, C++, Python 3, Node.js, and Java with dedicated sandbox images
 - 📊 **Per-Test-Case Metrics** — Runtime, memory, exit code, and output tracked for each test case
 
-### Real-Time System
-- ⚡ **WebSocket Updates** — Submission status pushed instantly via Socket.IO (queued → processing → completed)
-- 📡 **Redis Pub/Sub** — Workers publish results to Redis channels, gateway broadcasts to connected clients
-- 🔔 **Per-User Channels** — Each authenticated user receives updates only for their own submissions
+### Submission Tracking
+- 🔄 **Reliable Polling Mechanism** — Frontend actively polls the database via API for resilient, synchronous-style execution tracking
+- 📡 **Redis Pub/Sub Backend** — Workers publish results to Redis channels, processed by the gateway to update database state reliably
+
+### Admin & Platform Management
+- 🛡️ **Role-Based Admin Console** — A dedicated, secure dashboard for platform management with advanced analytics and user control
+- 🚦 **Multi-State Problem Lifecycle** — Robust granular problem publishing system (`Draft`, `Review`, `Published`, `Archived`)
+- 📥 **LeetCode Dataset Integration** — Built-in automated ingestion pipelines to import and format external algorithmic problem sets
 
 ### Authentication & Security
 - 🔐 **JWT Authentication** — Access + refresh token rotation with secure httpOnly cookies
@@ -325,12 +329,12 @@ npm run health
 
 ---
 
-## 🔁 Real-Time Execution Flow
+## 🔁 Execution Flow
 
-The submission pipeline is fully asynchronous with real-time status tracking:
+The submission pipeline is fully asynchronous, and the frontend polls for updates:
 
 ```
- Client                Gateway              Redis               Worker              Docker
+ Client                Gateway              Redis               Worker            Docker/Podman
    │                     │                    │                    │                    │
    │  POST /submit       │                    │                    │                    │
    ├────────────────────>│                    │                    │                    │
@@ -345,21 +349,19 @@ The submission pipeline is fully asynchronous with real-time status tracking:
    │<────────────────────┤                    │                    │                    │
    │                     │                    │  BRPOP (dequeue)   │                    │
    │                     │                    │<───────────────────┤                    │
-   │                     │                    │                    │                    │
-   │                     │                    │  PUB processing    │                    │
-   │  WS: processing     │  SUB result:*      │<───────────────────┤                    │
+   │  GET /poll          │                    │                    │                    │
+   ├────────────────────>│  PUB processing    │                    │                    │
    │<────────────────────┤<───────────────────┤                    │                    │
-   │                     │                    │                    │  docker.run()      │
-   │                     │                    │                    ├───────────────────>│
+   │  { status:          │                    │                    │  docker.run()      │
+   │    processing }     │                    │                    ├───────────────────>│
    │                     │                    │                    │                    │
    │                     │                    │                    │   {stdout, stderr, │
    │                     │                    │                    │   exitCode, time } │
-   │                     │                    │                    │<───────────────────┤
-   │                     │                    │                    │                    │
-   │                     │                    │  PUB completed     │                    │
-   │  WS: accepted       │  SUB result:*      │<───────────────────┤                    │
+   │  GET /poll          │                    │                    │<───────────────────┤
+   ├────────────────────>│  PUB completed     │                    │                    │
    │<────────────────────┤<───────────────────┤                    │                    │
-   │                     │                    │                    │                    │
+   │  { status:          │                    │                    │                    │
+   │    accepted }       │                    │                    │                    │
 ```
 
 ### Status Lifecycle
