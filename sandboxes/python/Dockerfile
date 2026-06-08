@@ -3,6 +3,9 @@
 
 FROM python:3.12-alpine
 
+# Install GNU time for memory profiling
+RUN apk add --no-cache time
+
 # Create non-root sandbox user
 RUN addgroup -S sandbox && adduser -S -G sandbox sandbox
 

@@ -9,7 +9,7 @@ LANGUAGE_CONFIG = {
         "memory": "64m",
         "cpus": 0.5,
         "tmpfs_size": "16m",
-        "run_command": "node main.js",
+        "run_command": "/app/mem_wrapper node main.js",
         "timeout": 5,
     },
     "python": {
@@ -18,7 +18,7 @@ LANGUAGE_CONFIG = {
         "memory": "64m",
         "cpus": 0.5,
         "tmpfs_size": "16m",
-        "run_command": "python main.py",
+        "run_command": "/app/mem_wrapper python main.py",
         "timeout": 5,
     },
     "cpp": {
@@ -27,7 +27,7 @@ LANGUAGE_CONFIG = {
         "memory": "256m",
         "cpus": 1.0,
         "tmpfs_size": "32m",
-        "run_command": "g++ main.cpp -O2 -std=c++17 -o /tmp/main && /tmp/main",
+        "run_command": "g++ main.cpp -O2 -std=c++17 -o /tmp/main && /app/mem_wrapper /tmp/main",
         "timeout": 15,
     },
     "c": {
@@ -36,7 +36,7 @@ LANGUAGE_CONFIG = {
         "memory": "256m",
         "cpus": 1.0,
         "tmpfs_size": "32m",
-        "run_command": "gcc main.c -O2 -std=c11 -o /tmp/main && /tmp/main",
+        "run_command": "gcc main.c -O2 -std=c11 -o /tmp/main && /app/mem_wrapper /tmp/main",
         "timeout": 15,
     },
     "java": {
@@ -45,7 +45,7 @@ LANGUAGE_CONFIG = {
         "memory": "512m",
         "cpus": 1.0,
         "tmpfs_size": "64m",
-        "run_command": "javac Main.java && java Main",
+        "run_command": "javac Main.java && /app/mem_wrapper java Main",
         "timeout": 15,
     },
 }

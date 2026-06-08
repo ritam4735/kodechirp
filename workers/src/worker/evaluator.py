@@ -112,6 +112,7 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
                 testCasesPassed=passed,
                 testCasesTotal=total,
                 runtimeMs=runtime_ms,
+                memoryKb=memory_kb,
                 error=truncate(result.stderr, 1000),
                 failedTestCase={
                     "input": tc.input,
@@ -135,6 +136,7 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
                 testCasesPassed=passed,
                 testCasesTotal=total,
                 runtimeMs=runtime_ms,
+                memoryKb=memory_kb,
                 failedTestCase={
                     "input": tc.input,
                     "expectedOutput": tc.expectedOutput,

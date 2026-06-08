@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc curl ca-certificates \
+    gcc libc6-dev curl ca-certificates \
     && curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-24.0.9.tgz -o docker.tgz \
     && tar xzvf docker.tgz \
     && mv docker/docker /usr/local/bin/docker \
@@ -17,6 +17,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source
 COPY src/ ./src/
+
+# Compile the memory wrapper statically
+RUN gcc -static src/utils/mem_wrapper.c -o src/utils/mem_wrapper && chmod +x src/utils/mem_wrapper
 
 EXPOSE 8000
 

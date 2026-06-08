@@ -66,6 +66,13 @@ class DockerService:
         src_path.write_text(code, encoding="utf-8")
         os.chmod(str(src_path), 0o666)
 
+        # Copy mem_wrapper
+        mem_wrapper_src = Path(__file__).parent.parent / "utils" / "mem_wrapper"
+        if mem_wrapper_src.exists():
+            mem_wrapper_dst = run_dir / "mem_wrapper"
+            shutil.copy2(mem_wrapper_src, mem_wrapper_dst)
+            os.chmod(str(mem_wrapper_dst), 0o755)
+
         try:
             # Build Docker command
             timeout_s = min(timeout_ms / 1000, config["timeout"])
@@ -119,8 +126,25 @@ class DockerService:
 
             elapsed_ms = int((time.monotonic() - start_time) * 1000)
 
-            stdout = sanitize_output(stdout_bytes.decode("utf-8", errors="replace"))
-            stderr = sanitize_output(stderr_bytes.decode("utf-8", errors="replace"))
+            raw_stdout = stdout_bytes.decode("utf-8", errors="replace")
+            raw_stderr = stderr_bytes.decode("utf-8", errors="replace")
+
+            # Extract memory profile
+            memory_kb = None
+            filtered_stderr_lines = []
+            for line in raw_stderr.splitlines():
+                if line.startswith("MEMORY_KB: "):
+                    try:
+                        memory_kb = int(line.split("MEMORY_KB: ")[1].strip())
+                    except ValueError:
+                        pass
+                else:
+                    filtered_stderr_lines.append(line)
+            
+            raw_stderr = "\n".join(filtered_stderr_lines)
+
+            stdout = sanitize_output(raw_stdout)
+            stderr = sanitize_output(raw_stderr)
 
             return ExecutionResult(
                 stdout=stdout,
@@ -128,6 +152,7 @@ class DockerService:
                 exitCode=proc.returncode or 0,
                 timedOut=False,
                 runtimeMs=elapsed_ms,
+                memoryKb=memory_kb,
             )
 
         except Exception as e:
