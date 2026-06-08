@@ -88,19 +88,24 @@ export const api = {
 
   // ── Problems ────────────────────────────────────────────────────────────────
 
-  getProblems: async (searchQuery = '') => {
-    const qs = searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : '';
-    const data = await request(`/api/problems${qs}`);
-    // Backend returns { success, data: [...], meta }
-    return { problems: data.data };
+  getProblems: async (searchQuery = '', { page = 1, limit = 50, difficulty = '' } = {}) => {
+    const qs = new URLSearchParams();
+    if (searchQuery) qs.set('search', searchQuery);
+    if (page) qs.set('page', page);
+    if (limit) qs.set('limit', limit);
+    if (difficulty) qs.set('difficulty', difficulty);
+    const queryStr = qs.toString() ? `?${qs.toString()}` : '';
+    const data = await request(`/api/problems${queryStr}`);
+    // Backend returns { success, data: [...], pagination: { page, limit, total } }
+    return { problems: data.data, pagination: data.pagination };
   },
 
   getProblem: async (slug) => {
     const data = await request(`/api/problems/${slug}`);
-    // Backend returns { success, data: { ...problem, sample_test_cases: [...] } }
+    // Backend returns { success, data: { ...problem, testCases: [...] } }
     const problem = data.data;
     // Normalise test cases to the shape the frontend already uses: { input, output }
-    problem.testCases = (problem.sample_test_cases || []).map((tc) => ({
+    problem.testCases = (problem.testCases || []).map((tc) => ({
       input: tc.input,
       output: tc.expected_output,
     }));
