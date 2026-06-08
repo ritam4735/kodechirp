@@ -3,6 +3,7 @@
 import { Syne, DM_Sans, JetBrains_Mono } from 'next/font/google';
 import '../styles/globals.css';
 import '../styles/landing.css';
+import '../styles/admin.css';
 import { Navbar } from '../components/layout/Navbar';
 import { useAuth } from '../hooks/useAuth';
 import { useEffect } from 'react';
