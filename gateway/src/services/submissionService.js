@@ -18,7 +18,7 @@ const { STATUS } = require('../utils/constants');
 async function submitCode({ problemId, code, language, userId }) {
   // 1. Verify problem exists and fetch test cases
   const problemResult = await db.query(
-    'SELECT id, time_limit_ms, memory_limit_mb FROM problems WHERE id = $1 AND is_active = TRUE',
+    "SELECT id, time_limit_ms, memory_limit_mb FROM problems WHERE id = $1 AND status = 'Published'",
     [problemId]
   );
 

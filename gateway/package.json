@@ -7,7 +7,9 @@
     "start": "node src/server.js",
     "dev": "nodemon --watch src src/server.js",
     "test": "jest --coverage",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "generate-missing-testcases": "node src/scripts/generate-missing-testcases.js",
+    "generate-missing-testcases:dry": "node src/scripts/generate-missing-testcases.js --dry-run"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
