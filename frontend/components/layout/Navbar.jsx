@@ -112,13 +112,13 @@ export const Navbar = () => {
                 <Link href="/profile" className="nav-dropdown-item">
                   <span>👤</span> Profile
                 </Link>
-                <Link href="/coming-soon/nest" className="nav-dropdown-item">
+                <Link href="/settings" className="nav-dropdown-item">
                   <span>⚙️</span> Settings
                 </Link>
-                <Link href="/coming-soon/nest" className="nav-dropdown-item">
+                <Link href="/submissions" className="nav-dropdown-item">
                   <span>📨</span> My Submissions
                 </Link>
-                <Link href="/coming-soon/nest" className="nav-dropdown-item">
+                <Link href="/progress" className="nav-dropdown-item">
                   <span>📊</span> My Progress
                 </Link>
                 {isAdmin && (
