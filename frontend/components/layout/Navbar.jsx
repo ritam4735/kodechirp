@@ -20,8 +20,14 @@ export const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Admin tab only when authenticated AND role is admin
-  const isAdmin = isAuthenticated && user?.role === 'admin';
+  const isAdmin = mounted && isAuthenticated && user?.role === 'admin';
 
   const isActive = (href) => {
     if (href === '/') return pathname === '/';
@@ -76,63 +82,67 @@ export const Navbar = () => {
 
       <div className="nav-spacer"></div>
 
-      {isAuthenticated ? (
-        <div className="nav-user-container" ref={menuRef} style={{ position: 'relative' }}>
-          <div
-            className="nav-user"
-            id="navUser"
-            onClick={() => setMenuOpen(!menuOpen)}
-            title="Account menu"
-          >
-            <div className="nav-avatar">🦅</div>
-            <div className="nav-user-info">
-              <div className="nav-user-name">
-                {user?.username || user?.name || 'Profile'}
-                {isAdmin && <span className="nav-admin-badge" style={{ marginLeft: '6px' }}>Admin</span>}
+      {mounted ? (
+        isAuthenticated ? (
+          <div className="nav-user-container" ref={menuRef} style={{ position: 'relative' }}>
+            <div
+              className="nav-user"
+              id="navUser"
+              onClick={() => setMenuOpen(!menuOpen)}
+              title="Account menu"
+            >
+              <div className="nav-avatar">🦅</div>
+              <div className="nav-user-info">
+                <div className="nav-user-name">
+                  {user?.username || user?.name || 'Profile'}
+                  {isAdmin && <span className="nav-admin-badge" style={{ marginLeft: '6px' }}>Admin</span>}
+                </div>
+                <div className="nav-user-tag">{isAdmin ? 'Administrator' : 'Keep Chirping!'}</div>
               </div>
-              <div className="nav-user-tag">{isAdmin ? 'Administrator' : 'Keep Chirping!'}</div>
+              <span className="nav-chevron" style={{ transform: menuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
             </div>
-            <span className="nav-chevron" style={{ transform: menuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
-          </div>
 
-          {menuOpen && (
-            <div className="nav-dropdown">
-              <div className="nav-dropdown-header">
-                <div className="nav-dropdown-username">{user?.username}</div>
-                <div className="nav-dropdown-email">{user?.email || ''}</div>
+            {menuOpen && (
+              <div className="nav-dropdown">
+                <div className="nav-dropdown-header">
+                  <div className="nav-dropdown-username">{user?.username}</div>
+                  <div className="nav-dropdown-email">{user?.email || ''}</div>
+                </div>
+                <div className="nav-dropdown-divider"></div>
+                <Link href="/profile" className="nav-dropdown-item">
+                  <span>👤</span> Profile
+                </Link>
+                <Link href="/coming-soon/nest" className="nav-dropdown-item">
+                  <span>⚙️</span> Settings
+                </Link>
+                <Link href="/coming-soon/nest" className="nav-dropdown-item">
+                  <span>📨</span> My Submissions
+                </Link>
+                <Link href="/coming-soon/nest" className="nav-dropdown-item">
+                  <span>📊</span> My Progress
+                </Link>
+                {isAdmin && (
+                  <>
+                    <div className="nav-dropdown-divider"></div>
+                    <Link href="/admin" className="nav-dropdown-item">
+                      <span>🛡️</span> Admin Console
+                    </Link>
+                  </>
+                )}
+                <div className="nav-dropdown-divider"></div>
+                <button className="nav-dropdown-item nav-dropdown-logout" onClick={onLogout}>
+                  <span>🚪</span> Sign Out
+                </button>
               </div>
-              <div className="nav-dropdown-divider"></div>
-              <Link href="/profile" className="nav-dropdown-item">
-                <span>👤</span> Profile
-              </Link>
-              <Link href="/coming-soon/nest" className="nav-dropdown-item">
-                <span>⚙️</span> Settings
-              </Link>
-              <Link href="/coming-soon/nest" className="nav-dropdown-item">
-                <span>📨</span> My Submissions
-              </Link>
-              <Link href="/coming-soon/nest" className="nav-dropdown-item">
-                <span>📊</span> My Progress
-              </Link>
-              {isAdmin && (
-                <>
-                  <div className="nav-dropdown-divider"></div>
-                  <Link href="/admin" className="nav-dropdown-item">
-                    <span>🛡️</span> Admin Console
-                  </Link>
-                </>
-              )}
-              <div className="nav-dropdown-divider"></div>
-              <button className="nav-dropdown-item nav-dropdown-logout" onClick={onLogout}>
-                <span>🚪</span> Sign Out
-              </button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        ) : (
+          <Link href="/auth" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '13px' }}>
+            Join Flock
+          </Link>
+        )
       ) : (
-        <Link href="/auth" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '13px' }}>
-          Join Flock
-        </Link>
+        <div style={{ width: '90px', height: '36px' }}></div>
       )}
     </nav>
   );

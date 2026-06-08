@@ -2,7 +2,7 @@
 
 import { useAuth } from '../../hooks/useAuth';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 const ADMIN_NAV = [
@@ -24,15 +24,23 @@ export default function AdminLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth');
-    } else if (user?.role !== 'admin') {
-      router.push('/');
-    }
-  }, [user, isAuthenticated, router]);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isAuthenticated || user?.role !== 'admin') {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      if (!isAuthenticated) {
+        router.push('/auth');
+      } else if (user?.role !== 'admin') {
+        router.push('/');
+      }
+    }
+  }, [user, isAuthenticated, router, mounted]);
+
+  if (!mounted || !isAuthenticated || user?.role !== 'admin') {
     return (
       <div className="admin-loading">
         <div className="admin-spinner"></div>
