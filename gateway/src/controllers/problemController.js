@@ -14,7 +14,7 @@ exports.getAllProblems = async (req, res, next) => {
       SELECT id, slug, title, difficulty, acceptance_rate,
              total_submissions, total_accepted, created_at
       FROM problems
-      WHERE is_active = TRUE
+      WHERE status = 'Published'
     `;
     const params = [];
     let paramIndex = 1;
@@ -37,7 +37,7 @@ exports.getAllProblems = async (req, res, next) => {
     const result = await db.query(queryText, params);
 
     // Get total count for pagination
-    let countQuery = 'SELECT COUNT(*) FROM problems WHERE is_active = TRUE';
+    let countQuery = "SELECT COUNT(*) FROM problems WHERE status = 'Published'";
     const countParams = [];
     let countParamIndex = 1;
 
@@ -72,10 +72,21 @@ exports.getProblem = async (req, res, next) => {
   try {
     const { slug } = req.params;
 
-    const problemResult = await db.query(
-      `SELECT * FROM problems WHERE (slug = $1 OR id::text = $1) AND is_active = TRUE`,
-      [slug]
-    );
+    let isAdmin = false;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const jwt = require('jsonwebtoken');
+      try {
+        const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+        if (decoded.role === 'admin') isAdmin = true;
+      } catch (e) {}
+    }
+
+    const query = isAdmin 
+      ? `SELECT * FROM problems WHERE (slug = $1 OR id::text = $1)`
+      : `SELECT * FROM problems WHERE (slug = $1 OR id::text = $1) AND status = 'Published'`;
+
+    const problemResult = await db.query(query, [slug]);
 
     if (problemResult.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Problem not found' });

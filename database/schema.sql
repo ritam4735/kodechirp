@@ -55,6 +55,9 @@ CREATE TABLE IF NOT EXISTS problems (
     total_submissions INTEGER DEFAULT 0,
     total_accepted INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
+    source VARCHAR(50) DEFAULT 'kodechirp',
+    tags JSONB DEFAULT '[]'::jsonb,
+    metadata JSONB DEFAULT '{}'::jsonb,
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
