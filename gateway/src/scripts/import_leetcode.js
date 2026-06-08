@@ -4,7 +4,7 @@ const csv = require('csv-parser');
 const db = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
 
-const CSV_FILE_PATH = path.join(__dirname, '../../../data/leetcode_dataset - lc.csv');
+const CSV_FILE_PATH = fs.existsSync('/app/leetcode_dataset.csv') ? '/app/leetcode_dataset.csv' : path.join(__dirname, '../../../data/leetcode_dataset - lc.csv');
 
 function slugify(title) {
   return title
@@ -82,7 +82,7 @@ async function importDataset() {
 
         const query = `
           INSERT INTO problems 
-          (slug, title, description, difficulty, constraints, source, is_active, tags, metadata)
+          (slug, title, description, difficulty, constraints, source, status, tags, metadata)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         `;
 
@@ -93,7 +93,7 @@ async function importDataset() {
           difficulty,
           constraints,
           'leetcode_import',
-          false, // Initially unpublished
+          'Draft', // Initially unpublished
           JSON.stringify(tags),
           JSON.stringify(metadata)
         ]);

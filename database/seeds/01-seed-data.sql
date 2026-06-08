@@ -2,8 +2,14 @@
 -- KodeChirp — Seed Data: Problems & Test Cases
 -- ============================================================================
 
+-- Sample users
+INSERT INTO users (id, username, email, password_hash, role) VALUES
+('00000000-0000-0000-0000-000000000000', 'admin', 'admin@kodechirp.io', '$2a$10$C51JpYSHpmmawUtVsu1Ljeti7UcUZd7HUiBcUHyecswrgn1HRtrzS', 'admin'),
+('00000000-0000-0000-0000-000000000001', 'user', 'user@kodechirp.io', '$2a$10$C51JpYSHpmmawUtVsu1Ljeti7UcUZd7HUiBcUHyecswrgn1HRtrzS', 'user')
+ON CONFLICT (username) DO NOTHING;
+
 -- Sample problems
-INSERT INTO problems (id, slug, title, description, difficulty, input_format, output_format, constraints) VALUES
+INSERT INTO problems (id, slug, title, description, difficulty, input_format, output_format, constraints, status) VALUES
 (
   '11111111-1111-1111-1111-111111111111',
   'two-sum',
@@ -20,7 +26,8 @@ Second line contains n space-separated integers.',
   '2 ≤ n ≤ 10^4
 -10^9 ≤ nums[i] ≤ 10^9
 -10^9 ≤ target ≤ 10^9
-Only one valid answer exists.'
+Only one valid answer exists.',
+  'Published'
 ),
 (
   '22222222-2222-2222-2222-222222222222',
@@ -36,7 +43,8 @@ An input string is valid if:
   'A single line containing the string s.',
   'Print "true" if the string is valid, "false" otherwise.',
   '1 ≤ |s| ≤ 10^4
-s consists of parentheses only: ()[]{}'
+s consists of parentheses only: ()[]{}',
+  'Published'
 ),
 (
   '33333333-3333-3333-3333-333333333333',
@@ -52,7 +60,8 @@ Output: 5 → 4 → 3 → 2 → 1',
 Second line contains n space-separated integers representing node values.',
   'Print the values of the reversed linked list separated by spaces.',
   '0 ≤ n ≤ 5000
--5000 ≤ Node.val ≤ 5000'
+-5000 ≤ Node.val ≤ 5000',
+  'Published'
 ),
 (
   '44444444-4444-4444-4444-444444444444',
@@ -64,7 +73,8 @@ Each time you can either climb 1 or 2 steps. In how many distinct ways can you c
   'Medium',
   'A single integer n.',
   'Print the number of distinct ways to climb to the top.',
-  '1 ≤ n ≤ 45'
+  '1 ≤ n ≤ 45',
+  'Published'
 ),
 (
   '55555555-5555-5555-5555-555555555555',
@@ -78,7 +88,8 @@ A subarray is a contiguous non-empty sequence of elements within an array.',
 Second line contains n space-separated integers.',
   'Print the maximum subarray sum.',
   '1 ≤ n ≤ 10^5
--10^4 ≤ nums[i] ≤ 10^4'
+-10^4 ≤ nums[i] ≤ 10^4',
+  'Published'
 ),
 (
   '66666666-6666-6666-6666-666666666666',
@@ -94,7 +105,8 @@ Third line: n space-separated integers (nums2)',
   'Print the merged sorted array space-separated.',
   '0 ≤ m, n ≤ 200
 1 ≤ m + n ≤ 200
--10^9 ≤ nums[i] ≤ 10^9'
+-10^9 ≤ nums[i] ≤ 10^9',
+  'Published'
 ) ON CONFLICT (id) DO NOTHING;
 
 -- Sample test cases

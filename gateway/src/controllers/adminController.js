@@ -41,7 +41,7 @@ exports.getStats = async (req, res, next) => {
         ORDER BY s.created_at DESC
         LIMIT 10
       `),
-      db.query("SELECT COUNT(*) FROM problems WHERE is_active = true"),
+      db.query("SELECT COUNT(*) FROM problems WHERE status = 'Published'"),
       db.query("SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '7 days'"),
       db.query("SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '30 days'"),
     ]);
@@ -377,12 +377,12 @@ exports.bulkAction = async (req, res, next) => {
     let result;
     if (action === 'publish') {
       result = await db.query(
-        'UPDATE problems SET is_active = true, updated_at = NOW() WHERE id = ANY($1::uuid[]) RETURNING id',
+        "UPDATE problems SET status = 'Published', updated_at = NOW() WHERE id = ANY($1::uuid[]) RETURNING id",
         [ids]
       );
     } else if (action === 'unpublish') {
       result = await db.query(
-        'UPDATE problems SET is_active = false, updated_at = NOW() WHERE id = ANY($1::uuid[]) RETURNING id',
+        "UPDATE problems SET status = 'Draft', updated_at = NOW() WHERE id = ANY($1::uuid[]) RETURNING id",
         [ids]
       );
     } else if (action === 'delete') {

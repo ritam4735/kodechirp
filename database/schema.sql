@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS problems (
     acceptance_rate REAL DEFAULT 0,
     total_submissions INTEGER DEFAULT 0,
     total_accepted INTEGER DEFAULT 0,
-    is_active BOOLEAN DEFAULT TRUE,
+    status VARCHAR(20) DEFAULT 'Draft' CHECK (status IN ('Draft', 'Review', 'Published', 'Archived')),
     source VARCHAR(50) DEFAULT 'kodechirp',
     tags JSONB DEFAULT '[]'::jsonb,
     metadata JSONB DEFAULT '{}'::jsonb,
