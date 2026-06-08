@@ -15,17 +15,9 @@ export const useAuth = () => {
     localStorage.removeItem('kc_user');
   };
 
-  const initAuth = () => {
-    const storedToken = localStorage.getItem('kc_token');
-    const storedUser = localStorage.getItem('kc_user');
-    if (storedToken && storedUser) {
-      try {
-        login(JSON.parse(storedUser), storedToken);
-      } catch {
-        handleLogout();
-      }
-    }
-  };
+  // initAuth kept for backward compat but is now a no-op;
+  // the store rehydrates itself synchronously from localStorage.
+  const initAuth = () => {};
 
   return { user, token, isAuthenticated, handleLogin, handleLogout, initAuth };
 };
