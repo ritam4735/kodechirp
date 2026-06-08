@@ -16,9 +16,9 @@ router.post(
   '/run',
   optionalAuth,
   submitRunLimiter,
-  body('code').isString().notEmpty().withMessage('Code is required'),
+  body('code').isString().isLength({ min: 1, max: 65535 }).withMessage('Code must be between 1 and 65535 characters'),
   body('language').isString().isIn(LANGUAGES).withMessage(`Supported languages: ${LANGUAGES.join(', ')}`),
-  body('stdin').optional().isString(),
+  body('stdin').optional().isString().isLength({ max: 65535 }).withMessage('Stdin must not exceed 65535 characters'),
   validateRequest,
   submissionController.runCode
 );
@@ -28,7 +28,7 @@ router.post(
   '/submit',
   optionalAuth,
   submitJudgeLimiter,
-  body('code').isString().notEmpty().withMessage('Code is required'),
+  body('code').isString().isLength({ min: 1, max: 65535 }).withMessage('Code must be between 1 and 65535 characters'),
   body('language').isString().isIn(LANGUAGES).withMessage(`Supported languages: ${LANGUAGES.join(', ')}`),
   body('problem_id').matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i).withMessage('Valid problem ID is required'),
   validateRequest,

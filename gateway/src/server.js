@@ -40,8 +40,8 @@ app.use(cors({
 }));
 
 // Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '500kb' }));
+app.use(express.urlencoded({ extended: true, limit: '500kb' }));
 app.use(cookieParser());
 
 // Request logging
@@ -58,6 +58,7 @@ app.use('/api/submissions', require('./routes/submissions'));
 app.use('/api/contests',    require('./routes/contests'));
 app.use('/api/leaderboard', require('./routes/leaderboard'));
 app.use('/api/chirps',      require('./routes/chirps'));
+app.use('/api/admin',       require('./routes/admin'));
 app.use('/health',          require('./routes/health'));
 
 // ── 404 handler ──────────────────────────────────────────────────────────────

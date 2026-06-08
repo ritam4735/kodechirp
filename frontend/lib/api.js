@@ -34,6 +34,23 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  // ── Auth ────────────────────────────────────────────────────────────────────
+  login: async (identifier, password) => {
+    const data = await request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ identifier, password }),
+    });
+    return data;
+  },
+
+  signup: async (email, password, username) => {
+    const data = await request('/api/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, username }),
+    });
+    return data;
+  },
+
   // ── Problems ────────────────────────────────────────────────────────────────
 
   getProblems: async (searchQuery = '') => {
