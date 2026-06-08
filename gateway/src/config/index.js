@@ -39,8 +39,8 @@ const config = {
   // ── Rate Limiting ──────────────────────────────────────────────────────────
   rateLimit: {
     global:      { window: 60, max: 100 },
-    authLogin:   { window: 900, max: 5 },     // 15 min
-    authSignup:  { window: 3600, max: 3 },    // 1 hour
+    authLogin:   { window: 900, max: 50 },    // 15 min
+    authSignup:  { window: 3600, max: 30 },   // 1 hour
     submitRun:   { window: 60, max: 10 },
     submitJudge: { window: 60, max: 5 },
   },

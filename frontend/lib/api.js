@@ -6,6 +6,8 @@
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
+import { useAuthStore } from '../store/authStore';
+
 async function request(path, options = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('kc_token') : null;
   const headers = { 'Content-Type': 'application/json', ...options.headers };
@@ -14,12 +16,45 @@ async function request(path, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  let res = await fetch(`${API_BASE}${path}`, {
     headers,
     ...options,
   });
 
-  const data = await res.json();
+  let data = await res.json().catch(() => ({}));
+
+  if (res.status === 401 && data.code === 'TOKEN_EXPIRED') {
+    try {
+      const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        const newToken = refreshData.accessToken;
+        
+        localStorage.setItem('kc_token', newToken);
+        localStorage.setItem('kc_user', JSON.stringify(refreshData.user));
+        useAuthStore.getState().login(refreshData.user, newToken);
+
+        // Retry original request
+        headers['Authorization'] = `Bearer ${newToken}`;
+        res = await fetch(`${API_BASE}${path}`, {
+          ...options,
+          headers,
+        });
+        data = await res.json().catch(() => ({}));
+      } else {
+        useAuthStore.getState().logout();
+        localStorage.removeItem('kc_token');
+        localStorage.removeItem('kc_user');
+      }
+    } catch (e) {
+      console.error('Failed to refresh token', e);
+    }
+  }
 
   if (!res.ok) {
     let errorMessage = data.error || `HTTP ${res.status}`;
