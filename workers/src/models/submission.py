@@ -12,6 +12,7 @@ class TestCase(BaseModel):
     id: str
     input: str
     expectedOutput: str
+    isSample: bool = False
 
 
 class Constraints(BaseModel):

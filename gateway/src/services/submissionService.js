@@ -32,7 +32,7 @@ async function submitCode({ problemId, code, language, userId }) {
 
   // Fetch ALL test cases (sample + hidden)
   const tcResult = await db.query(
-    `SELECT id, input, expected_output, order_index
+    `SELECT id, input, expected_output, is_sample, order_index
      FROM test_cases
      WHERE problem_id = $1
      ORDER BY order_index ASC`,
@@ -67,6 +67,7 @@ async function submitCode({ problemId, code, language, userId }) {
       id: tc.id,
       input: tc.input,
       expectedOutput: tc.expected_output,
+      isSample: tc.is_sample,
     })),
     constraints: {
       timeoutMs: problem.time_limit_ms || 5000,
@@ -160,7 +161,17 @@ async function getUserSubmissions(userId, { limit = 50, offset = 0 } = {}) {
  * Get a single submission by ID.
  */
 async function getSubmission(submissionId, user = null) {
-  let queryText = 'SELECT * FROM submissions WHERE id = $1';
+  let queryText = `
+    SELECT s.*,
+      (SELECT tc.is_sample
+       FROM execution_metrics em
+       JOIN test_cases tc ON em.test_case_id = tc.id
+       WHERE em.submission_id = s.id AND em.status != 'Accepted'
+       ORDER BY em.test_index ASC
+       LIMIT 1
+      ) as failed_test_is_sample
+    FROM submissions s WHERE s.id = $1
+  `;
   const params = [submissionId];
 
   // Admin can access any submission
@@ -172,7 +183,17 @@ async function getSubmission(submissionId, user = null) {
     params.push(user.id);
   } else {
     // Guest can only access guest submissions
-    queryText += ' AND user_id IS NULL';
+    queryText = `
+      SELECT s.*,
+        (SELECT tc.is_sample
+         FROM execution_metrics em
+         JOIN test_cases tc ON em.test_case_id = tc.id
+         WHERE em.submission_id = s.id AND em.status != 'Accepted'
+         ORDER BY em.test_index ASC
+         LIMIT 1
+        ) as failed_test_is_sample
+      FROM submissions s WHERE s.id = $1 AND s.user_id IS NULL
+    `;
   }
 
   const result = await db.query(queryText, params);
@@ -183,7 +204,21 @@ async function getSubmission(submissionId, user = null) {
     throw err;
   }
 
-  return result.rows[0];
+  const submission = result.rows[0];
+
+  // Redact private information if user is not admin and the failed test case is hidden
+  const isAdmin = user && user.role === 'admin';
+  if (!isAdmin && submission.failed_test_is_sample === false) {
+    submission.failed_test_input = null;
+    submission.failed_test_expected = null;
+    submission.failed_test_actual = null;
+    submission.error_message = 'Hidden execution trace';
+  }
+
+  // Remove the temporary column
+  delete submission.failed_test_is_sample;
+
+  return submission;
 }
 
 module.exports = {

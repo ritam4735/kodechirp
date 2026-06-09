@@ -90,6 +90,7 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
                     "input": tc.input,
                     "expectedOutput": tc.expectedOutput,
                     "actualOutput": result.stdout,
+                    "isSample": tc.isSample,
                 },
                 workerId=WORKER_ID,
             )
@@ -118,6 +119,7 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
                     "input": tc.input,
                     "expectedOutput": tc.expectedOutput,
                     "actualOutput": result.stderr,
+                    "isSample": tc.isSample,
                 },
                 workerId=WORKER_ID,
             )
@@ -141,6 +143,7 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
                     "input": tc.input,
                     "expectedOutput": tc.expectedOutput,
                     "actualOutput": result.stdout,
+                    "isSample": tc.isSample,
                 },
                 workerId=WORKER_ID,
             )

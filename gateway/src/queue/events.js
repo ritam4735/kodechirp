@@ -101,6 +101,14 @@ async function handleExecutionResult(result) {
 
   // 2. Emit to user via WebSocket
   if (io && userId) {
+    let wsFailedTestCase = failedTestCase || null;
+    let wsError = error || null;
+
+    if (failedTestCase && failedTestCase.isSample === false) {
+      wsFailedTestCase = { isHidden: true };
+      wsError = 'Hidden execution trace';
+    }
+
     io.to(`user:${userId}`).emit(WS_EVENTS.SUBMISSION_RESULT, {
       submissionId,
       verdict,
@@ -108,8 +116,8 @@ async function handleExecutionResult(result) {
       testCasesTotal,
       runtimeMs,
       memoryKb,
-      failedTestCase: failedTestCase || null,
-      error: error || null,
+      failedTestCase: wsFailedTestCase,
+      error: wsError,
     });
 
     logger.debug({ userId, submissionId }, '[Events] Result emitted to user via WebSocket');
