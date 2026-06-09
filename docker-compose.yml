@@ -91,14 +91,15 @@ services:
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
       EXECUTION_TIMEOUT: ${EXECUTION_TIMEOUT:-10}
       MAX_RETRIES: ${MAX_RETRIES:-3}
-      DOCKER_HOST: unix:///var/run/docker.sock
+      DOCKER_HOST: tcp://docker-proxy:2375
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      docker-proxy:
+        condition: service_started
     volumes:
-      - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:z
       - /tmp/kodechirp:/tmp/kodechirp:z
     deploy:
       replicas: 1
@@ -107,7 +108,35 @@ services:
           cpus: '2.0'
           memory: 1G
     restart: unless-stopped
-    privileged: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - kodechirp-net
+
+  # ── Docker Socket Proxy ──────────────────────────────────────────────────
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy
+    container_name: kodechirp-docker-proxy
+    environment:
+      CONTAINERS: 1
+      IMAGES: 1
+      POST: 1
+      AUTH: 0
+      BUILD: 0
+      EXEC: 0
+      NETWORKS: 0
+      NODES: 0
+      PLUGINS: 0
+      SERVICES: 0
+      SWARM: 0
+      SYSTEM: 0
+      TASKS: 0
+      VOLUMES: 0
+    volumes:
+      - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    restart: unless-stopped
     networks:
       - kodechirp-net
 

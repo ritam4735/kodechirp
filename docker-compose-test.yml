@@ -1,0 +1,13 @@
+version: '3.9'
+services:
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy
+    container_name: kodechirp-docker-proxy
+    environment:
+      CONTAINERS: 1
+      IMAGES: 1
+      POST: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - kodechirp-net
