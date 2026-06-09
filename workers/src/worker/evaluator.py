@@ -62,6 +62,7 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
 
         # Execute code
         result = await docker_service.execute_code(
+            submission_id=submission_id,
             code=job.code,
             language=job.language,
             stdin=tc.input,

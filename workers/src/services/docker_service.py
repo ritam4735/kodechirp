@@ -28,6 +28,7 @@ class DockerService:
 
     async def execute_code(
         self,
+        submission_id: str,
         code: str,
         language: str,
         stdin: str = "",
@@ -53,8 +54,8 @@ class DockerService:
             )
 
         # Create isolated temp directory for this execution
-        run_id = str(uuid.uuid4())
-        run_dir = self._tmp_base / f"kc_run_{run_id}"
+        container_name = f"judge-submission-{submission_id}"
+        run_dir = self._tmp_base / f"{container_name}_{uuid.uuid4().hex[:8]}"
         run_dir.mkdir(parents=True, exist_ok=True)
         os.chmod(str(run_dir), 0o777)
 
@@ -73,6 +74,7 @@ class DockerService:
             shutil.copy2(mem_wrapper_src, mem_wrapper_dst)
             os.chmod(str(mem_wrapper_dst), 0o755)
 
+        proc = None
         try:
             # Build Docker command
             timeout_s = min(timeout_ms / 1000, config["timeout"])
@@ -80,6 +82,7 @@ class DockerService:
 
             docker_args = [
                 "docker", "run",
+                "--name", container_name,
                 "--rm",
                 "-i",
                 "--network=none",
@@ -107,20 +110,57 @@ class DockerService:
                 stderr=asyncio.subprocess.PIPE,
             )
 
+            if stdin:
+                proc.stdin.write(stdin.encode("utf-8"))
             try:
-                stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                    proc.communicate(input=stdin.encode("utf-8") if stdin else None),
+                await proc.stdin.drain()
+            except Exception:
+                pass
+            proc.stdin.close()
+
+            MAX_OUTPUT_BYTES = 10 * 1024 * 1024  # 10 MB
+
+            async def read_stream(stream: asyncio.StreamReader, limit: int) -> bytes:
+                chunks = []
+                total_bytes = 0
+                while True:
+                    chunk = await stream.read(8192)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                    total_bytes += len(chunk)
+                    if total_bytes > limit:
+                        raise MemoryError("Output Limit Exceeded")
+                return b"".join(chunks)
+
+            try:
+                stdout_task = asyncio.create_task(read_stream(proc.stdout, MAX_OUTPUT_BYTES))
+                stderr_task = asyncio.create_task(read_stream(proc.stderr, MAX_OUTPUT_BYTES))
+                
+                await asyncio.wait_for(
+                    asyncio.gather(stdout_task, stderr_task, proc.wait()),
                     timeout=docker_timeout,
                 )
+                
+                stdout_bytes = stdout_task.result()
+                stderr_bytes = stderr_task.result()
+                
             except asyncio.TimeoutError:
-                proc.kill()
-                await proc.wait()
                 elapsed_ms = int((time.monotonic() - start_time) * 1000)
                 return ExecutionResult(
                     stdout="",
                     stderr="Time Limit Exceeded",
                     exitCode=-1,
                     timedOut=True,
+                    runtimeMs=elapsed_ms,
+                )
+            except MemoryError:
+                elapsed_ms = int((time.monotonic() - start_time) * 1000)
+                return ExecutionResult(
+                    stdout="",
+                    stderr="Runtime Error: Output exceeded 10 MB limit",
+                    exitCode=-1,
+                    timedOut=False,
                     runtimeMs=elapsed_ms,
                 )
 
@@ -162,11 +202,35 @@ class DockerService:
                 exitCode=-1,
             )
         finally:
-            # Cleanup
+            # 1. Guaranteed Cleanup for Container
             try:
-                shutil.rmtree(str(run_dir), ignore_errors=True)
+                rm_proc = await asyncio.create_subprocess_exec(
+                    "docker", "rm", "-f", container_name,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                rm_stdout, rm_stderr = await asyncio.wait_for(rm_proc.communicate(), timeout=5.0)
+                if rm_proc.returncode != 0:
+                    err_str = rm_stderr.decode('utf-8', errors='replace').strip()
+                    if "No such container" not in err_str:
+                        logger.error(f"Cleanup failure for container {container_name}: {err_str}")
+            except Exception as e:
+                logger.error(f"Exception during cleanup of container {container_name}: {e}")
+
+            # 2. Cleanup Docker CLI process if it's still alive
+            try:
+                if proc is not None and proc.returncode is None:
+                    proc.kill()
+                    await proc.wait()
             except Exception:
                 pass
+
+            # 3. Cleanup temp files and directories
+            try:
+                if run_dir.exists():
+                    shutil.rmtree(str(run_dir), ignore_errors=True)
+            except Exception as e:
+                logger.error(f"Failed to cleanup temp directory {run_dir}: {e}")
 
 
 # Singleton instance
