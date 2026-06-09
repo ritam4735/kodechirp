@@ -13,10 +13,10 @@ router.get('/', profileController.getProfile);
 
 router.put(
   '/',
-  body('username').optional().isString().isLength({ min: 3, max: 50 })
-    .matches(/^[a-zA-Z0-9_-]+$/).withMessage('Username can only contain letters, numbers, underscores, hyphens'),
-  body('display_name').optional().isString().isLength({ max: 100 }),
-  body('bio').optional().isString().isLength({ max: 500 }),
+  body('username').optional().isString().trim().isLength({ min: 3, max: 50 })
+    .matches(/^[a-zA-Z0-9_-]+$/).withMessage('Username can only contain letters, numbers, underscores, hyphens').escape(),
+  body('display_name').optional().isString().trim().isLength({ max: 100 }).escape(),
+  body('bio').optional().isString().trim().isLength({ max: 500 }).escape(),
   body('github_url').optional({ checkFalsy: true }).isURL().withMessage('Invalid URL'),
   body('linkedin_url').optional({ checkFalsy: true }).isURL().withMessage('Invalid URL'),
   body('website_url').optional({ checkFalsy: true }).isURL().withMessage('Invalid URL'),

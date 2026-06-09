@@ -161,15 +161,61 @@ class DockerService:
             except Exception as e:
                 logger.error(f"Failed to cleanup temp directory {run_dir}: {e}")
 
-    async def execute_test_case(
+    async def start_sandbox(
         self,
         run_dir: Path,
         submission_id: str,
         language: str,
+        memory_mb: int = 256,
+    ) -> Optional[str]:
+        config = LANGUAGE_CONFIG.get(language)
+        if not config:
+            return None
+
+        container_name = f"judge-sandbox-{submission_id}-{uuid.uuid4().hex[:8]}"
+
+        docker_args = [
+            "docker", "run", "-d",
+            "--name", container_name,
+            "--rm",
+            "--network=none",
+            f"--memory={config.get('memory', f'{memory_mb}m')}",
+            f"--cpus={config['cpus']}",
+            "--pids-limit=64",
+            "--cap-drop=ALL",
+            "--security-opt=no-new-privileges",
+            "--read-only",
+            "--tmpfs", f"/tmp:size={config['tmpfs_size']},exec",
+            "--user", "sandbox",
+            "-v", f"{run_dir}:/app:Z",
+            "-w", "/app",
+            config["image"],
+            "sleep", "infinity"
+        ]
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *docker_args,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(proc.communicate(), timeout=10.0)
+            
+            if proc.returncode != 0:
+                logger.error(f"Failed to start sandbox container: {stderr_bytes.decode('utf-8')}")
+                return None
+                
+            return container_name
+        except Exception as e:
+            logger.error(f"Error starting sandbox: {e}")
+            return None
+
+    async def execute_in_sandbox(
+        self,
+        container_name: str,
+        language: str,
         stdin: str = "",
         timeout_ms: int = 5000,
-        memory_mb: int = 256,
-        test_index: int = 0,
     ) -> ExecutionResult:
         config = LANGUAGE_CONFIG.get(language)
         if not config:
@@ -178,30 +224,14 @@ class DockerService:
                 exitCode=-1,
             )
 
-        container_name = f"judge-run-{submission_id}-tc{test_index}-{uuid.uuid4().hex[:8]}"
-
         proc = None
         try:
             timeout_s = min(timeout_ms / 1000, config["timeout"])
             docker_timeout = timeout_s + 5
 
             docker_args = [
-                "docker", "run",
-                "--name", container_name,
-                "--rm",
-                "-i",
-                "--network=none",
-                f"--memory={config.get('memory', f'{memory_mb}m')}",
-                f"--cpus={config['cpus']}",
-                "--pids-limit=64",
-                "--cap-drop=ALL",
-                "--security-opt=no-new-privileges",
-                "--read-only",
-                "--tmpfs", f"/tmp:size={config['tmpfs_size']},exec",
-                "--user", "sandbox",
-                "-v", f"{run_dir}:/app:Z",
-                "-w", "/app",
-                config["image"],
+                "docker", "exec", "-i",
+                container_name,
                 "sh", "-c", config["run_command"],
             ]
 
@@ -253,6 +283,12 @@ class DockerService:
                 
             except asyncio.TimeoutError:
                 elapsed_ms = int((time.monotonic() - start_time) * 1000)
+                # Ensure the exec process is killed
+                try:
+                    proc.kill()
+                    await proc.wait()
+                except Exception:
+                    pass
                 return ExecutionResult(
                     stdout="",
                     stderr="Time Limit Exceeded",
@@ -262,26 +298,23 @@ class DockerService:
                 )
             except MemoryError:
                 elapsed_ms = int((time.monotonic() - start_time) * 1000)
+                try:
+                    proc.kill()
+                    await proc.wait()
+                except Exception:
+                    pass
                 return ExecutionResult(
                     stdout="",
                     stderr="Runtime Error: Output exceeded 10 MB limit",
-                    exitCode=-1, # wait, this is limit exceeded, maybe exit code 1?
+                    exitCode=-1,
                     timedOut=False,
                     runtimeMs=elapsed_ms,
                 )
 
-            # Check if docker container was OOM killed
-            try:
-                inspect_proc = await asyncio.create_subprocess_exec(
-                    "docker", "inspect", container_name,
-                    "--format", "{{.State.OOMKilled}}",
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                inspect_stdout, _ = await asyncio.wait_for(inspect_proc.communicate(), timeout=2.0)
-                if inspect_stdout.decode('utf-8').strip() == "true":
-                    exit_code = 137 # OOM killed exit code
-            except Exception:
+            # Check if container died (e.g. from OOM)
+            # Actually, `docker exec` will return 137 if the process inside is killed by OOM
+            # If the whole container was killed, `docker exec` might fail with some exit code or error.
+            if exit_code == 137:
                 pass
 
             elapsed_ms = int((time.monotonic() - start_time) * 1000)
@@ -322,26 +355,37 @@ class DockerService:
             )
         finally:
             try:
-                rm_proc = await asyncio.create_subprocess_exec(
-                    "docker", "rm", "-f", container_name,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                rm_stdout, rm_stderr = await asyncio.wait_for(rm_proc.communicate(), timeout=5.0)
-                if rm_proc.returncode != 0:
-                    err_str = rm_stderr.decode('utf-8', errors='replace').strip()
-                    if "No such container" not in err_str:
-                        logger.error(f"Cleanup failure for container {container_name}: {err_str}")
-            except Exception as e:
-                logger.error(f"Exception during cleanup of container {container_name}: {e}")
-
-            try:
                 if proc is not None and proc.returncode is None:
                     proc.kill()
                     await proc.wait()
             except Exception:
                 pass
 
+    async def stop_sandbox(self, container_name: str):
+        """Stop and remove the sandbox container."""
+        if not container_name:
+            return
+        try:
+            # Fast kill to avoid 10s SIGTERM timeout for sleep infinity
+            kill_proc = await asyncio.create_subprocess_exec(
+                "docker", "kill", "-s", "KILL", container_name,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await kill_proc.communicate()
+
+            rm_proc = await asyncio.create_subprocess_exec(
+                "docker", "rm", "-f", container_name,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            rm_stdout, rm_stderr = await asyncio.wait_for(rm_proc.communicate(), timeout=15.0)
+            if rm_proc.returncode != 0:
+                err_str = rm_stderr.decode('utf-8', errors='replace').strip()
+                if "No such container" not in err_str:
+                    logger.error(f"Cleanup failure for container {container_name}: {err_str}")
+        except Exception as e:
+            logger.error(f"Exception during cleanup of container {container_name}: {e}")
 
 # Singleton instance
 docker_service = DockerService()

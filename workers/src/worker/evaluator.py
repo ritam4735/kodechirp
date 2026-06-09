@@ -81,6 +81,27 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
             workerId=WORKER_ID,
         )
 
+    container_name = await docker_service.start_sandbox(
+        run_dir=run_dir,
+        submission_id=submission_id,
+        language=job.language,
+        memory_mb=job.constraints.memoryMb,
+    )
+
+    if not container_name:
+        return SubmissionResult(
+            submissionId=submission_id,
+            userId=job.userId,
+            verdict=Verdict.INTERNAL_ERROR,
+            testCasesPassed=0,
+            testCasesTotal=total,
+            runtimeMs=0,
+            memoryKb=0,
+            error="Failed to start sandbox",
+            failedTestCase={},
+            workerId=WORKER_ID,
+        )
+
     # ── Execution Phase ────────────────────────────────────────────
     try:
         for idx, tc in enumerate(job.testCases):
@@ -93,15 +114,12 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
                 "status": "running",
             })
 
-            # Execute code
-            result = await docker_service.execute_test_case(
-                run_dir=run_dir,
-                submission_id=submission_id,
+            # Execute code in existing sandbox
+            result = await docker_service.execute_in_sandbox(
+                container_name=container_name,
                 language=job.language,
                 stdin=tc.input,
                 timeout_ms=job.constraints.timeoutMs,
-                memory_mb=job.constraints.memoryMb,
-                test_index=idx,
             )
 
             runtime_ms = result.runtimeMs or 0
@@ -232,6 +250,7 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
             workerId=WORKER_ID,
         )
     finally:
+        await docker_service.stop_sandbox(container_name)
         await docker_service.cleanup_submission(run_dir)
 
 async def _save_metric(

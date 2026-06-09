@@ -12,18 +12,46 @@ export default function AuthPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState('');
+
   const { handleLogin } = useAuth();
   const router = useRouter();
+
+  const handleResend = async () => {
+    setResending(true);
+    setResendSuccess('');
+    setError('');
+    try {
+      await api.resendVerification(unverifiedEmail);
+      setResendSuccess('Verification email sent! Please check your inbox.');
+    } catch (err) {
+      setError(err.message || 'Failed to resend verification email.');
+    } finally {
+      setResending(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
+    setUnverifiedEmail('');
+    setResendSuccess('');
+
     try {
       let data;
       if (isLogin) {
         data = await api.login(identifier, password);
       } else {
         data = await api.signup(identifier, password, name);
+        if (data.verificationRequired) {
+          setSuccessMessage(data.message);
+          setIsLogin(true); // Switch to login view automatically
+          return;
+        }
       }
       
       handleLogin(data.user, data.accessToken);
@@ -35,6 +63,10 @@ export default function AuthPage() {
       }
     } catch (err) {
       setError(err.message);
+      if (err.message.includes('not verified')) {
+        // Provide the identifier (usually email, but could be username)
+        setUnverifiedEmail(identifier);
+      }
     }
   };
 
@@ -44,7 +76,23 @@ export default function AuthPage() {
         <h2 className="text-2xl font-bold text-[#e6edf3] mb-6 text-center">
           {isLogin ? 'Welcome Back' : 'Create an Account'}
         </h2>
-        {error && <div className="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded mb-4 text-sm">{error}</div>}
+        {successMessage && <div className="bg-[#2ea043]/10 border border-[#2ea043]/30 text-[#3fb950] p-3 rounded mb-4 text-sm">{successMessage}</div>}
+        {resendSuccess && <div className="bg-[#2ea043]/10 border border-[#2ea043]/30 text-[#3fb950] p-3 rounded mb-4 text-sm">{resendSuccess}</div>}
+        {error && (
+          <div className="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded mb-4 text-sm flex flex-col gap-2">
+            <span>{error}</span>
+            {unverifiedEmail && !resendSuccess && (
+              <button 
+                type="button"
+                onClick={handleResend}
+                disabled={resending}
+                className="self-start text-[#58a6ff] hover:underline text-xs font-medium disabled:opacity-50"
+              >
+                {resending ? 'Sending...' : 'Resend verification email'}
+              </button>
+            )}
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
@@ -72,7 +120,14 @@ export default function AuthPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#8b949e] mb-1">Password</label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-sm font-medium text-[#8b949e]">Password</label>
+              {isLogin && (
+                <a href="/auth/forgot-password" className="text-xs text-[#58a6ff] hover:underline">
+                  Forgot password?
+                </a>
+              )}
+            </div>
             <input
               required
               type="password"

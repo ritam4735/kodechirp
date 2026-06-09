@@ -2,8 +2,14 @@
 
 import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { api } from '../../lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
+import { 
+  User, Settings as SettingsIcon, Github, Linkedin, Globe, 
+  Camera, CheckCircle, AlertCircle, Award, Activity, CheckSquare, ChevronRight 
+} from 'lucide-react';
 
 export default function ProfilePage() {
   const { user: authUser, isAuthenticated, handleLogout } = useAuth();
@@ -13,6 +19,7 @@ export default function ProfilePage() {
   const [profileData, setProfileData] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef(null);
   
   // Forms
   const [editForm, setEditForm] = useState({
@@ -69,23 +76,26 @@ export default function ProfilePage() {
     setError('');
     setSuccess('');
     setSaving(true);
+    
+    // Optimistic Update
+    const prevProfile = { ...profileData };
+    setProfileData(prev => ({ ...prev, ...editForm }));
+
     try {
       const updates = { ...editForm };
-      
-      // Validation basic
-      if (updates.avatar_url && !updates.avatar_url.startsWith('http') && !updates.avatar_url.startsWith('data:image')) {
-        throw new Error('Avatar must be a valid URL or data URI');
-      }
-
       await api.updateProfile(updates);
-      if (updates.avatar_url !== profileData.avatar_url) {
+      
+      if (updates.avatar_url !== prevProfile.avatar_url) {
         await api.updateAvatar(updates.avatar_url);
       }
       
       setSuccess('Profile updated successfully!');
-      loadProfile();
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
+      // Revert Optimistic Update
+      setProfileData(prevProfile);
       setError(err.message || 'Failed to update profile');
+      setTimeout(() => setError(''), 3000);
     } finally {
       setSaving(false);
     }
@@ -100,285 +110,398 @@ export default function ProfilePage() {
       await api.changePassword(passwordForm.current_password, passwordForm.new_password);
       setSuccess('Password changed successfully!');
       setPasswordForm({ current_password: '', new_password: '' });
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.message || 'Failed to change password');
+      setTimeout(() => setError(''), 3000);
     } finally {
       setSaving(false);
     }
   };
 
-  if (!isAuthenticated) return null;
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setError('Image must be less than 2MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditForm(prev => ({ ...prev, avatar_url: reader.result }));
+        setProfileData(prev => ({ ...prev, avatar_url: reader.result })); // Optimistic UI for Avatar
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto w-full px-4 py-10 flex justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#58a6ff]"></div>
-      </div>
-    );
-  }
+  if (!isAuthenticated) return null;
 
   const user = profileData || authUser;
 
   return (
-    <div className="max-w-5xl mx-auto w-full px-4 py-10">
-      <div className="flex flex-col md:flex-row gap-8">
-        
-        {/* Sidebar */}
-        <div className="w-full md:w-1/3 flex flex-col gap-6">
-          <div className="bg-[#161b22] border border-[#21262d] rounded-xl p-6 flex flex-col items-center text-center">
-            {user?.avatar_url ? (
-              <img 
-                src={user.avatar_url} 
-                alt="Avatar" 
-                className="w-32 h-32 rounded-full mb-4 object-cover border-4 border-[#21262d]"
-              />
-            ) : (
-              <div className="w-32 h-32 bg-[#58a6ff]/20 text-[#58a6ff] rounded-full flex items-center justify-center text-5xl font-bold mb-4 border-4 border-[#21262d]">
-                {user?.display_name?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || 'U'}
-              </div>
-            )}
-            
-            <h2 className="text-2xl font-bold text-[#e6edf3]">
-              {user?.display_name || user?.username}
-            </h2>
-            <p className="text-[#8b949e] text-lg mb-2">@{user?.username}</p>
-            <p className="text-[#8b949e] mb-4 text-sm">{user?.email}</p>
-            
-            {user?.bio && (
-              <p className="text-[#e6edf3] text-sm italic mb-4">"{user.bio}"</p>
-            )}
+    <div className="relative flex-1 bg-[#0d1117] min-h-screen overflow-hidden">
+      <AnimatedBackground variant="particles" />
+      
+      <div className="relative z-10 max-w-6xl mx-auto w-full px-4 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1 className="text-3xl font-display font-bold text-white mb-8">My Profile</h1>
+        </motion.div>
 
-            <div className="flex gap-4 mt-2 mb-6">
-              {user?.github_url && (
-                <a href={user.github_url} target="_blank" rel="noreferrer" className="text-[#8b949e] hover:text-[#58a6ff] transition-colors">
-                  GitHub
-                </a>
-              )}
-              {user?.linkedin_url && (
-                <a href={user.linkedin_url} target="_blank" rel="noreferrer" className="text-[#8b949e] hover:text-[#58a6ff] transition-colors">
-                  LinkedIn
-                </a>
-              )}
-              {user?.website_url && (
-                <a href={user.website_url} target="_blank" rel="noreferrer" className="text-[#8b949e] hover:text-[#58a6ff] transition-colors">
-                  Website
-                </a>
-              )}
-            </div>
-
-            <button
-              onClick={() => {
-                handleLogout();
-                router.push('/');
-              }}
-              className="w-full bg-[#21262d] hover:bg-[#30363d] text-[#f85149] px-4 py-2 rounded-lg font-medium transition-colors border border-[#30363d]"
-            >
-              Sign Out
-            </button>
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#58a6ff]"></div>
           </div>
+        ) : (
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Sidebar */}
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="w-full lg:w-1/3 flex flex-col gap-6"
+            >
+              {/* Profile Card */}
+              <div className="bg-[#161b22]/80 backdrop-blur-md border border-[#30363d] rounded-2xl p-6 flex flex-col items-center text-center shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-r from-[#58a6ff]/20 to-[#8957e5]/20"></div>
+                
+                <div className="relative group mt-4">
+                  <div className="w-32 h-32 rounded-full mb-4 border-4 border-[#161b22] bg-[#0d1117] flex items-center justify-center overflow-hidden z-10 relative">
+                    {user?.avatar_url ? (
+                      <img 
+                        src={user.avatar_url} 
+                        alt="Avatar" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User size={64} className="text-[#8b949e]" />
+                    )}
+                  </div>
+                  {activeTab === 'edit' && (
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-4 right-0 bg-[#58a6ff] hover:bg-[#3182ce] text-white p-2 rounded-full transition-colors z-20 shadow-md"
+                      title="Upload Avatar"
+                    >
+                      <Camera size={16} />
+                    </button>
+                  )}
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleImageUpload} 
+                    accept="image/png, image/jpeg, image/webp, image/gif" 
+                    className="hidden" 
+                  />
+                </div>
+                
+                <h2 className="text-2xl font-bold text-white tracking-tight">
+                  {user?.display_name || user?.username}
+                </h2>
+                <p className="text-[#58a6ff] font-medium mb-1">@{user?.username}</p>
+                <p className="text-[#8b949e] text-sm mb-2">{user?.email}</p>
+                {user?.created_at && (
+                  <p className="text-[#8b949e] text-xs mb-6 flex items-center justify-center gap-1">
+                    <CheckCircle size={12} className="text-[#3fb950]"/> 
+                    Joined {new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}
+                  </p>
+                )}
+                
+                {user?.bio && (
+                  <p className="text-[#c9d1d9] text-sm italic mb-6 leading-relaxed max-w-xs px-2">"{user.bio}"</p>
+                )}
 
-          {stats && (
-            <div className="bg-[#161b22] border border-[#21262d] rounded-xl p-6">
-              <h3 className="text-lg font-bold text-[#e6edf3] mb-4 border-b border-[#21262d] pb-2">Statistics</h3>
-              <div className="flex flex-col gap-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-[#8b949e]">Problems Solved</span>
-                  <span className="text-[#e6edf3] font-bold bg-[#2ea043]/20 text-[#3fb950] px-2 py-0.5 rounded">
-                    {stats.problems_solved}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[#8b949e]">Total Submissions</span>
-                  <span className="text-[#e6edf3] font-bold">
-                    {stats.total_submissions}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[#8b949e]">Acceptance Rate</span>
-                  <span className="text-[#e6edf3] font-bold">
-                    {stats.acceptance_rate}%
-                  </span>
+                <div className="flex gap-4 mb-6">
+                  {user?.github_url && (
+                    <a href={user.github_url} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-[#21262d] flex items-center justify-center text-[#8b949e] hover:text-white hover:bg-[#30363d] transition-all">
+                      <Github size={18} />
+                    </a>
+                  )}
+                  {user?.linkedin_url && (
+                    <a href={user.linkedin_url} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-[#21262d] flex items-center justify-center text-[#8b949e] hover:text-[#0a66c2] hover:bg-[#30363d] transition-all">
+                      <Linkedin size={18} />
+                    </a>
+                  )}
+                  {user?.website_url && (
+                    <a href={user.website_url} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-[#21262d] flex items-center justify-center text-[#8b949e] hover:text-[#58a6ff] hover:bg-[#30363d] transition-all">
+                      <Globe size={18} />
+                    </a>
+                  )}
                 </div>
               </div>
-            </div>
-          )}
-        </div>
 
-        {/* Main Content Area */}
-        <div className="w-full md:w-2/3 flex flex-col gap-6">
-          <div className="flex border-b border-[#21262d]">
-            <button 
-              className={`px-4 py-3 font-medium text-sm transition-colors ${activeTab === 'profile' ? 'text-[#58a6ff] border-b-2 border-[#58a6ff]' : 'text-[#8b949e] hover:text-[#e6edf3]'}`}
-              onClick={() => { setActiveTab('profile'); setError(''); setSuccess(''); }}
-            >
-              Overview
-            </button>
-            <button 
-              className={`px-4 py-3 font-medium text-sm transition-colors ${activeTab === 'edit' ? 'text-[#58a6ff] border-b-2 border-[#58a6ff]' : 'text-[#8b949e] hover:text-[#e6edf3]'}`}
-              onClick={() => { setActiveTab('edit'); setError(''); setSuccess(''); }}
-            >
-              Edit Profile
-            </button>
-            <button 
-              className={`px-4 py-3 font-medium text-sm transition-colors ${activeTab === 'settings' ? 'text-[#58a6ff] border-b-2 border-[#58a6ff]' : 'text-[#8b949e] hover:text-[#e6edf3]'}`}
-              onClick={() => { setActiveTab('settings'); setError(''); setSuccess(''); }}
-            >
-              Account Settings
-            </button>
-          </div>
-
-          {error && (
-            <div className="bg-[#f85149]/10 border border-[#f85149]/50 text-[#f85149] px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="bg-[#2ea043]/10 border border-[#2ea043]/50 text-[#3fb950] px-4 py-3 rounded-lg text-sm">
-              {success}
-            </div>
-          )}
-
-          {activeTab === 'profile' && (
-            <div className="bg-[#161b22] border border-[#21262d] rounded-xl p-6">
-              <h3 className="text-xl font-bold text-[#e6edf3] mb-4">About Me</h3>
-              {user?.bio ? (
-                <p className="text-[#c9d1d9] whitespace-pre-wrap">{user.bio}</p>
-              ) : (
-                <p className="text-[#8b949e] italic">No bio provided yet.</p>
+              {/* Stats Card */}
+              {stats && (
+                <div className="bg-[#161b22]/80 backdrop-blur-md border border-[#30363d] rounded-2xl p-6 shadow-lg">
+                  <h3 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
+                    <Award size={18} className="text-[#d2a8ff]" />
+                    Submission Statistics
+                  </h3>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center p-3 bg-[#21262d]/50 rounded-xl border border-[#30363d]">
+                      <div className="w-10 h-10 rounded-lg bg-[#2ea043]/20 flex items-center justify-center text-[#3fb950] mr-4">
+                        <CheckSquare size={18} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-[#8b949e] uppercase tracking-wider font-semibold">Solved</p>
+                        <p className="text-xl font-bold text-white">{stats.problems_solved}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center p-3 bg-[#21262d]/50 rounded-xl border border-[#30363d]">
+                      <div className="w-10 h-10 rounded-lg bg-[#58a6ff]/20 flex items-center justify-center text-[#58a6ff] mr-4">
+                        <Activity size={18} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-[#8b949e] uppercase tracking-wider font-semibold">Submissions</p>
+                        <p className="text-xl font-bold text-white">{stats.total_submissions}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center p-3 bg-[#21262d]/50 rounded-xl border border-[#30363d]">
+                      <div className="w-10 h-10 rounded-lg bg-[#f0883e]/20 flex items-center justify-center text-[#f0883e] mr-4">
+                        <Award size={18} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-[#8b949e] uppercase tracking-wider font-semibold">Acceptance Rate</p>
+                        <p className="text-xl font-bold text-white">{stats.acceptance_rate}%</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
-            </div>
-          )}
+            </motion.div>
 
-          {activeTab === 'edit' && (
-            <div className="bg-[#161b22] border border-[#21262d] rounded-xl p-6">
-              <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm text-[#e6edf3] font-medium">Username</label>
-                    <input 
-                      type="text" 
-                      value={editForm.username} 
-                      onChange={(e) => setEditForm({...editForm, username: e.target.value})}
-                      className="bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                      required
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm text-[#e6edf3] font-medium">Display Name</label>
-                    <input 
-                      type="text" 
-                      value={editForm.display_name} 
-                      onChange={(e) => setEditForm({...editForm, display_name: e.target.value})}
-                      className="bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#e6edf3] font-medium">Avatar URL</label>
-                  <input 
-                    type="url" 
-                    value={editForm.avatar_url} 
-                    onChange={(e) => setEditForm({...editForm, avatar_url: e.target.value})}
-                    placeholder="https://example.com/avatar.png"
-                    className="bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                  />
-                  <span className="text-xs text-[#8b949e]">Leave blank for default. You can use image URLs or Base64 data URIs.</span>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#e6edf3] font-medium">Bio</label>
-                  <textarea 
-                    value={editForm.bio} 
-                    onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
-                    rows={4}
-                    className="bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] resize-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm text-[#e6edf3] font-medium">GitHub URL</label>
-                    <input 
-                      type="url" 
-                      value={editForm.github_url} 
-                      onChange={(e) => setEditForm({...editForm, github_url: e.target.value})}
-                      className="bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm text-[#e6edf3] font-medium">LinkedIn URL</label>
-                    <input 
-                      type="url" 
-                      value={editForm.linkedin_url} 
-                      onChange={(e) => setEditForm({...editForm, linkedin_url: e.target.value})}
-                      className="bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1 md:col-span-2">
-                    <label className="text-sm text-[#e6edf3] font-medium">Personal Website</label>
-                    <input 
-                      type="url" 
-                      value={editForm.website_url} 
-                      onChange={(e) => setEditForm({...editForm, website_url: e.target.value})}
-                      className="bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end mt-4">
+            {/* Main Content Area */}
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="w-full lg:w-2/3 flex flex-col gap-6"
+            >
+              {/* Navigation Tabs */}
+              <div className="bg-[#161b22]/80 backdrop-blur-md border border-[#30363d] rounded-2xl p-2 flex gap-2 shadow-sm">
+                {[
+                  { id: 'profile', label: 'Overview', icon: User },
+                  { id: 'edit', label: 'Edit Profile', icon: Camera },
+                  { id: 'settings', label: 'Account Settings', icon: SettingsIcon },
+                ].map((tab) => (
                   <button 
-                    type="submit" 
-                    disabled={saving}
-                    className="bg-[#238636] hover:bg-[#2ea043] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+                    key={tab.id}
+                    className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-medium text-sm transition-all duration-200 ${
+                      activeTab === tab.id 
+                        ? 'bg-[#21262d] text-white shadow-sm border border-[#30363d]' 
+                        : 'text-[#8b949e] hover:text-[#c9d1d9] hover:bg-[#21262d]/50'
+                    }`}
+                    onClick={() => { setActiveTab(tab.id); setError(''); setSuccess(''); }}
                   >
-                    {saving ? 'Saving...' : 'Save Profile'}
+                    <tab.icon size={16} className={activeTab === tab.id ? 'text-[#58a6ff]' : ''} />
+                    {tab.label}
                   </button>
-                </div>
-              </form>
-            </div>
-          )}
+                ))}
+              </div>
 
-          {activeTab === 'settings' && (
-            <div className="bg-[#161b22] border border-[#21262d] rounded-xl p-6">
-              <h3 className="text-xl font-bold text-[#e6edf3] mb-4">Change Password</h3>
-              <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4 max-w-md">
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#e6edf3] font-medium">Current Password</label>
-                  <input 
-                    type="password" 
-                    value={passwordForm.current_password} 
-                    onChange={(e) => setPasswordForm({...passwordForm, current_password: e.target.value})}
-                    className="bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    required
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#e6edf3] font-medium">New Password</label>
-                  <input 
-                    type="password" 
-                    value={passwordForm.new_password} 
-                    onChange={(e) => setPasswordForm({...passwordForm, new_password: e.target.value})}
-                    className="bg-[#0d1117] border border-[#30363d] rounded-md px-3 py-2 text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    required
-                  />
-                  <span className="text-xs text-[#8b949e]">Minimum 8 characters, at least one uppercase letter and one number.</span>
-                </div>
-                <div className="flex justify-start mt-2">
-                  <button 
-                    type="submit" 
-                    disabled={saving}
-                    className="bg-[#238636] hover:bg-[#2ea043] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+              {/* Alerts */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="bg-[#f85149]/10 border border-[#f85149]/30 text-[#ff7b72] px-4 py-3 rounded-xl text-sm flex items-center gap-3"
                   >
-                    {saving ? 'Updating...' : 'Update Password'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
+                    <AlertCircle size={16} className="shrink-0" />
+                    {error}
+                  </motion.div>
+                )}
+                {success && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="bg-[#2ea043]/10 border border-[#2ea043]/30 text-[#3fb950] px-4 py-3 rounded-xl text-sm flex items-center gap-3"
+                  >
+                    <CheckCircle size={16} className="shrink-0" />
+                    {success}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-        </div>
+              {/* Tab Contents */}
+              <div className="bg-[#161b22]/80 backdrop-blur-md border border-[#30363d] rounded-2xl p-6 md:p-8 shadow-lg min-h-[400px]">
+                
+                {activeTab === 'profile' && (
+                  <motion.div 
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="flex flex-col gap-8"
+                  >
+                    <div>
+                      <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2 border-b border-[#30363d] pb-3">
+                        <User size={20} className="text-[#58a6ff]" />
+                        About Me
+                      </h3>
+                      {user?.bio ? (
+                        <p className="text-[#c9d1d9] leading-relaxed whitespace-pre-wrap">{user.bio}</p>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-8 text-[#8b949e]">
+                          <User size={32} className="mb-3 opacity-20" />
+                          <p>No bio provided yet.</p>
+                          <button 
+                            onClick={() => setActiveTab('edit')} 
+                            className="mt-4 text-[#58a6ff] hover:underline text-sm font-medium flex items-center"
+                          >
+                            Add a bio <ChevronRight size={14} className="ml-1" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
+                {activeTab === 'edit' && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2 border-b border-[#30363d] pb-3">
+                      <SettingsIcon size={20} className="text-[#58a6ff]" />
+                      Profile Details
+                    </h3>
+                    <form onSubmit={handleEditSubmit} className="flex flex-col gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm text-[#c9d1d9] font-semibold">Username</label>
+                          <input 
+                            type="text" 
+                            value={editForm.username} 
+                            onChange={(e) => setEditForm({...editForm, username: e.target.value})}
+                            className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white placeholder-[#484f58] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                            required
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm text-[#c9d1d9] font-semibold">Display Name</label>
+                          <input 
+                            type="text" 
+                            value={editForm.display_name} 
+                            onChange={(e) => setEditForm({...editForm, display_name: e.target.value})}
+                            className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white placeholder-[#484f58] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                            placeholder="John Doe"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm text-[#c9d1d9] font-semibold">Bio</label>
+                        <textarea 
+                          value={editForm.bio} 
+                          onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
+                          rows={4}
+                          className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white placeholder-[#484f58] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all resize-none"
+                          placeholder="Tell us about yourself..."
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm text-[#c9d1d9] font-semibold flex items-center gap-2"><Github size={14}/> GitHub URL</label>
+                          <input 
+                            type="url" 
+                            value={editForm.github_url} 
+                            onChange={(e) => setEditForm({...editForm, github_url: e.target.value})}
+                            className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white placeholder-[#484f58] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                            placeholder="https://github.com/username"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm text-[#c9d1d9] font-semibold flex items-center gap-2"><Linkedin size={14}/> LinkedIn URL</label>
+                          <input 
+                            type="url" 
+                            value={editForm.linkedin_url} 
+                            onChange={(e) => setEditForm({...editForm, linkedin_url: e.target.value})}
+                            className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white placeholder-[#484f58] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                            placeholder="https://linkedin.com/in/username"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2 md:col-span-2">
+                          <label className="text-sm text-[#c9d1d9] font-semibold flex items-center gap-2"><Globe size={14}/> Personal Website</label>
+                          <input 
+                            type="url" 
+                            value={editForm.website_url} 
+                            onChange={(e) => setEditForm({...editForm, website_url: e.target.value})}
+                            className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white placeholder-[#484f58] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                            placeholder="https://yourwebsite.com"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end mt-6 pt-6 border-t border-[#30363d]">
+                        <button 
+                          type="submit" 
+                          disabled={saving}
+                          className="bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#3fb950] text-white px-8 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-[#2ea043]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                          {saving ? (
+                            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Saving...</>
+                          ) : (
+                            'Save Changes'
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  </motion.div>
+                )}
+
+                {activeTab === 'settings' && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2 border-b border-[#30363d] pb-3">
+                      <SettingsIcon size={20} className="text-[#f0883e]" />
+                      Security
+                    </h3>
+                    <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-6 max-w-md">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm text-[#c9d1d9] font-semibold">Current Password</label>
+                        <input 
+                          type="password" 
+                          value={passwordForm.current_password} 
+                          onChange={(e) => setPasswordForm({...passwordForm, current_password: e.target.value})}
+                          className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm text-[#c9d1d9] font-semibold">New Password</label>
+                        <input 
+                          type="password" 
+                          value={passwordForm.new_password} 
+                          onChange={(e) => setPasswordForm({...passwordForm, new_password: e.target.value})}
+                          className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                          required
+                        />
+                        <span className="text-xs text-[#8b949e]">Minimum 8 characters, at least one uppercase letter and one number.</span>
+                      </div>
+                      <div className="flex justify-start mt-4 pt-4">
+                        <button 
+                          type="submit" 
+                          disabled={saving}
+                          className="bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-sm disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {saving ? (
+                            <><div className="w-4 h-4 border-2 border-[#8b949e] border-t-white rounded-full animate-spin"></div> Updating...</>
+                          ) : (
+                            'Update Password'
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  </motion.div>
+                )}
+
+              </div>
+            </motion.div>
+          </div>
+        )}
       </div>
     </div>
   );

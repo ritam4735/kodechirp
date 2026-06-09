@@ -86,6 +86,38 @@ export const api = {
     return data;
   },
 
+  forgotPassword: async (email) => {
+    const data = await request('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    return data;
+  },
+
+  resetPassword: async (email, token, newPassword) => {
+    const data = await request('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, token, newPassword }),
+    });
+    return data;
+  },
+
+  verifyEmail: async (email, token) => {
+    const data = await request('/api/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ email, token }),
+    });
+    return data;
+  },
+
+  resendVerification: async (email) => {
+    const data = await request('/api/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    return data;
+  },
+
   // ── Profile ─────────────────────────────────────────────────────────────────
   getProfile: async () => {
     const data = await request('/api/profile');

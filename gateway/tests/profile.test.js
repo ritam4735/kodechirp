@@ -105,7 +105,7 @@ describe('Profile Controller Security Audit', () => {
   });
 
   describe('updateAvatar', () => {
-    it('updates avatar successfully', async () => {
+    it('updates avatar successfully with URL', async () => {
       mockReq.body = { avatar_url: 'http://example.com/avatar.jpg' };
       db.query.mockResolvedValueOnce({ rows: [{ avatar_url: 'http://example.com/avatar.jpg' }] });
 
@@ -123,6 +123,24 @@ describe('Profile Controller Security Audit', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({ success: false, error: 'Avatar URL is required' });
+    });
+
+    it('returns 400 if image format is invalid', async () => {
+      mockReq.body = { avatar_url: 'data:image/svg+xml;base64,PHN2Zz4=' };
+      await profileController.updateAvatar(mockReq, mockRes, mockNext);
+      
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith({ success: false, error: 'Invalid image format. Allowed: PNG, JPEG, WEBP, GIF' });
+    });
+
+    it('returns 400 if image exceeds size limit', async () => {
+      // simulate large base64
+      const largeBase64 = 'data:image/png;base64,' + 'A'.repeat(3 * 1024 * 1024); // > 2MB
+      mockReq.body = { avatar_url: largeBase64 };
+      await profileController.updateAvatar(mockReq, mockRes, mockNext);
+      
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith({ success: false, error: 'Image size exceeds 2MB limit' });
     });
   });
 });
