@@ -1,8 +1,3 @@
-# workers/src/worker/evaluator.py
-# ─────────────────────────────────────────────────────────────────────────────
-# Test case evaluator — runs code against all test cases and determines verdict
-# ─────────────────────────────────────────────────────────────────────────────
-
 import socket
 from typing import Optional
 
@@ -50,123 +45,194 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
         submission_id, Verdict.RUNNING, worker_id=WORKER_ID
     )
 
-    for idx, tc in enumerate(job.testCases):
-        # Publish progress
-        await redis_service.publish_progress({
-            "submissionId": submission_id,
-            "userId": job.userId,
-            "testCaseIndex": idx + 1,
-            "testCasesTotal": total,
-            "status": "running",
-        })
-
-        # Execute code
-        result = await docker_service.execute_code(
-            submission_id=submission_id,
-            code=job.code,
-            language=job.language,
-            stdin=tc.input,
-            timeout_ms=job.constraints.timeoutMs,
-            memory_mb=job.constraints.memoryMb,
-        )
-
-        runtime_ms = result.runtimeMs or 0
-        memory_kb = result.memoryKb or 0
-        max_runtime_ms = max(max_runtime_ms, runtime_ms)
-        max_memory_kb = max(max_memory_kb, memory_kb)
-
-        # ── Time Limit Exceeded ──────────────────────────────────────────
-        if result.timedOut:
-            await _save_metric(submission_id, tc.id, idx, result, Verdict.TLE)
-
-            return SubmissionResult(
-                submissionId=submission_id,
-                userId=job.userId,
-                verdict=Verdict.TLE,
-                testCasesPassed=passed,
-                testCasesTotal=total,
-                runtimeMs=runtime_ms,
-                memoryKb=memory_kb,
-                failedTestCase={
-                    "input": tc.input,
-                    "expectedOutput": tc.expectedOutput,
-                    "actualOutput": result.stdout,
-                    "isSample": tc.isSample,
-                },
-                workerId=WORKER_ID,
-            )
-
-        # ── Compilation / Runtime Error ──────────────────────────────────
-        if result.exitCode != 0:
-            # Detect compilation vs runtime error
-            stderr_lower = result.stderr.lower()
-            if any(kw in stderr_lower for kw in ["error:", "undefined reference", "cannot find"]):
-                verdict = Verdict.COMPILATION_ERROR
-            else:
-                verdict = Verdict.RUNTIME_ERROR
-
-            await _save_metric(submission_id, tc.id, idx, result, verdict)
-
-            return SubmissionResult(
-                submissionId=submission_id,
-                userId=job.userId,
-                verdict=verdict,
-                testCasesPassed=passed,
-                testCasesTotal=total,
-                runtimeMs=runtime_ms,
-                memoryKb=memory_kb,
-                error=truncate(result.stderr, 1000),
-                failedTestCase={
-                    "input": tc.input,
-                    "expectedOutput": tc.expectedOutput,
-                    "actualOutput": result.stderr,
-                    "isSample": tc.isSample,
-                },
-                workerId=WORKER_ID,
-            )
-
-        # ── Wrong Answer ─────────────────────────────────────────────────
-        actual = normalise_output(result.stdout)
-        expected = normalise_output(tc.expectedOutput)
-
-        if actual != expected:
-            await _save_metric(submission_id, tc.id, idx, result, Verdict.WRONG_ANSWER)
-
-            return SubmissionResult(
-                submissionId=submission_id,
-                userId=job.userId,
-                verdict=Verdict.WRONG_ANSWER,
-                testCasesPassed=passed,
-                testCasesTotal=total,
-                runtimeMs=runtime_ms,
-                memoryKb=memory_kb,
-                failedTestCase={
-                    "input": tc.input,
-                    "expectedOutput": tc.expectedOutput,
-                    "actualOutput": result.stdout,
-                    "isSample": tc.isSample,
-                },
-                workerId=WORKER_ID,
-            )
-
-        # ── Passed ───────────────────────────────────────────────────────
-        await _save_metric(submission_id, tc.id, idx, result, Verdict.ACCEPTED)
-        passed += 1
-
-    # ── All Passed → Accepted ────────────────────────────────────────────
-    logger.info(f"Submission {submission_id}: Accepted ({passed}/{total})")
-
-    return SubmissionResult(
-        submissionId=submission_id,
-        userId=job.userId,
-        verdict=Verdict.ACCEPTED,
-        testCasesPassed=passed,
-        testCasesTotal=total,
-        runtimeMs=max_runtime_ms,
-        memoryKb=max_memory_kb,
-        workerId=WORKER_ID,
+    # ── Compilation Phase ──────────────────────────────────────────
+    run_dir, compile_result = await docker_service.prepare_and_compile(
+        submission_id=submission_id,
+        code=job.code,
+        language=job.language,
     )
 
+    if compile_result and compile_result.exitCode != 0:
+        logger.info(f"Submission {submission_id}: Compilation Error")
+        
+        # Save a metric for the first test case to show the error
+        if len(job.testCases) > 0:
+            tc = job.testCases[0]
+            await _save_metric(submission_id, tc.id, 0, compile_result, Verdict.COMPILATION_ERROR)
+            failed_tc = {
+                "input": tc.input,
+                "expectedOutput": tc.expectedOutput,
+                "actualOutput": compile_result.stderr,
+                "isSample": tc.isSample,
+            }
+        else:
+            failed_tc = {}
+
+        return SubmissionResult(
+            submissionId=submission_id,
+            userId=job.userId,
+            verdict=Verdict.COMPILATION_ERROR,
+            testCasesPassed=0,
+            testCasesTotal=total,
+            runtimeMs=compile_result.runtimeMs or 0,
+            memoryKb=0,
+            error=truncate(compile_result.stderr, 1000),
+            failedTestCase=failed_tc,
+            workerId=WORKER_ID,
+        )
+
+    # ── Execution Phase ────────────────────────────────────────────
+    try:
+        for idx, tc in enumerate(job.testCases):
+            # Publish progress
+            await redis_service.publish_progress({
+                "submissionId": submission_id,
+                "userId": job.userId,
+                "testCaseIndex": idx + 1,
+                "testCasesTotal": total,
+                "status": "running",
+            })
+
+            # Execute code
+            result = await docker_service.execute_test_case(
+                run_dir=run_dir,
+                submission_id=submission_id,
+                language=job.language,
+                stdin=tc.input,
+                timeout_ms=job.constraints.timeoutMs,
+                memory_mb=job.constraints.memoryMb,
+                test_index=idx,
+            )
+
+            runtime_ms = result.runtimeMs or 0
+            memory_kb = result.memoryKb or 0
+            max_runtime_ms = max(max_runtime_ms, runtime_ms)
+            max_memory_kb = max(max_memory_kb, memory_kb)
+
+            # ── Time Limit Exceeded ──────────────────────────────────────────
+            if result.timedOut:
+                await _save_metric(submission_id, tc.id, idx, result, Verdict.TLE)
+
+                return SubmissionResult(
+                    submissionId=submission_id,
+                    userId=job.userId,
+                    verdict=Verdict.TLE,
+                    testCasesPassed=passed,
+                    testCasesTotal=total,
+                    runtimeMs=runtime_ms,
+                    memoryKb=memory_kb,
+                    failedTestCase={
+                        "input": tc.input,
+                        "expectedOutput": tc.expectedOutput,
+                        "actualOutput": result.stdout,
+                        "isSample": tc.isSample,
+                    },
+                    workerId=WORKER_ID,
+                )
+            
+            # ── Memory Limit Exceeded ────────────────────────────────────────
+            # Detect MLE: exit code 137, SIGKILL, or Docker OOM events. (137 = 128 + 9)
+            # Also catch specific language errors that cause memory issues (e.g. MemoryError)
+            is_mle = False
+            if result.exitCode == 137:
+                is_mle = True
+            elif result.stderr:
+                stderr_lower = result.stderr.lower()
+                if "memoryerror" in stderr_lower or "javascript heap out of memory" in stderr_lower or "fatal error: runtime: out of memory" in stderr_lower or "java.lang.outofmemoryerror" in stderr_lower:
+                    is_mle = True
+            elif "Runtime Error: Output exceeded 10 MB limit" in result.stderr:
+                 is_mle = True
+                 
+            if is_mle:
+                await _save_metric(submission_id, tc.id, idx, result, Verdict.MLE)
+
+                return SubmissionResult(
+                    submissionId=submission_id,
+                    userId=job.userId,
+                    verdict=Verdict.MLE,
+                    testCasesPassed=passed,
+                    testCasesTotal=total,
+                    runtimeMs=runtime_ms,
+                    memoryKb=memory_kb,
+                    error=truncate(result.stderr, 1000) if result.stderr else "Memory Limit Exceeded",
+                    failedTestCase={
+                        "input": tc.input,
+                        "expectedOutput": tc.expectedOutput,
+                        "actualOutput": result.stderr or "Process was killed due to memory limits (OOM)",
+                        "isSample": tc.isSample,
+                    },
+                    workerId=WORKER_ID,
+                )
+
+            # ── Runtime Error ────────────────────────────────────────────────
+            if result.exitCode != 0:
+                # Any other non-zero exit code is a Runtime Error
+                # e.g., Segfault (139), Divide by zero (136), Stack overflow, Python exceptions
+                verdict = Verdict.RUNTIME_ERROR
+
+                await _save_metric(submission_id, tc.id, idx, result, verdict)
+
+                return SubmissionResult(
+                    submissionId=submission_id,
+                    userId=job.userId,
+                    verdict=verdict,
+                    testCasesPassed=passed,
+                    testCasesTotal=total,
+                    runtimeMs=runtime_ms,
+                    memoryKb=memory_kb,
+                    error=truncate(result.stderr, 1000),
+                    failedTestCase={
+                        "input": tc.input,
+                        "expectedOutput": tc.expectedOutput,
+                        "actualOutput": result.stderr,
+                        "isSample": tc.isSample,
+                    },
+                    workerId=WORKER_ID,
+                )
+
+            # ── Wrong Answer ─────────────────────────────────────────────────
+            actual = normalise_output(result.stdout)
+            expected = normalise_output(tc.expectedOutput)
+
+            if actual != expected:
+                await _save_metric(submission_id, tc.id, idx, result, Verdict.WRONG_ANSWER)
+
+                return SubmissionResult(
+                    submissionId=submission_id,
+                    userId=job.userId,
+                    verdict=Verdict.WRONG_ANSWER,
+                    testCasesPassed=passed,
+                    testCasesTotal=total,
+                    runtimeMs=runtime_ms,
+                    memoryKb=memory_kb,
+                    failedTestCase={
+                        "input": tc.input,
+                        "expectedOutput": tc.expectedOutput,
+                        "actualOutput": result.stdout,
+                        "isSample": tc.isSample,
+                    },
+                    workerId=WORKER_ID,
+                )
+
+            # ── Passed ───────────────────────────────────────────────────────
+            await _save_metric(submission_id, tc.id, idx, result, Verdict.ACCEPTED)
+            passed += 1
+
+        # ── All Passed → Accepted ────────────────────────────────────────────
+        logger.info(f"Submission {submission_id}: Accepted ({passed}/{total})")
+
+        return SubmissionResult(
+            submissionId=submission_id,
+            userId=job.userId,
+            verdict=Verdict.ACCEPTED,
+            testCasesPassed=passed,
+            testCasesTotal=total,
+            runtimeMs=max_runtime_ms,
+            memoryKb=max_memory_kb,
+            workerId=WORKER_ID,
+        )
+    finally:
+        await docker_service.cleanup_submission(run_dir)
 
 async def _save_metric(
     submission_id: str,

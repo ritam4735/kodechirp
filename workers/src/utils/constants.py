@@ -27,7 +27,8 @@ LANGUAGE_CONFIG = {
         "memory": "256m",
         "cpus": 1.0,
         "tmpfs_size": "32m",
-        "run_command": "g++ main.cpp -O2 -std=c++17 -o /tmp/main && /app/mem_wrapper /tmp/main",
+        "compile_command": "g++ main.cpp -O2 -std=c++17 -o main",
+        "run_command": "/app/mem_wrapper ./main",
         "timeout": 15,
     },
     "c": {
@@ -36,7 +37,8 @@ LANGUAGE_CONFIG = {
         "memory": "256m",
         "cpus": 1.0,
         "tmpfs_size": "32m",
-        "run_command": "gcc main.c -O2 -std=c11 -o /tmp/main && /app/mem_wrapper /tmp/main",
+        "compile_command": "gcc main.c -O2 -std=c11 -o main",
+        "run_command": "/app/mem_wrapper ./main",
         "timeout": 15,
     },
     "java": {
@@ -45,7 +47,8 @@ LANGUAGE_CONFIG = {
         "memory": "512m",
         "cpus": 1.0,
         "tmpfs_size": "64m",
-        "run_command": "javac Main.java && /app/mem_wrapper java Main",
+        "compile_command": "javac Main.java",
+        "run_command": "/app/mem_wrapper java Main",
         "timeout": 15,
     },
 }
