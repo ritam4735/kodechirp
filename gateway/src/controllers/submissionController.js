@@ -88,7 +88,7 @@ exports.getSubmission = async (req, res, next) => {
   try {
     const submission = await submissionService.getSubmission(
       req.params.id,
-      req.user?.id
+      req.user
     );
 
     return res.json({ success: true, data: submission });

@@ -159,14 +159,20 @@ async function getUserSubmissions(userId, { limit = 50, offset = 0 } = {}) {
 /**
  * Get a single submission by ID.
  */
-async function getSubmission(submissionId, userId = null) {
+async function getSubmission(submissionId, user = null) {
   let queryText = 'SELECT * FROM submissions WHERE id = $1';
   const params = [submissionId];
 
-  // If userId provided, ensure they own the submission
-  if (userId) {
+  // Admin can access any submission
+  if (user && user.role === 'admin') {
+    // No additional filters
+  } else if (user && user.id) {
+    // Authenticated user can only access their own submissions
     queryText += ' AND user_id = $2';
-    params.push(userId);
+    params.push(user.id);
+  } else {
+    // Guest can only access guest submissions
+    queryText += ' AND user_id IS NULL';
   }
 
   const result = await db.query(queryText, params);
