@@ -86,6 +86,36 @@ export const api = {
     return data;
   },
 
+  // ── Profile ─────────────────────────────────────────────────────────────────
+  getProfile: async () => {
+    const data = await request('/api/profile');
+    return data;
+  },
+
+  updateProfile: async (updates) => {
+    const data = await request('/api/profile', {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+    return data;
+  },
+
+  changePassword: async (current_password, new_password) => {
+    const data = await request('/api/profile/password', {
+      method: 'PUT',
+      body: JSON.stringify({ current_password, new_password }),
+    });
+    return data;
+  },
+
+  updateAvatar: async (avatar_url) => {
+    const data = await request('/api/profile/avatar', {
+      method: 'POST',
+      body: JSON.stringify({ avatar_url }),
+    });
+    return data;
+  },
+
   // ── Problems ────────────────────────────────────────────────────────────────
 
   getProblems: async (searchQuery = '', { page = 1, limit = 50, difficulty = '' } = {}) => {

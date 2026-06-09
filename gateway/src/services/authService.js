@@ -35,7 +35,7 @@ async function signup({ email, password, username }) {
   const result = await db.query(
     `INSERT INTO users (username, email, password_hash)
      VALUES ($1, $2, $3)
-     RETURNING id, username, email, role, avatar_url, bio, rating, created_at`,
+     RETURNING id, username, email, display_name, role, avatar_url, bio, rating, github_url, linkedin_url, website_url, preferences_json, created_at`,
     [username, email, passwordHash]
   );
 
@@ -140,7 +140,7 @@ async function refreshAccessToken(refreshToken) {
 
   // Fetch user
   const userResult = await db.query(
-    'SELECT id, username, email, role, avatar_url, bio, rating FROM users WHERE id = $1 AND is_active = TRUE',
+    'SELECT id, username, email, display_name, role, avatar_url, bio, rating, github_url, linkedin_url, website_url, preferences_json FROM users WHERE id = $1 AND is_active = TRUE',
     [storedToken.user_id]
   );
 
@@ -176,7 +176,7 @@ async function revokeAllTokens(userId) {
  */
 async function getProfile(userId) {
   const result = await db.query(
-    `SELECT id, username, email, role, avatar_url, bio, rating, created_at, updated_at
+    `SELECT id, username, email, display_name, role, avatar_url, bio, rating, github_url, linkedin_url, website_url, preferences_json, created_at, updated_at
      FROM users WHERE id = $1`,
     [userId]
   );

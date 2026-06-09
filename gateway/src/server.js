@@ -53,6 +53,7 @@ app.use(globalLimiter);
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 app.use('/api/auth',        require('./routes/auth'));
+app.use('/api/profile',     require('./routes/profile'));
 app.use('/api/problems',    require('./routes/problems'));
 app.use('/api/submissions', require('./routes/submissions'));
 app.use('/api/contests',    require('./routes/contests'));

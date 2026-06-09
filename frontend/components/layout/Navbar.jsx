@@ -91,10 +91,16 @@ export const Navbar = () => {
               onClick={() => setMenuOpen(!menuOpen)}
               title="Account menu"
             >
-              <div className="nav-avatar">🦅</div>
+              <div className="nav-avatar">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                ) : (
+                  '🦅'
+                )}
+              </div>
               <div className="nav-user-info">
                 <div className="nav-user-name">
-                  {user?.username || user?.name || 'Profile'}
+                  {user?.display_name || user?.username || 'Profile'}
                   {isAdmin && <span className="nav-admin-badge" style={{ marginLeft: '6px' }}>Admin</span>}
                 </div>
                 <div className="nav-user-tag">{isAdmin ? 'Administrator' : 'Keep Chirping!'}</div>
@@ -105,7 +111,7 @@ export const Navbar = () => {
             {menuOpen && (
               <div className="nav-dropdown">
                 <div className="nav-dropdown-header">
-                  <div className="nav-dropdown-username">{user?.username}</div>
+                  <div className="nav-dropdown-username">{user?.display_name || user?.username}</div>
                   <div className="nav-dropdown-email">{user?.email || ''}</div>
                 </div>
                 <div className="nav-dropdown-divider"></div>
