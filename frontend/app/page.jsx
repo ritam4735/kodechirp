@@ -3,12 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import { api } from '../lib/api';
-
-const BirdCursor = dynamic(() => import('../components/ui/BirdCursor').then(mod => mod.BirdCursor), {
-  ssr: false,
-});
 
 function HeroSection() {
   const router = useRouter();
@@ -259,12 +254,12 @@ function ProblemsSection({ problems }) {
             </div>
           </div>
 
-          <div className="sidebar-card">
+          <div className="sidebar-card daily-challenge-card">
             <div className="sidebar-card-title">Daily Challenge</div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: '1.6' }}>
-              Minimum Window Substring — <span style={{ color: '#f87171', fontWeight: 600 }}>Hard</span>
+            <div style={{ fontSize: '14px', color: '#e2e8f0', marginBottom: '12px', lineHeight: '1.6', fontWeight: 500, textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
+              Minimum Window Substring — <span style={{ color: '#fca5a5', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>Hard</span>
             </div>
-            <Link href="/questions" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', fontSize: '13px', padding: '10px' }}>
+            <Link href="/questions" className="btn btn-primary daily-challenge-btn" style={{ width: '100%', justifyContent: 'center', fontSize: '14px', padding: '12px', fontWeight: 700, boxShadow: '0 4px 15px rgba(120,60,240,0.6)' }}>
               Attempt Today's Challenge 🎯
             </Link>
           </div>
@@ -339,22 +334,10 @@ export default function HomePage() {
 
   return (
     <div className="landing-page-wrapper">
-      <BirdCursor />
-      
       <div className="scroll-progress" id="scrollProgress"></div>
       <div className="cursor-glow" id="cursorGlow"></div>
 
-      <div className="bg-universe">
-        <div className="bg-gradient-mesh"></div>
-        <div className="star-field" id="starField"></div>
-        <div className="nebula nebula-1"></div>
-        <div className="nebula nebula-2"></div>
-        <div className="nebula nebula-3"></div>
-        <svg className="mountain-silhouette" viewBox="0 0 1440 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M0,280 L0,200 L80,180 L140,150 L200,160 L280,100 L360,130 L420,80 L500,110 L560,60 L620,90 L680,50 L740,80 L800,40 L860,70 L920,30 L980,60 L1040,90 L1100,55 L1160,85 L1220,120 L1280,140 L1360,160 L1440,150 L1440,280 Z" fill="rgba(10,15,50,0.6)"/>
-          <path d="M0,280 L0,230 L60,220 L120,200 L200,210 L280,170 L350,185 L420,145 L500,160 L580,130 L640,150 L720,110 L800,130 L880,105 L940,120 L1020,90 L1100,110 L1180,140 L1260,160 L1360,175 L1440,165 L1440,280 Z" fill="rgba(5,8,25,0.7)"/>
-        </svg>
-        <div className="water-reflection"></div>
+      <div className="bg-universe" style={{ backgroundImage: "url('/background.jpeg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
       </div>
 
       <div className="bubbles-container" id="bubblesContainer"></div>

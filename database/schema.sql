@@ -65,14 +65,53 @@ CREATE TABLE IF NOT EXISTS problems (
     acceptance_rate REAL DEFAULT 0,
     total_submissions INTEGER DEFAULT 0,
     total_accepted INTEGER DEFAULT 0,
-    status VARCHAR(20) DEFAULT 'Draft' CHECK (status IN ('Draft', 'Review', 'Published', 'Archived')),
+    status VARCHAR(20) DEFAULT 'Draft' CHECK (status IN ('Draft', 'Review', 'Published', 'Archived', 'Imported', 'Parsed', 'AI_Normalized', 'Review_Required', 'Ready')),
     source VARCHAR(50) DEFAULT 'kodechirp',
     tags JSONB DEFAULT '[]'::jsonb,
     metadata JSONB DEFAULT '{}'::jsonb,
+    -- Normalization pipeline fields
+    raw_statement TEXT,
+    description_md TEXT,
+    examples_json JSONB,
+    constraints_json JSONB,
+    notes_json JSONB,
+    parser_confidence NUMERIC,
+    ai_quality_flags JSONB,
+    generated_constraints JSONB,
+    constraint_source VARCHAR(20),
+    review_status VARCHAR(50) DEFAULT 'imported',
+    reference_solution_id UUID,  -- FK added after reference_solutions table
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_problems_review_status ON problems(review_status);
+CREATE INDEX IF NOT EXISTS idx_problems_parser_confidence ON problems(parser_confidence);
+
+-- ── Reference Solutions ──────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS reference_solutions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    problem_id UUID NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
+    language VARCHAR(20) NOT NULL,
+    source_code TEXT NOT NULL,
+    compile_status VARCHAR(50) DEFAULT 'pending',
+    verification_result JSONB,
+    last_verified_at TIMESTAMPTZ,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ref_solutions_problem ON reference_solutions(problem_id);
+
+-- FK: problems.reference_solution_id -> reference_solutions(id)
+DO $$ BEGIN
+    ALTER TABLE problems ADD CONSTRAINT fk_problems_ref_solution
+        FOREIGN KEY (reference_solution_id) REFERENCES reference_solutions(id)
+        ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ── Test Cases ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS test_cases (
@@ -82,7 +121,11 @@ CREATE TABLE IF NOT EXISTS test_cases (
     expected_output TEXT NOT NULL,
     is_sample BOOLEAN DEFAULT FALSE,
     explanation TEXT,
-    order_index INTEGER DEFAULT 0
+    order_index INTEGER DEFAULT 0,
+    category VARCHAR(50),
+    generated_by VARCHAR(50),
+    verified BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_test_cases_problem ON test_cases(problem_id);
@@ -239,6 +282,12 @@ END $$;
 
 DO $$ BEGIN
     CREATE TRIGGER update_contests_updated_at BEFORE UPDATE ON contests
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    CREATE TRIGGER update_ref_solutions_updated_at BEFORE UPDATE ON reference_solutions
         FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;

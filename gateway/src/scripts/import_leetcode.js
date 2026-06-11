@@ -62,7 +62,8 @@ async function importDataset() {
           continue;
         }
 
-        const { description, constraints } = parseProblemDescription(row.description);
+        const rawStatement = row.description || '';
+        const { description, constraints } = parseProblemDescription(rawStatement);
         
         let difficulty = row.difficulty || 'Medium';
         if (!['Easy', 'Medium', 'Hard'].includes(difficulty)) {
@@ -82,18 +83,20 @@ async function importDataset() {
 
         const query = `
           INSERT INTO problems 
-          (slug, title, description, difficulty, constraints, source, status, tags, metadata)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          (slug, title, description, raw_statement, difficulty, constraints, source, status, review_status, tags, metadata)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         `;
 
         await db.query(query, [
           slug,
           row.title,
-          description,
+          description || rawStatement,
+          rawStatement,
           difficulty,
           constraints,
           'leetcode_import',
-          'Draft', // Initially unpublished
+          'Imported',
+          'imported',
           JSON.stringify(tags),
           JSON.stringify(metadata)
         ]);

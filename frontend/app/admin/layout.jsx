@@ -12,6 +12,7 @@ const ADMIN_NAV = [
   ]},
   { section: 'Content', items: [
     { label: 'Problems',    href: '/admin/problems',     icon: '📝' },
+    { label: 'Normalize',   href: '/admin/normalize',    icon: '🔬' },
   ]},
   { section: 'Platform', items: [
     { label: 'Users',       href: '/admin/users',        icon: '👥' },

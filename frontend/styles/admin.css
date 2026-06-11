@@ -743,3 +743,316 @@
   border: 1px solid rgba(77, 159, 255, 0.15);
   margin: 1px 3px 1px 0;
 }
+
+/* ============================================
+   NORMALIZATION PIPELINE — Extended Styles
+   ============================================ */
+
+/* ── Confidence Meter ───────────────────────── */
+.confidence-meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.confidence-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+  max-width: 120px;
+}
+
+.confidence-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease, background 0.3s ease;
+}
+
+.confidence-fill.high { background: linear-gradient(90deg, #22c55e, #4ade80); }
+.confidence-fill.medium { background: linear-gradient(90deg, #eab308, #fbbf24); }
+.confidence-fill.low { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+.confidence-value {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-code, monospace);
+  min-width: 42px;
+  text-align: right;
+}
+
+.confidence-value.high { color: #4ade80; }
+.confidence-value.medium { color: #fbbf24; }
+.confidence-value.low { color: #f87171; }
+
+/* ── Review Status Badges ───────────────────── */
+.badge-pending { background: rgba(139,148,158,0.12); color: #8b949e; border: 1px solid rgba(139,148,158,0.25); }
+.badge-imported { background: rgba(139,148,158,0.12); color: #8b949e; border: 1px solid rgba(139,148,158,0.25); }
+.badge-parsed { background: rgba(77,159,255,0.12); color: #4d9fff; border: 1px solid rgba(77,159,255,0.25); }
+.badge-ai_normalized { background: rgba(168,85,247,0.12); color: #c084fc; border: 1px solid rgba(168,85,247,0.25); }
+.badge-review_required { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
+.badge-approved { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+.badge-ready { background: rgba(0,212,255,0.12); color: #00d4ff; border: 1px solid rgba(0,212,255,0.25); }
+.badge-ready_for_publication { background: rgba(0,212,255,0.12); color: #00d4ff; border: 1px solid rgba(0,212,255,0.25); }
+.badge-published { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+.badge-review { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
+.badge-archived { background: rgba(139,148,158,0.12); color: #8b949e; border: 1px solid rgba(139,148,158,0.25); }
+
+/* ── Normalization Stats Row ────────────────── */
+.norm-stats-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.norm-stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 20, 55, 0.55);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 140px;
+}
+
+.norm-stat-chip:hover {
+  border-color: rgba(77, 159, 255, 0.3);
+  background: rgba(15, 20, 55, 0.75);
+}
+
+.norm-stat-chip.active {
+  border-color: rgba(77, 159, 255, 0.5);
+  background: rgba(77, 159, 255, 0.08);
+}
+
+.norm-stat-count {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.norm-stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.norm-stat-conf {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-code, monospace);
+}
+
+/* ── Split Pane (Raw vs Parsed) ─────────────── */
+.norm-split-pane {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.norm-pane {
+  background: rgba(15, 20, 55, 0.45);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.norm-pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(5, 8, 18, 0.6);
+  border-bottom: 1px solid var(--border-glass);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.norm-pane-body {
+  padding: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.norm-pane-body pre {
+  font-family: var(--font-code, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+/* ── Quality Flags ──────────────────────────── */
+.quality-flags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quality-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.quality-flag.flag-ok {
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.quality-flag.flag-warn {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.quality-flag.flag-error {
+  background: rgba(248, 81, 73, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(248, 81, 73, 0.2);
+}
+
+/* ── Example Cards ──────────────────────────── */
+.norm-example-card {
+  background: rgba(15, 20, 55, 0.3);
+  border: 1px solid rgba(100, 140, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.norm-example-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.norm-example-field {
+  margin-bottom: 8px;
+}
+
+.norm-example-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4d9fff;
+  margin-bottom: 3px;
+}
+
+.norm-example-value {
+  font-family: var(--font-code, monospace);
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  background: rgba(5, 8, 18, 0.5);
+  border-radius: 6px;
+  white-space: pre-wrap;
+}
+
+/* ── Constraint List ────────────────────────── */
+.norm-constraint-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.norm-constraint-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-family: var(--font-code, monospace);
+  border-bottom: 1px solid rgba(100, 140, 255, 0.06);
+}
+
+.norm-constraint-item:last-child {
+  border-bottom: none;
+}
+
+.norm-constraint-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.norm-constraint-dot.source-parsed { background: #4ade80; }
+.norm-constraint-dot.source-ai { background: #c084fc; }
+
+/* ── Review Action Bar ──────────────────────── */
+.norm-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: rgba(15, 20, 55, 0.65);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  margin-top: 20px;
+}
+
+.norm-action-bar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-right: auto;
+}
+
+/* ── Warning Pill ───────────────────────────── */
+.admin-btn-warning {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.admin-btn-warning:hover { background: rgba(251, 191, 36, 0.25); }
+
+/* ── AI Status Pill ─────────────────────────── */
+.ai-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ai-status-pill.ai-active {
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.ai-status-pill.ai-inactive {
+  background: rgba(139, 148, 158, 0.1);
+  color: #8b949e;
+  border: 1px solid rgba(139, 148, 158, 0.2);
+}
+
+/* ── Responsive ─────────────────────────────── */
+@media (max-width: 1024px) {
+  .norm-split-pane {
+    grid-template-columns: 1fr;
+  }
+}

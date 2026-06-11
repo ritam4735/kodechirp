@@ -152,6 +152,62 @@ class DockerService:
             # We don't clean up run_dir here, it's passed to execute_test_case
             pass
 
+    async def execute_code(
+        self,
+        code: str,
+        language: str,
+        stdin: str = "",
+        timeout_ms: int = 5000,
+    ) -> ExecutionResult:
+        """Compile, run once, and clean up a temporary sandbox execution."""
+        submission_id = uuid.uuid4().hex
+        run_dir = None
+        container_name = None
+
+        try:
+            run_dir, compile_result = await self.prepare_and_compile(
+                submission_id=submission_id,
+                code=code,
+                language=language,
+            )
+
+            if compile_result and compile_result.exitCode != 0:
+                return compile_result
+
+            if run_dir is None:
+                return ExecutionResult(
+                    stderr="Failed to prepare execution directory",
+                    exitCode=-1,
+                )
+
+            container_name = await self.start_sandbox(
+                run_dir=run_dir,
+                submission_id=submission_id,
+                language=language,
+            )
+
+            if not container_name:
+                return ExecutionResult(
+                    stderr="Failed to start sandbox",
+                    exitCode=-1,
+                )
+
+            return await self.execute_in_sandbox(
+                container_name=container_name,
+                language=language,
+                stdin=stdin,
+                timeout_ms=timeout_ms,
+            )
+        except Exception as e:
+            logger.error(f"Docker execute_code error: {e}")
+            return ExecutionResult(
+                stderr=f"Execution error: {str(e)}",
+                exitCode=-1,
+            )
+        finally:
+            if container_name:
+                await self.stop_sandbox(container_name)
+            await self.cleanup_submission(run_dir)
 
     async def cleanup_submission(self, run_dir: Optional[Path]):
         """Cleanup submission temp directory."""

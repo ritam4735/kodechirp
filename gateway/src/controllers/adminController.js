@@ -4,23 +4,80 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const db = require('../config/database');
+const { parseProblem } = require('../services/problemParser');
+const normalizationService = require('../services/problemNormalizationService');
+const referenceSolutionService = require('../services/referenceSolutionService');
+const testGenerationService = require('../services/testGenerationService');
+
+const REVIEW_STATUSES = Object.freeze({
+  IMPORTED: 'imported',
+  PARSED: 'parsed',
+  AI_NORMALIZED: 'ai_normalized',
+  REVIEW_REQUIRED: 'review_required',
+  APPROVED: 'approved',
+  READY_FOR_PUBLICATION: 'ready_for_publication',
+  PUBLISHED: 'published',
+});
+
+const LEGACY_REVIEW_STATUSES = Object.freeze(['pending', 'ready']);
+const VALID_REVIEW_STATUSES = Object.freeze([
+  ...Object.values(REVIEW_STATUSES),
+  ...LEGACY_REVIEW_STATUSES,
+]);
 
 // ── Publish Validation Helper ───────────────────────────────────────────────
-// Validates a problem meets all requirements before publishing
+// Validates a problem meets all requirements before publishing.
+// Required: title, description, ≥1 example, difficulty, tags, reference solution
 async function validatePublish(problemId) {
   const errors = [];
 
   // Check problem fields
   const probResult = await db.query(
-    'SELECT title, description, constraints FROM problems WHERE id = $1',
+    `SELECT title, description, difficulty, tags, constraints,
+            examples_json, reference_solution_id
+     FROM problems WHERE id = $1`,
     [problemId]
   );
   if (probResult.rowCount === 0) {
     return { valid: false, errors: ['Problem not found'] };
   }
   const prob = probResult.rows[0];
+
+  // Required fields
   if (!prob.title || !prob.title.trim()) errors.push('Title is required');
   if (!prob.description || !prob.description.trim()) errors.push('Description is required');
+  if (!prob.difficulty) errors.push('Difficulty is required');
+
+  // Tags
+  const tags = prob.tags || [];
+  if (!Array.isArray(tags) || tags.length === 0) errors.push('At least one tag is required');
+
+  // Examples: check examples_json or sample test cases
+  const examplesJson = prob.examples_json || [];
+  const sampleResult = await db.query(
+    'SELECT COUNT(*)::int as count FROM test_cases WHERE problem_id = $1 AND is_sample = TRUE',
+    [problemId]
+  );
+  const sampleCount = sampleResult.rows[0].count;
+  if (examplesJson.length === 0 && sampleCount === 0) {
+    errors.push('At least one example is required');
+  }
+
+  // Reference solution
+  if (!prob.reference_solution_id) {
+    errors.push('Cannot publish problem without a reference solution');
+  } else {
+    // Check verification status
+    const refResult = await db.query(
+      'SELECT compile_status FROM reference_solutions WHERE id = $1',
+      [prob.reference_solution_id]
+    );
+    if (refResult.rowCount === 0) {
+      errors.push('Reference solution record not found');
+    } else if (refResult.rows[0].compile_status !== 'verified') {
+      errors.push('Reference solution must be verified before publishing');
+    }
+  }
 
   // Check test cases
   const tcResult = await db.query(
@@ -367,6 +424,7 @@ exports.updateProblem = async (req, res, next) => {
           metadata = COALESCE($11, metadata),
           slug = COALESCE($12, slug),
           source = COALESCE($13, source),
+          review_status = CASE WHEN $4 = 'Published' THEN '${REVIEW_STATUSES.PUBLISHED}' ELSE review_status END,
           updated_at = NOW()
       WHERE id = $14 RETURNING *
     `, [
@@ -418,8 +476,12 @@ exports.toggleProblemStatus = async (req, res, next) => {
     }
 
     const result = await db.query(
-      'UPDATE problems SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
-      [status, req.params.id]
+      `UPDATE problems
+       SET status = $1,
+           review_status = CASE WHEN $1 = 'Published' THEN $3 ELSE review_status END,
+           updated_at = NOW()
+       WHERE id = $2 RETURNING *`,
+      [status, req.params.id, REVIEW_STATUSES.PUBLISHED]
     );
     if (result.rowCount === 0) {
       return res.status(404).json({ success: false, error: 'Problem not found' });
@@ -463,8 +525,8 @@ exports.bulkAction = async (req, res, next) => {
         });
       }
       result = await db.query(
-        "UPDATE problems SET status = 'Published', updated_at = NOW() WHERE id = ANY($1::uuid[]) RETURNING id",
-        [ids]
+        "UPDATE problems SET status = 'Published', review_status = $2, updated_at = NOW() WHERE id = ANY($1::uuid[]) RETURNING id",
+        [ids, REVIEW_STATUSES.PUBLISHED]
       );
     } else if (action === 'unpublish') {
       result = await db.query(
@@ -848,6 +910,493 @@ exports.getTestCaseReport = async (req, res, next) => {
       problems: result.rows,
     });
   } catch (err) {
+    next(err);
+  }
+};
+
+// ── Problem Normalization Pipeline ──────────────────────────────────────────
+
+// Parse a single problem
+exports.parseProblem = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query('SELECT id, title, description, raw_statement FROM problems WHERE id = $1', [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Problem not found' });
+    }
+
+    const problem = result.rows[0];
+    const rawText = problem.raw_statement || problem.description || '';
+
+    // Run parser
+    const parseResult = parseProblem(rawText);
+
+    // Copy current description to raw_statement if not already set
+    if (!problem.raw_statement && problem.description) {
+      await db.query(
+        'UPDATE problems SET raw_statement = description WHERE id = $1',
+        [id]
+      );
+    }
+
+    // Save parsed data to database
+    await db.query(`
+      UPDATE problems SET
+        description_md = $1,
+        examples_json = $2,
+        constraints_json = $3,
+        notes_json = $4,
+        parser_confidence = $5,
+        review_status = $6,
+        updated_at = NOW()
+      WHERE id = $7
+    `, [
+      parseResult.parsed.description,
+      JSON.stringify(parseResult.parsed.examples),
+      JSON.stringify(parseResult.parsed.constraints),
+      JSON.stringify(parseResult.parsed.notes),
+      parseResult.confidence,
+      REVIEW_STATUSES.PARSED,
+      id,
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id,
+        title: problem.title,
+        ...parseResult,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Batch parse multiple problems
+exports.batchParse = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'No problem IDs provided' });
+    }
+
+    // Limit batch size
+    const limitedIds = ids.slice(0, 50);
+
+    const result = await db.query(
+      'SELECT id, title, description, raw_statement FROM problems WHERE id = ANY($1::uuid[])',
+      [limitedIds]
+    );
+
+    const results = [];
+
+    for (const problem of result.rows) {
+      const rawText = problem.raw_statement || problem.description || '';
+      const parseResult = parseProblem(rawText);
+
+      // Preserve raw_statement
+      if (!problem.raw_statement && problem.description) {
+        await db.query(
+          'UPDATE problems SET raw_statement = description WHERE id = $1',
+          [problem.id]
+        );
+      }
+
+      // Save parsed data
+      await db.query(`
+        UPDATE problems SET
+          description_md = $1,
+          examples_json = $2,
+          constraints_json = $3,
+          notes_json = $4,
+          parser_confidence = $5,
+          review_status = $6,
+          updated_at = NOW()
+        WHERE id = $7
+      `, [
+        parseResult.parsed.description,
+        JSON.stringify(parseResult.parsed.examples),
+        JSON.stringify(parseResult.parsed.constraints),
+        JSON.stringify(parseResult.parsed.notes),
+        parseResult.confidence,
+        REVIEW_STATUSES.PARSED,
+        problem.id,
+      ]);
+
+      results.push({
+        id: problem.id,
+        title: problem.title,
+        confidence: parseResult.confidence,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: results,
+      message: `${results.length} problems parsed`,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// AI-normalize a single problem
+exports.normalizeProblem = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query(
+      `SELECT id, title, description, raw_statement, description_md,
+              examples_json, constraints_json, notes_json, parser_confidence
+       FROM problems WHERE id = $1`,
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Problem not found' });
+    }
+
+    const problem = result.rows[0];
+    const rawText = problem.raw_statement || problem.description || '';
+
+    // Ensure parser has run first
+    let parsedData;
+    if (problem.description_md) {
+      parsedData = {
+        description: problem.description_md,
+        examples: problem.examples_json || [],
+        constraints: problem.constraints_json || [],
+        notes: problem.notes_json || [],
+      };
+    } else {
+      // Run parser first
+      const parseResult = parseProblem(rawText);
+      parsedData = parseResult.parsed;
+    }
+
+    // Run AI normalization
+    const normalized = await normalizationService.normalize(parsedData, rawText);
+    const normalizedReviewStatus = normalized.quality_flags?.needs_manual_review
+      ? REVIEW_STATUSES.REVIEW_REQUIRED
+      : REVIEW_STATUSES.AI_NORMALIZED;
+
+    // Save normalized data
+    await db.query(`
+      UPDATE problems SET
+        description_md = $1,
+        examples_json = $2,
+        constraints_json = $3,
+        notes_json = $4,
+        ai_quality_flags = $5,
+        generated_constraints = $6,
+        constraint_source = $7,
+        review_status = $8,
+        updated_at = NOW()
+      WHERE id = $9
+    `, [
+      normalized.description,
+      JSON.stringify(normalized.examples),
+      JSON.stringify(normalized.constraints),
+      JSON.stringify(normalized.notes),
+      JSON.stringify(normalized.quality_flags),
+      JSON.stringify(normalized.generated_constraints),
+      normalized.constraint_source,
+      normalizedReviewStatus,
+      id,
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id,
+        title: problem.title,
+        normalized,
+        ai_status: normalizationService.getAIStatus(),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get problems in the review queue
+exports.getReviewQueue = async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+    const offset = parseInt(req.query.offset) || 0;
+    const reviewStatus = req.query.review_status || '';
+    const minConfidence = parseFloat(req.query.min_confidence) || 0;
+    const maxConfidence = parseFloat(req.query.max_confidence) || 1;
+    const sortBy = req.query.sortBy || 'parser_confidence';
+    const sortOrder = req.query.sortOrder === 'desc' ? 'DESC' : 'ASC';
+
+    const allowedSorts = ['parser_confidence', 'created_at', 'title', 'updated_at'];
+    const safeSortBy = allowedSorts.includes(sortBy) ? sortBy : 'parser_confidence';
+
+    let whereClause = 'WHERE 1=1';
+    const params = [];
+    let paramIndex = 1;
+
+    if (reviewStatus) {
+      whereClause += ` AND p.review_status = $${paramIndex}`;
+      params.push(reviewStatus);
+      paramIndex++;
+    }
+
+    if (minConfidence > 0) {
+      whereClause += ` AND p.parser_confidence >= $${paramIndex}`;
+      params.push(minConfidence);
+      paramIndex++;
+    }
+
+    if (maxConfidence < 1) {
+      whereClause += ` AND p.parser_confidence <= $${paramIndex}`;
+      params.push(maxConfidence);
+      paramIndex++;
+    }
+
+    const countQuery = `SELECT COUNT(*) FROM problems p ${whereClause}`;
+    const dataQuery = `
+      SELECT p.id, p.title, p.slug, p.difficulty, p.status, p.source,
+             p.description_md, p.examples_json, p.constraints_json, p.notes_json,
+             p.parser_confidence, p.ai_quality_flags, p.generated_constraints,
+             p.constraint_source, p.review_status, p.raw_statement,
+             p.created_at, p.updated_at
+      FROM problems p
+      ${whereClause}
+      ORDER BY p.${safeSortBy} ${sortOrder}
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+    params.push(limit, offset);
+
+    const [countRes, dataRes] = await Promise.all([
+      db.query(countQuery, params.slice(0, -2)),
+      db.query(dataQuery, params),
+    ]);
+
+    // Calculate review stats
+    const statsResult = await db.query(`
+      SELECT
+        review_status,
+        COUNT(*)::int as count,
+        ROUND(AVG(parser_confidence)::numeric, 2) as avg_confidence
+      FROM problems
+      WHERE review_status IS NOT NULL
+      GROUP BY review_status
+    `);
+
+    res.status(200).json({
+      success: true,
+      data: dataRes.rows,
+      meta: {
+        total: parseInt(countRes.rows[0].count),
+        limit,
+        offset,
+      },
+      stats: statsResult.rows,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Approve parsing result
+exports.approveParsing = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { description_md, examples, constraints, notes } = req.body;
+
+    // Allow admin to optionally override parsed fields
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (description_md !== undefined) {
+      updates.push(`description_md = $${paramIndex}`);
+      values.push(description_md);
+      paramIndex++;
+    }
+
+    if (examples !== undefined) {
+      updates.push(`examples_json = $${paramIndex}`);
+      values.push(JSON.stringify(examples));
+      paramIndex++;
+    }
+
+    if (constraints !== undefined) {
+      updates.push(`constraints_json = $${paramIndex}`);
+      values.push(JSON.stringify(constraints));
+      paramIndex++;
+    }
+
+    if (notes !== undefined) {
+      updates.push(`notes_json = $${paramIndex}`);
+      values.push(JSON.stringify(notes));
+      paramIndex++;
+    }
+
+    updates.push(`review_status = '${REVIEW_STATUSES.APPROVED}'`);
+    updates.push(`updated_at = NOW()`);
+
+    values.push(id);
+
+    const result = await db.query(
+      `UPDATE problems SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      values
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Problem not found' });
+    }
+
+    res.status(200).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Update review status
+exports.updateReviewStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { review_status } = req.body;
+
+    if (!VALID_REVIEW_STATUSES.includes(review_status)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid review_status. Must be one of: ${VALID_REVIEW_STATUSES.join(', ')}`,
+      });
+    }
+
+    const result = await db.query(
+      'UPDATE problems SET review_status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [review_status, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Problem not found' });
+    }
+
+    res.status(200).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get AI normalization service status
+exports.getAIStatus = async (req, res, next) => {
+  try {
+    res.status(200).json({
+      success: true,
+      data: normalizationService.getAIStatus(),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Reference Solution Management ──────────────────────────────────────────
+
+exports.getReferenceSolution = async (req, res, next) => {
+  try {
+    const solution = await referenceSolutionService.getByProblem(req.params.id);
+    res.status(200).json({ success: true, data: solution });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.upsertReferenceSolution = async (req, res, next) => {
+  try {
+    const { language, source_code } = req.body;
+
+    if (!language || !source_code) {
+      return res.status(400).json({
+        success: false,
+        error: 'Language and source_code are required',
+      });
+    }
+
+    const supportedLanguages = ['cpp', 'c', 'python', 'javascript', 'java'];
+    if (!supportedLanguages.includes(language)) {
+      return res.status(400).json({
+        success: false,
+        error: `Unsupported language. Must be one of: ${supportedLanguages.join(', ')}`,
+      });
+    }
+
+    const solution = await referenceSolutionService.upsert(req.params.id, {
+      language,
+      sourceCode: source_code,
+      userId: req.user.id,
+    });
+
+    res.status(200).json({ success: true, data: solution });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.deleteReferenceSolution = async (req, res, next) => {
+  try {
+    const solution = await referenceSolutionService.getByProblem(req.params.id);
+    if (!solution) {
+      return res.status(404).json({ success: false, error: 'No reference solution found' });
+    }
+    await referenceSolutionService.remove(solution.id);
+    res.status(200).json({ success: true, message: 'Reference solution deleted' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.verifyReferenceSolution = async (req, res, next) => {
+  try {
+    const solution = await referenceSolutionService.getByProblem(req.params.id);
+    if (!solution) {
+      return res.status(404).json({ success: false, error: 'No reference solution found' });
+    }
+
+    const result = await referenceSolutionService.verify(solution.id);
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Automated Test Generation ──────────────────────────────────────────────
+
+exports.generateTests = async (req, res, next) => {
+  try {
+    const { visible_count, hidden_count, dry_run } = req.body;
+
+    if (!testGenerationService.isAIConfigured()) {
+      return res.status(400).json({
+        success: false,
+        error: 'AI service is not configured. Set AI_API_URL and AI_API_KEY.',
+      });
+    }
+
+    const result = await testGenerationService.generateTests(req.params.id, {
+      visibleCount: visible_count || 10,
+      hiddenCount: hidden_count || 50,
+      dryRun: dry_run || false,
+    });
+
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    // Return user-facing errors with 400
+    if (err.message && (
+      err.message.includes('not found') ||
+      err.message.includes('no reference') ||
+      err.message.includes('not verified') ||
+      err.message.includes('AI')
+    )) {
+      return res.status(400).json({ success: false, error: err.message });
+    }
     next(err);
   }
 };

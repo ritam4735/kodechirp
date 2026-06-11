@@ -13,6 +13,11 @@ router.get('/stats', adminController.getStats);
 // Analytics
 router.get('/stats/analytics', adminController.getAnalytics);
 
+// ── Problem Normalization Pipeline (static paths before :id) ────────────────
+router.get('/problems/review-queue', adminController.getReviewQueue);
+router.post('/problems/batch-parse', adminController.batchParse);
+router.get('/normalization/ai-status', adminController.getAIStatus);
+
 // Problems management
 router.get('/problems', adminController.getProblems);
 router.post('/problems', adminController.createProblem);
@@ -21,6 +26,21 @@ router.get('/problems/:id', adminController.getProblem);
 router.put('/problems/:id', adminController.updateProblem);
 router.delete('/problems/:id', adminController.deleteProblem);
 router.post('/problems/:id/toggle-status', adminController.toggleProblemStatus);
+
+// Normalization — parameterized routes
+router.post('/problems/:id/parse', adminController.parseProblem);
+router.post('/problems/:id/normalize', adminController.normalizeProblem);
+router.post('/problems/:id/approve-parsing', adminController.approveParsing);
+router.post('/problems/:id/review-status', adminController.updateReviewStatus);
+
+// Reference Solution management
+router.get('/problems/:id/reference-solution', adminController.getReferenceSolution);
+router.put('/problems/:id/reference-solution', adminController.upsertReferenceSolution);
+router.delete('/problems/:id/reference-solution', adminController.deleteReferenceSolution);
+router.post('/problems/:id/reference-solution/verify', adminController.verifyReferenceSolution);
+
+// Automated Test Generation
+router.post('/problems/:id/generate-tests', adminController.generateTests);
 
 // Test Cases management
 router.get('/problems/:id/test-cases', adminController.getTestCases);

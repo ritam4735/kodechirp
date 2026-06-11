@@ -33,5 +33,14 @@ for seed_file in "$PROJECT_ROOT/database/seeds"/*.sql; do
     fi
 done
 
+# Apply migrations
+for migration_file in $(ls "$PROJECT_ROOT/database/migrations"/*.sql 2>/dev/null | sort); do
+    if [ -f "$migration_file" ]; then
+        echo "  🔄 Applying migration: $(basename "$migration_file")"
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+            -f "$migration_file"
+    fi
+done
+
 echo ""
 echo "✅ Database initialized successfully!"

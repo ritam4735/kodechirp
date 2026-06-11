@@ -100,4 +100,57 @@ export const adminApi = {
 
   // ── Reports ───────────────────────────────────────────────────────────────
   getTestCaseReport: () => requestAdmin('/reports/test-cases'),
+
+  // ── Normalization Pipeline ────────────────────────────────────────────────
+  parseProblem: (id) =>
+    requestAdmin(`/problems/${id}/parse`, { method: 'POST' }),
+  batchParse: (ids) =>
+    requestAdmin('/problems/batch-parse', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
+  normalizeProblem: (id) =>
+    requestAdmin(`/problems/${id}/normalize`, { method: 'POST' }),
+  getReviewQueue: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.offset) qs.set('offset', params.offset);
+    if (params.limit) qs.set('limit', params.limit);
+    if (params.review_status) qs.set('review_status', params.review_status);
+    if (params.min_confidence) qs.set('min_confidence', params.min_confidence);
+    if (params.max_confidence) qs.set('max_confidence', params.max_confidence);
+    if (params.sortBy) qs.set('sortBy', params.sortBy);
+    if (params.sortOrder) qs.set('sortOrder', params.sortOrder);
+    return requestAdmin(`/problems/review-queue?${qs.toString()}`);
+  },
+  approveParsing: (id, data = {}) =>
+    requestAdmin(`/problems/${id}/approve-parsing`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateReviewStatus: (id, reviewStatus) =>
+    requestAdmin(`/problems/${id}/review-status`, {
+      method: 'POST',
+      body: JSON.stringify({ review_status: reviewStatus }),
+    }),
+  getAIStatus: () => requestAdmin('/normalization/ai-status'),
+
+  // ── Reference Solutions ───────────────────────────────────────────────────
+  getReferenceSolution: (problemId) =>
+    requestAdmin(`/problems/${problemId}/reference-solution`),
+  upsertReferenceSolution: (problemId, data) =>
+    requestAdmin(`/problems/${problemId}/reference-solution`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteReferenceSolution: (problemId) =>
+    requestAdmin(`/problems/${problemId}/reference-solution`, { method: 'DELETE' }),
+  verifyReferenceSolution: (problemId) =>
+    requestAdmin(`/problems/${problemId}/reference-solution/verify`, { method: 'POST' }),
+
+  // ── Test Generation ───────────────────────────────────────────────────────
+  generateTests: (problemId, options = {}) =>
+    requestAdmin(`/problems/${problemId}/generate-tests`, {
+      method: 'POST',
+      body: JSON.stringify(options),
+    }),
 };
