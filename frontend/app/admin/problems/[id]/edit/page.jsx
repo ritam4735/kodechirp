@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { adminApi } from '../../../../../lib/adminApi';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import SignatureBuilder from '../../components/SignatureBuilder';
+import { JUDGE_MODES } from '../../../../../lib/typeSystem';
 
 export default function EditProblem() {
   const router = useRouter();
@@ -45,6 +47,8 @@ export default function EditProblem() {
         source: p.source || 'kodechirp',
         status: p.status,
         slug: p.slug || '',
+        judge_mode: p.judge_mode || JUDGE_MODES.STDIN_STDOUT,
+        signature_metadata: p.signature_metadata || { name: '', params: [], returnType: 'Void' },
       });
       if (valRes) setValidation(valRes);
       if (refRes.data) {
@@ -249,6 +253,23 @@ export default function EditProblem() {
             <label className="admin-form-label">Constraints</label>
             <textarea className="admin-textarea" style={{ minHeight: '80px' }} value={form.constraints} onChange={e => updateField('constraints', e.target.value)} />
           </div>
+
+          <div className="admin-form-group">
+            <label className="admin-form-label">Judge Mode</label>
+            <select className="admin-select" style={{ width: '100%' }} value={form.judge_mode} onChange={e => updateField('judge_mode', e.target.value)}>
+              {Object.values(JUDGE_MODES).map(mode => (
+                <option key={mode} value={mode}>{mode}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">Select FUNCTION for modern DSA problems, STDIN_STDOUT for competitive programming.</p>
+          </div>
+
+          {(form.judge_mode === JUDGE_MODES.FUNCTION || form.judge_mode === JUDGE_MODES.CLASS) && (
+            <SignatureBuilder 
+              signature={form.signature_metadata} 
+              onChange={(sig) => updateField('signature_metadata', sig)} 
+            />
+          )}
         </div>
         <div>
           <div className="admin-grid-2">
