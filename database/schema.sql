@@ -81,6 +81,9 @@ CREATE TABLE IF NOT EXISTS problems (
     constraint_source VARCHAR(20),
     review_status VARCHAR(50) DEFAULT 'imported',
     reference_solution_id UUID,  -- FK added after reference_solutions table
+    judge_mode VARCHAR(20) DEFAULT 'STDIN_STDOUT' CHECK (judge_mode IN ('STDIN_STDOUT', 'FUNCTION', 'CLASS', 'CUSTOM')),
+    signature_metadata JSONB,
+    execution_version INTEGER DEFAULT 1,
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -113,12 +116,23 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+-- ── Problem Templates ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS problem_templates (
+    problem_id UUID REFERENCES problems(id) ON DELETE CASCADE,
+    language VARCHAR(20) NOT NULL,
+    starter_code TEXT,
+    hidden_wrapper TEXT,
+    PRIMARY KEY (problem_id, language)
+);
+
 -- ── Test Cases ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS test_cases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     problem_id UUID NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
     input TEXT NOT NULL,
     expected_output TEXT NOT NULL,
+    input_json JSONB,
+    expected_json JSONB,
     is_sample BOOLEAN DEFAULT FALSE,
     explanation TEXT,
     order_index INTEGER DEFAULT 0,
@@ -129,6 +143,8 @@ CREATE TABLE IF NOT EXISTS test_cases (
 );
 
 CREATE INDEX IF NOT EXISTS idx_test_cases_problem ON test_cases(problem_id);
+CREATE INDEX IF NOT EXISTS idx_test_cases_input_json ON test_cases USING GIN (input_json);
+CREATE INDEX IF NOT EXISTS idx_test_cases_expected_json ON test_cases USING GIN (expected_json);
 
 -- ── Submissions ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS submissions (
@@ -148,6 +164,10 @@ CREATE TABLE IF NOT EXISTS submissions (
     error_message TEXT,
     queue_id VARCHAR(100),
     worker_id VARCHAR(100),
+    problem_version INTEGER NOT NULL DEFAULT 1,
+    judge_mode VARCHAR(20),
+    signature_snapshot JSONB,
+    template_snapshot JSONB,
     queued_at TIMESTAMPTZ DEFAULT NOW(),
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
