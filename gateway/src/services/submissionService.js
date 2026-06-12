@@ -18,7 +18,7 @@ const { STATUS } = require('../utils/constants');
 async function submitCode({ problemId, code, language, userId }) {
   // 1. Verify problem exists and fetch test cases
   const problemResult = await db.query(
-    "SELECT id, time_limit_ms, memory_limit_mb FROM problems WHERE id = $1 AND status = 'Published'",
+    "SELECT id, time_limit_ms, memory_limit_mb, judge_mode, signature_metadata FROM problems WHERE id = $1 AND status = 'Published'",
     [problemId]
   );
 
@@ -32,7 +32,7 @@ async function submitCode({ problemId, code, language, userId }) {
 
   // Fetch ALL test cases (sample + hidden)
   const tcResult = await db.query(
-    `SELECT id, input, expected_output, is_sample, order_index
+    `SELECT id, input, expected_output, input_json, expected_json, is_sample, order_index
      FROM test_cases
      WHERE problem_id = $1
      ORDER BY order_index ASC`,
@@ -63,12 +63,22 @@ async function submitCode({ problemId, code, language, userId }) {
     problemId,
     language,
     code,
-    testCases: tcResult.rows.map(tc => ({
-      id: tc.id,
-      input: tc.input,
-      expectedOutput: tc.expected_output,
-      isSample: tc.is_sample,
-    })),
+    testCases: tcResult.rows.map(tc => {
+      let inputStr = tc.input;
+      let expectedStr = tc.expected_output;
+      if (problem.judge_mode === 'FUNCTION' || problem.judge_mode === 'CLASS') {
+        inputStr = typeof tc.input_json === 'string' ? tc.input_json : JSON.stringify(tc.input_json || {});
+        expectedStr = typeof tc.expected_json === 'string' ? tc.expected_json : JSON.stringify(tc.expected_json || null);
+      }
+      return {
+        id: tc.id,
+        input: inputStr || '',
+        expectedOutput: expectedStr || '',
+        isSample: tc.is_sample,
+      };
+    }),
+    judgeMode: problem.judge_mode || 'STDIN_STDOUT',
+    signatureMetadata: typeof problem.signature_metadata === 'string' ? JSON.parse(problem.signature_metadata || '{}') : problem.signature_metadata,
     constraints: {
       timeoutMs: problem.time_limit_ms || 5000,
       memoryMb: problem.memory_limit_mb || 256,

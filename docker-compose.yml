@@ -92,6 +92,7 @@ services:
       EXECUTION_TIMEOUT: ${EXECUTION_TIMEOUT:-10}
       MAX_RETRIES: ${MAX_RETRIES:-3}
       DOCKER_HOST: tcp://docker-proxy:2375
+      SUBMISSION_QUEUE: kodechirp-submissions
     depends_on:
       postgres:
         condition: service_healthy
@@ -136,6 +137,9 @@ services:
       VOLUMES: 0
     volumes:
       - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    user: root
+    security_opt:
+      - label=disable
     restart: unless-stopped
     networks:
       - kodechirp-net

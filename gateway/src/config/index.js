@@ -42,7 +42,7 @@ const config = {
     authLogin:   { window: 900, max: 50 },    // 15 min
     authSignup:  { window: 3600, max: 30 },   // 1 hour
     submitRun:   { window: 60, max: 10 },
-    submitJudge: { window: 60, max: 5 },
+    submitJudge: { window: 60, max: 1000 },
   },
 
   // ── Worker ─────────────────────────────────────────────────────────────────

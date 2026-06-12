@@ -119,7 +119,8 @@ async function generateTests(problemId, options = {}) {
 
   const problemResult = await db.query(
     `SELECT id, title, description, description_md, constraints, constraints_json,
-            examples_json, input_format, output_format, reference_solution_id
+            examples_json, input_format, output_format, reference_solution_id,
+            judge_mode, signature_metadata
      FROM problems WHERE id = $1`,
     [problemId]
   );
@@ -162,11 +163,13 @@ async function generateTests(problemId, options = {}) {
 Description:
 ${description}
 
-Input Format:
+${problem.judge_mode === 'STDIN_STDOUT' ? `Input Format:
 ${problem.input_format || 'See description'}
 
 Output Format:
-${problem.output_format || 'See description'}
+${problem.output_format || 'See description'}` : `Signature:
+${typeof problem.signature_metadata === 'object' ? JSON.stringify(problem.signature_metadata, null, 2) : problem.signature_metadata}
+Note: Generate an 'input_json' field instead of 'input', structured as a JSON object with keys matching the parameter names.`}
 
 Constraints:
 ${constraints}
@@ -205,17 +208,19 @@ Generate ${totalCount} test cases with this distribution:
   const validTests = [];
 
   for (const tc of candidateTests) {
-    if (!tc.input || typeof tc.input !== 'string') continue;
+    // Deduplicate based on whether it's STDIN or FUNCTION
+    const rawInput = problem.judge_mode === 'STDIN_STDOUT' ? tc.input : JSON.stringify(tc.input_json || tc.input);
+    if (!rawInput || typeof rawInput !== 'string') continue;
 
-    const normalizedInput = tc.input.trim();
+    const normalizedInput = rawInput.trim();
     if (!normalizedInput) continue;
 
-    // Deduplicate
     if (seenInputs.has(normalizedInput)) continue;
     seenInputs.add(normalizedInput);
 
     validTests.push({
-      input: normalizedInput,
+      input: problem.judge_mode === 'STDIN_STDOUT' ? normalizedInput : null,
+      input_json: problem.judge_mode !== 'STDIN_STDOUT' ? (tc.input_json || JSON.parse(normalizedInput)) : null,
       category: tc.category || 'random_small',
       visibility: tc.visibility || 'hidden',
       description: tc.description || '',
@@ -231,29 +236,31 @@ Generate ${totalCount} test cases with this distribution:
   const failures = [];
 
   for (const tc of validTests) {
+    const inputToRun = problem.judge_mode === 'STDIN_STDOUT' ? tc.input : JSON.stringify(tc.input_json);
     try {
       const result = await referenceSolutionService.runAgainstInput(
         problem.reference_solution_id,
-        tc.input
+        inputToRun
       );
 
       if (result.timedOut) {
-        failures.push({ input: tc.input.substring(0, 100), error: 'Timed out' });
+        failures.push({ input: inputToRun.substring(0, 100), error: 'Timed out' });
         continue;
       }
 
       if (result.exitCode !== 0 && !result.stdout) {
-        failures.push({ input: tc.input.substring(0, 100), error: result.stderr || 'Non-zero exit' });
+        failures.push({ input: inputToRun.substring(0, 100), error: result.stderr || 'Non-zero exit' });
         continue;
       }
 
       processedTests.push({
         ...tc,
-        expectedOutput: result.stdout,
+        expectedOutput: problem.judge_mode === 'STDIN_STDOUT' ? result.stdout : null,
+        expectedJson: problem.judge_mode !== 'STDIN_STDOUT' ? JSON.parse(result.stdout) : null,
         verified: true,
       });
     } catch (err) {
-      failures.push({ input: tc.input.substring(0, 100), error: err.message });
+      failures.push({ input: inputToRun.substring(0, 100), error: err.message });
     }
   }
 
@@ -304,24 +311,26 @@ Generate ${totalCount} test cases with this distribution:
 
     for (const tc of allTests) {
       placeholders.push(
-        `($${paramIdx}, $${paramIdx + 1}, $${paramIdx + 2}, $${paramIdx + 3}, $${paramIdx + 4}, $${paramIdx + 5}, $${paramIdx + 6}, $${paramIdx + 7})`
+        `($${paramIdx}, $${paramIdx + 1}, $${paramIdx + 2}, $${paramIdx + 3}, $${paramIdx + 4}, $${paramIdx + 5}, $${paramIdx + 6}, $${paramIdx + 7}, $${paramIdx + 8}, $${paramIdx + 9})`
       );
       values.push(
         problemId,
         tc.input,
         tc.expectedOutput,
+        tc.input_json ? JSON.stringify(tc.input_json) : null,
+        tc.expectedJson ? JSON.stringify(tc.expectedJson) : null,
         tc.visibility === 'visible',
         orderIdx++,
         tc.category,
         'ai_generated',
         true
       );
-      paramIdx += 8;
+      paramIdx += 10;
     }
 
     if (placeholders.length > 0) {
       await db.query(`
-        INSERT INTO test_cases (problem_id, input, expected_output, is_sample, order_index, category, generated_by, verified)
+        INSERT INTO test_cases (problem_id, input, expected_output, input_json, expected_json, is_sample, order_index, category, generated_by, verified)
         VALUES ${placeholders.join(', ')}
       `, values);
     }
@@ -349,13 +358,13 @@ Generate ${totalCount} test cases with this distribution:
     quality: qualityReport,
     failures: failures.slice(0, 10), // Limit for response size
     visibleTests: visibleTests.map(t => ({
-      input: t.input.substring(0, 500),
-      output: t.expectedOutput.substring(0, 500),
+      input: (t.input || JSON.stringify(t.input_json)).substring(0, 500),
+      output: (t.expectedOutput || JSON.stringify(t.expectedJson)).substring(0, 500),
       category: t.category,
     })),
     hiddenTests: hiddenTests.map(t => ({
-      input: t.input.substring(0, 200),
-      output: t.expectedOutput.substring(0, 200),
+      input: (t.input || JSON.stringify(t.input_json)).substring(0, 200),
+      output: (t.expectedOutput || JSON.stringify(t.expectedJson)).substring(0, 200),
       category: t.category,
     })),
   };

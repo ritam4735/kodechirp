@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     max_retries: int = 3
 
     # Queue
-    submission_queue: str = "kodechirp:submissions"
+    submission_queue: str = "kodechirp-submissions"
     result_channel: str = "kodechirp:results"
     progress_channel: str = "kodechirp:progress"
 

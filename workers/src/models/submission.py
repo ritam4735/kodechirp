@@ -4,7 +4,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 
 class TestCase(BaseModel):
@@ -30,6 +30,8 @@ class SubmissionJob(BaseModel):
     code: str
     testCases: List[TestCase]
     constraints: Constraints = Constraints()
+    judgeMode: str = "STDIN_STDOUT"
+    signatureMetadata: Optional[Dict[str, Any]] = None
 
 
 class ExecutionResult(BaseModel):

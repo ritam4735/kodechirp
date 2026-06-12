@@ -8,6 +8,7 @@ const { parseProblem } = require('../services/problemParser');
 const normalizationService = require('../services/problemNormalizationService');
 const referenceSolutionService = require('../services/referenceSolutionService');
 const testGenerationService = require('../services/testGenerationService');
+const { validateSignature } = require('../utils/typeSystem');
 
 const REVIEW_STATUSES = Object.freeze({
   IMPORTED: 'imported',
@@ -34,7 +35,7 @@ async function validatePublish(problemId) {
   // Check problem fields
   const probResult = await db.query(
     `SELECT title, description, difficulty, tags, constraints,
-            examples_json, reference_solution_id
+            examples_json, reference_solution_id, judge_mode, signature_metadata
      FROM problems WHERE id = $1`,
     [problemId]
   );
@@ -42,6 +43,13 @@ async function validatePublish(problemId) {
     return { valid: false, errors: ['Problem not found'] };
   }
   const prob = probResult.rows[0];
+
+  // Signature validation for FUNCTION/CLASS
+  if (prob.judge_mode === 'FUNCTION' || prob.judge_mode === 'CLASS') {
+    if (!validateSignature(prob.signature_metadata)) {
+      errors.push('A valid function signature must be defined for FUNCTION/CLASS judge modes.');
+    }
+  }
 
   // Required fields
   if (!prob.title || !prob.title.trim()) errors.push('Title is required');
@@ -366,21 +374,23 @@ exports.createProblem = async (req, res, next) => {
     const {
       title, slug, description, difficulty, status,
       input_format, output_format, constraints,
-      time_limit_ms, memory_limit_mb, tags, metadata, source
+      time_limit_ms, memory_limit_mb, tags, metadata, source,
+      judge_mode, signature_metadata
     } = req.body;
 
     const finalSlug = slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
     const result = await db.query(`
       INSERT INTO problems (title, slug, description, difficulty, status, created_by,
-        input_format, output_format, constraints, time_limit_ms, memory_limit_mb, tags, metadata, source)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        input_format, output_format, constraints, time_limit_ms, memory_limit_mb, tags, metadata, source, judge_mode, signature_metadata)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
     `, [
       title, finalSlug, description, difficulty || 'Medium', status || 'Draft', req.user.id,
       input_format || null, output_format || null, constraints || null,
       time_limit_ms || 2000, memory_limit_mb || 256,
-      JSON.stringify(tags || []), JSON.stringify(metadata || {}), source || 'kodechirp'
+      JSON.stringify(tags || []), JSON.stringify(metadata || {}), source || 'kodechirp',
+      judge_mode || 'STDIN_STDOUT', signature_metadata ? JSON.stringify(signature_metadata) : null
     ]);
 
     res.status(201).json({ success: true, data: result.rows[0] });
@@ -394,7 +404,8 @@ exports.updateProblem = async (req, res, next) => {
     const {
       title, description, difficulty, status,
       input_format, output_format, constraints,
-      time_limit_ms, memory_limit_mb, tags, metadata, slug, source
+      time_limit_ms, memory_limit_mb, tags, metadata, slug, source,
+      judge_mode, signature_metadata
     } = req.body;
 
     // Validate publish requirements if transitioning to Published
@@ -424,6 +435,9 @@ exports.updateProblem = async (req, res, next) => {
           metadata = COALESCE($11, metadata),
           slug = COALESCE($12, slug),
           source = COALESCE($13, source),
+          judge_mode = COALESCE($15, judge_mode),
+          signature_metadata = COALESCE($16, signature_metadata),
+          execution_version = CASE WHEN ($15 IS NOT NULL AND $15 != judge_mode) OR ($16 IS NOT NULL AND $16::text != signature_metadata::text) THEN execution_version + 1 ELSE execution_version END,
           review_status = CASE WHEN $4 = 'Published' THEN '${REVIEW_STATUSES.PUBLISHED}' ELSE review_status END,
           updated_at = NOW()
       WHERE id = $14 RETURNING *
@@ -434,7 +448,8 @@ exports.updateProblem = async (req, res, next) => {
       tags ? JSON.stringify(tags) : null,
       metadata ? JSON.stringify(metadata) : null,
       slug, source,
-      req.params.id
+      req.params.id,
+      judge_mode, signature_metadata ? JSON.stringify(signature_metadata) : null
     ]);
 
     if (result.rowCount === 0) {
@@ -566,11 +581,20 @@ exports.getTestCases = async (req, res, next) => {
 
 exports.createTestCase = async (req, res, next) => {
   try {
-    const { input, expected_output, is_sample, explanation, order_index } = req.body;
+    const { input, expected_output, input_json, expected_json, is_sample, explanation, order_index } = req.body;
     const result = await db.query(`
-      INSERT INTO test_cases (problem_id, input, expected_output, is_sample, explanation, order_index)
-      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
-    `, [req.params.id, input, expected_output, is_sample || false, explanation, order_index || 0]);
+      INSERT INTO test_cases (problem_id, input, expected_output, input_json, expected_json, is_sample, explanation, order_index)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *
+    `, [
+      req.params.id, 
+      input, 
+      expected_output, 
+      input_json ? JSON.stringify(input_json) : null,
+      expected_json ? JSON.stringify(expected_json) : null,
+      is_sample || false, 
+      explanation, 
+      order_index || 0
+    ]);
 
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) {
@@ -628,16 +652,27 @@ exports.bulkImportTestCases = async (req, res, next) => {
 
 exports.updateTestCase = async (req, res, next) => {
   try {
-    const { input, expected_output, is_sample, explanation, order_index } = req.body;
+    const { input, expected_output, input_json, expected_json, is_sample, explanation, order_index } = req.body;
     const result = await db.query(`
       UPDATE test_cases
       SET input = COALESCE($1, input),
           expected_output = COALESCE($2, expected_output),
-          is_sample = COALESCE($3, is_sample),
-          explanation = COALESCE($4, explanation),
-          order_index = COALESCE($5, order_index)
-      WHERE id = $6 RETURNING *
-    `, [input, expected_output, is_sample, explanation, order_index, req.params.id]);
+          input_json = COALESCE($3, input_json),
+          expected_json = COALESCE($4, expected_json),
+          is_sample = COALESCE($5, is_sample),
+          explanation = COALESCE($6, explanation),
+          order_index = COALESCE($7, order_index)
+      WHERE id = $8 RETURNING *
+    `, [
+      input, 
+      expected_output, 
+      input_json ? JSON.stringify(input_json) : null,
+      expected_json ? JSON.stringify(expected_json) : null,
+      is_sample, 
+      explanation, 
+      order_index, 
+      req.params.id
+    ]);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ success: false, error: 'Test case not found' });

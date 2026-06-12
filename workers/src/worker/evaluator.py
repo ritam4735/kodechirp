@@ -13,6 +13,7 @@ from src.services.db_service import db_service
 from src.utils.constants import Verdict
 from src.utils.sanitizer import normalise_output, truncate
 from src.utils.logger import logger
+from src.worker.wrapper_generator import WrapperGenerator
 
 
 WORKER_ID = f"worker-{socket.gethostname()}"
@@ -45,10 +46,32 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
         submission_id, Verdict.RUNNING, worker_id=WORKER_ID
     )
 
+    # ── Wrapper Injection Phase ──────────────────────────────────────
+    execution_code = job.code
+    if job.judgeMode in ("FUNCTION", "CLASS") and job.signatureMetadata:
+        try:
+            execution_code = WrapperGenerator.generate(
+                language=job.language,
+                signature=job.signatureMetadata,
+                user_code=job.code
+            )
+            logger.info(f"Submission {submission_id}: Wrapper generated successfully")
+        except Exception as e:
+            logger.error(f"Wrapper generation failed: {e}")
+            return SubmissionResult(
+                submissionId=submission_id,
+                userId=job.userId,
+                verdict=Verdict.INTERNAL_ERROR,
+                testCasesPassed=0,
+                testCasesTotal=total,
+                error=f"Wrapper generation failed: {str(e)}",
+                workerId=WORKER_ID,
+            )
+
     # ── Compilation Phase ──────────────────────────────────────────
     run_dir, compile_result = await docker_service.prepare_and_compile(
         submission_id=submission_id,
-        code=job.code,
+        code=execution_code,
         language=job.language,
     )
 
