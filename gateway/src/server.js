@@ -39,9 +39,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Body parsing
-app.use(express.json({ limit: '500kb' }));
-app.use(express.urlencoded({ extended: true, limit: '500kb' }));
+// Body parsing — keep the global limit tight; avatar uploads get their own higher limit
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 app.use(cookieParser());
 
 // Request logging
@@ -53,7 +53,10 @@ app.use(globalLimiter);
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 app.use('/api/auth',        require('./routes/auth'));
-app.use('/api/profile',     require('./routes/profile'));
+// Avatar uploads send base64 data URIs (up to 2 MB raw → ~2.75 MB base64 + JSON overhead).
+// Apply a higher body-parser limit specifically for that route before the shared router.
+app.use('/api/profile/avatar', express.json({ limit: '3mb' }));
+app.use('/api/profile',        require('./routes/profile'));
 app.use('/api/problems',    require('./routes/problems'));
 app.use('/api/submissions', require('./routes/submissions'));
 app.use('/api/contests',    require('./routes/contests'));
