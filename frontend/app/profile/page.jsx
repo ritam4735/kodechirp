@@ -3,6 +3,16 @@
 import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+
+// Suppress the SSR/client hydration mismatch: this page is 100% auth-gated
+// so the server never has meaningful content to render. We return a stable
+// shell on the first render (both server and client-before-mount), then
+// let the real UI take over once the component has mounted on the client.
+function useMounted() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  return mounted;
+}
 import { api } from '../../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
@@ -82,14 +92,18 @@ export default function ProfilePage() {
     setProfileData(prev => ({ ...prev, ...editForm }));
 
     try {
-      const updates = { ...editForm };
-      await api.updateProfile(updates);
+      // Strip avatar_url — it must ONLY go through the dedicated /avatar endpoint
+      // (which has a 3mb body-parser limit). Sending it via PUT /api/profile would
+      // hit the global 100kb limit and cause a 413.
+      const { avatar_url, ...profileUpdates } = editForm;
+      await api.updateProfile(profileUpdates);
       
-      if (updates.avatar_url !== prevProfile.avatar_url) {
-        await api.updateAvatar(updates.avatar_url);
+      if (avatar_url !== prevProfile.avatar_url) {
+        await api.updateAvatar(avatar_url);
       }
       
       setSuccess('Profile updated successfully!');
+
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       // Revert Optimistic Update
@@ -134,6 +148,14 @@ export default function ProfilePage() {
       reader.readAsDataURL(file);
     }
   };
+
+  const mounted = useMounted();
+
+  // Before mount: return the same stable shell the server rendered.
+  // This keeps SSR and initial client HTML identical → no hydration error.
+  if (!mounted) {
+    return <div className="relative flex-1 bg-[#0d1117] min-h-screen overflow-hidden" />;
+  }
 
   if (!isAuthenticated) return null;
 

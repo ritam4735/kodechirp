@@ -28,6 +28,13 @@ export function AnimatedBackground({ variant = 'default' }) {
         <div className="absolute bottom-0 right-0 w-[400px] h-[300px] bg-[#a371f7]/8 rounded-full blur-[100px] mix-blend-screen" />
       </>
     ),
+    particles: (
+      <>
+        <div className="absolute top-[-8%] right-[20%] w-[650px] h-[550px] bg-[#58a6ff]/8 rounded-full blur-[140px] mix-blend-screen animate-pulse-soft" />
+        <div className="absolute bottom-[5%] left-[10%] w-[500px] h-[450px] bg-[#a371f7]/8 rounded-full blur-[120px] mix-blend-screen animate-pulse-soft" style={{ animationDelay: '2.5s' }} />
+        <div className="absolute top-[50%] right-[5%] w-[350px] h-[350px] bg-[#3fb950]/5 rounded-full blur-[160px] mix-blend-screen" />
+      </>
+    ),
   };
 
   const [mounted, setMounted] = useState(false);
