@@ -98,6 +98,7 @@ async def execute_code(request: RunCodeRequest):
     Executes code in a Docker sandbox and returns raw output.
     """
     from src.utils.constants import LANGUAGE_CONFIG
+    from src.worker.wrapper_generator import WrapperGenerator
 
     if request.language not in LANGUAGE_CONFIG:
         raise HTTPException(
@@ -106,12 +107,33 @@ async def execute_code(request: RunCodeRequest):
                    f"Supported: {', '.join(LANGUAGE_CONFIG.keys())}",
         )
 
+    execution_code = request.code
+    
+    if request.judgeMode in ("FUNCTION", "CLASS") and request.signatureMetadata:
+        try:
+            execution_code = WrapperGenerator.generate(
+                language=request.language,
+                signature=request.signatureMetadata,
+                user_code=request.code
+            )
+            logger.info(f"Generated wrapper source code:\n{execution_code}")
+        except Exception as e:
+            logger.error(f"Wrapper generation failed: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Wrapper generation failed: {str(e)}"
+            )
+
     result = await docker_service.execute_code(
-        code=request.code,
+        code=execution_code,
         language=request.language,
         stdin=request.stdin,
         timeout_ms=10000,  # 10s max for run mode
     )
+
+    logger.info(f"Raw stdout returned by sandbox:\n{result.stdout}")
+    logger.info(f"Raw stderr returned by sandbox:\n{result.stderr}")
+    logger.info(f"Raw verification result returned by worker: exitCode={result.exitCode}, timedOut={result.timedOut}")
 
     return {
         "stdout": result.stdout,

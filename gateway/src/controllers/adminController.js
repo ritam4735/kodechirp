@@ -1396,6 +1396,8 @@ exports.verifyReferenceSolution = async (req, res, next) => {
     }
 
     const result = await referenceSolutionService.verify(solution.id);
+    const requireLogger = require('../utils/logger');
+    requireLogger.info(`VERIFY RESPONSE JSON: ${JSON.stringify(result)}`);
     res.status(200).json({ success: true, data: result });
   } catch (err) {
     next(err);

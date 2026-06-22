@@ -9,6 +9,7 @@ import { useProblemStore } from '../store/problemStore';
 import { useAuthStore } from '../store/authStore';
 import { api } from '../lib/api';
 import { DEFAULT_CODE_SNIPPETS } from '../lib/constants';
+import { generateStarterCode } from '../lib/codeGenerator';
 
 export const useEditor = () => {
   const store = useEditorStore();
@@ -20,9 +21,19 @@ export const useEditor = () => {
   const language = store.language;
 
   const templates = currentProblem?.templates || {};
+  const judgeMode = currentProblem?.judge_mode;
+  const signature = currentProblem?.signature_metadata;
   
   const cacheKey = `${userId}_${problemId}_${language}`;
-  const code = store.codes[cacheKey] ?? (templates[language] || DEFAULT_CODE_SNIPPETS[language] || '');
+  
+  let defaultCode;
+  if (judgeMode === 'FUNCTION' || judgeMode === 'CLASS') {
+    defaultCode = generateStarterCode(judgeMode, signature, language) || templates[language] || DEFAULT_CODE_SNIPPETS[language] || '';
+  } else {
+    defaultCode = templates[language] || DEFAULT_CODE_SNIPPETS[language] || '';
+  }
+
+  const code = store.codes[cacheKey] ?? defaultCode;
 
   const handleRunCode = async () => {
     store.setIsExecuting(true);

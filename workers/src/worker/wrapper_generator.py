@@ -161,7 +161,8 @@ def __main():
 
         func_name = signature.get('name', 'solve')
         wrapper += f"\n    # Call user function\n"
-        wrapper += f"    result = {func_name}(*args)\n\n"
+        wrapper += f"    sol = Solution()\n"
+        wrapper += f"    result = sol.{func_name}(*args)\n\n"
 
         ret_type = signature.get('returnType', 'Void')
         if ret_type == 'Void':
@@ -310,6 +311,12 @@ if (require.main === module) {
                 parse_lines.append(f'    arg_{pn}_len = __kc_get_int_array(input, "{pn}", arg_{pn}, 100001);')
                 call_args.append(f'arg_{pn}')
                 call_args.append(f'arg_{pn}_len')
+            elif pt == 'LinkedList':
+                decl_lines.append(f'    int arg_{pn}_arr[100001]; int arg_{pn}_len = 0;')
+                decl_lines.append(f'    struct ListNode* arg_{pn} = NULL;')
+                parse_lines.append(f'    arg_{pn}_len = __kc_get_int_array(input, "{pn}", arg_{pn}_arr, 100001);')
+                parse_lines.append(f'    arg_{pn} = __kc_build_linked_list(arg_{pn}_arr, arg_{pn}_len);')
+                call_args.append(f'arg_{pn}')
 
         # For array return, user must write: int* func(args..., int* returnSize)
         if ret_type == 'Array<Int>':
@@ -333,6 +340,8 @@ if (require.main === module) {
         printf("%d", __result[__i]);
     }
     printf("]\\n");'''
+        elif ret_type == 'LinkedList':
+            print_logic = '    __kc_print_linked_list(__result);'
         else:
             print_logic = '    printf("%d\\n", __result);'
 
@@ -340,10 +349,18 @@ if (require.main === module) {
         c_ret = _c_type(ret_type)
         if ret_type == 'Array<Int>':
             c_ret = 'int*'
+        elif ret_type == 'LinkedList':
+            c_ret = 'struct ListNode*'
 
         wrapper = f'''#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* ── Platform Types ───────────────────────────────────────────────────── */
+struct ListNode {{
+    int val;
+    struct ListNode *next;
+}};
 
 /* ── Minimal JSON helpers ─────────────────────────────────────────────── */
 
@@ -426,6 +443,33 @@ static int __kc_get_int_array(const char* json, const char* key, int* out, int m
     return count;
 }}
 
+static struct ListNode* __kc_build_linked_list(int* arr, int len) {{
+    if (len == 0) return NULL;
+    struct ListNode* head = (struct ListNode*)malloc(sizeof(struct ListNode));
+    head->val = arr[0];
+    head->next = NULL;
+    struct ListNode* curr = head;
+    for (int i = 1; i < len; i++) {{
+        curr->next = (struct ListNode*)malloc(sizeof(struct ListNode));
+        curr->next->val = arr[i];
+        curr->next->next = NULL;
+        curr = curr->next;
+    }}
+    return head;
+}}
+
+static void __kc_print_linked_list(struct ListNode* head) {{
+    printf("[");
+    int first = 1;
+    while (head) {{
+        if (!first) printf(",");
+        printf("%d", head->val);
+        first = 0;
+        head = head->next;
+    }}
+    printf("]\\n");
+}}
+
 /* ── User Code ────────────────────────────────────────── */
 
 {user_code}
@@ -484,6 +528,9 @@ int main(void) {{
             elif pt == 'Array<Int>':
                 decl_lines.append(f'    vector<int> arg_{pn} = __kc_get_int_array(input, "{pn}");')
                 call_args.append(f'arg_{pn}')
+            elif pt == 'LinkedList':
+                decl_lines.append(f'    ListNode* arg_{pn} = __kc_build_linked_list(__kc_get_int_array(input, "{pn}"));')
+                call_args.append(f'arg_{pn}')
 
         decls = '\n'.join(decl_lines)
         args_str = ', '.join(call_args)
@@ -492,6 +539,8 @@ int main(void) {{
         cpp_ret = _cpp_type(ret_type)
         if ret_type == 'Array<Int>':
             cpp_ret = 'vector<int>'
+        elif ret_type == 'LinkedList':
+            cpp_ret = 'ListNode*'
 
         # Print logic
         if ret_type == 'Int':
@@ -507,6 +556,8 @@ int main(void) {{
         cout << result[__i];
     }
     cout << "]" << "\\n";'''
+        elif ret_type == 'LinkedList':
+            print_logic = '    __kc_print_linked_list(result);'
         else:
             print_logic = '    cout << result << "\\n";'
 
@@ -518,6 +569,15 @@ int main(void) {{
 #include <cstdlib>
 
 using namespace std;
+
+/* ── Platform Types ───────────────────────────────────────────────────── */
+struct ListNode {{
+    int val;
+    ListNode *next;
+    ListNode() : val(0), next(nullptr) {{}}
+    ListNode(int x) : val(x), next(nullptr) {{}}
+    ListNode(int x, ListNode *next) : val(x), next(next) {{}}
+}};
 
 /* ── Minimal JSON helpers ─────────────────────────────────────────────── */
 
@@ -596,6 +656,29 @@ static vector<int> __kc_get_int_array(const string& json, const string& key) {{
         }}
     }}
     return result;
+}}
+
+static ListNode* __kc_build_linked_list(const vector<int>& arr) {{
+    if (arr.empty()) return nullptr;
+    ListNode* head = new ListNode(arr[0]);
+    ListNode* curr = head;
+    for (size_t i = 1; i < arr.size(); i++) {{
+        curr->next = new ListNode(arr[i]);
+        curr = curr->next;
+    }}
+    return head;
+}}
+
+static void __kc_print_linked_list(ListNode* head) {{
+    cout << "[";
+    bool first = true;
+    while (head) {{
+        if (!first) cout << ",";
+        cout << head->val;
+        first = false;
+        head = head->next;
+    }}
+    cout << "]\\n";
 }}
 
 /* ── User Code ────────────────────────────────────────────────────────── */
@@ -785,10 +868,10 @@ public class Main {{
         for param in signature.get('params', []):
             pn = param['name']
             pt = param['type']
-            arg_lines += f"        a = tc.get('{pn}')\n"
+            arg_lines += f"        a_{pn} = tc.get('{pn}')\n"
             if pt == 'LinkedList':
-                arg_lines += f"        a = __build_linked_list(a)\n"
-            arg_lines += f"        args.append(a)\n"
+                arg_lines += f"        a_{pn} = __build_linked_list(a_{pn})\n"
+            arg_lines += f"        args.append(a_{pn})\n"
 
         # Build result serialization
         if ret_type == 'Void':
@@ -842,7 +925,8 @@ def __main():
         tc = json.loads(line)
         args = []
 {arg_lines}
-        r = {func_name}(*args)
+        sol = Solution()
+        r = sol.{func_name}(*args)
 {serialize}
         print("___KC_BATCH_SEP___", flush=True)
 
@@ -946,6 +1030,12 @@ if (require.main === module) {{ __main(); }}
                 parse_lines.append(f'        arg_{pn}_len = __kc_get_int_array(input, "{pn}", arg_{pn}, 100001);')
                 call_args.append(f'arg_{pn}')
                 call_args.append(f'arg_{pn}_len')
+            elif pt == 'LinkedList':
+                decl_lines.append(f'        int arg_{pn}_arr[100001]; int arg_{pn}_len = 0;')
+                decl_lines.append(f'        struct ListNode* arg_{pn} = NULL;')
+                parse_lines.append(f'        arg_{pn}_len = __kc_get_int_array(input, "{pn}", arg_{pn}_arr, 100001);')
+                parse_lines.append(f'        arg_{pn} = __kc_build_linked_list(arg_{pn}_arr, arg_{pn}_len);')
+                call_args.append(f'arg_{pn}')
 
         if ret_type == 'Array<Int>':
             call_args.append('&__ret_size')
@@ -967,16 +1057,26 @@ if (require.main === module) {{ __main(); }}
             printf("%d", __result[__i]);
         }
         printf("]\\n");'''
+        elif ret_type == 'LinkedList':
+            print_logic = '        __kc_print_linked_list(__result);'
         else:
             print_logic = '        printf("%d\\n", __result);'
 
         c_ret = _c_type(ret_type)
         if ret_type == 'Array<Int>':
             c_ret = 'int*'
+        elif ret_type == 'LinkedList':
+            c_ret = 'struct ListNode*'
 
         return f'''#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* ── Platform Types ───────────────────────────────────────────────────── */
+struct ListNode {{
+    int val;
+    struct ListNode *next;
+}};
 
 /* ── Minimal JSON helpers ─────────────────────────────────────────────── */
 
@@ -1059,6 +1159,33 @@ static int __kc_get_int_array(const char* json, const char* key, int* out, int m
     return count;
 }}
 
+static struct ListNode* __kc_build_linked_list(int* arr, int len) {{
+    if (len == 0) return NULL;
+    struct ListNode* head = (struct ListNode*)malloc(sizeof(struct ListNode));
+    head->val = arr[0];
+    head->next = NULL;
+    struct ListNode* curr = head;
+    for (int i = 1; i < len; i++) {{
+        curr->next = (struct ListNode*)malloc(sizeof(struct ListNode));
+        curr->next->val = arr[i];
+        curr->next->next = NULL;
+        curr = curr->next;
+    }}
+    return head;
+}}
+
+static void __kc_print_linked_list(struct ListNode* head) {{
+    printf("[");
+    int first = 1;
+    while (head) {{
+        if (!first) printf(",");
+        printf("%d", head->val);
+        first = 0;
+        head = head->next;
+    }}
+    printf("]\\n");
+}}
+
 /* ── User Code ────────────────────────────────────────── */
 
 {user_code}
@@ -1115,6 +1242,9 @@ int main(void) {{
             elif pt == 'Array<Int>':
                 decl_lines.append(f'        vector<int> arg_{pn} = __kc_get_int_array(input, "{pn}");')
                 call_args.append(f'arg_{pn}')
+            elif pt == 'LinkedList':
+                decl_lines.append(f'        ListNode* arg_{pn} = __kc_build_linked_list(__kc_get_int_array(input, "{pn}"));')
+                call_args.append(f'arg_{pn}')
 
         decls = '\n'.join(decl_lines)
         args_str = ', '.join(call_args)
@@ -1122,6 +1252,8 @@ int main(void) {{
         cpp_ret = _cpp_type(ret_type)
         if ret_type == 'Array<Int>':
             cpp_ret = 'vector<int>'
+        elif ret_type == 'LinkedList':
+            cpp_ret = 'ListNode*'
 
         if ret_type == 'Int':
             print_logic = '        cout << result << "\\n";'
@@ -1136,6 +1268,8 @@ int main(void) {{
             cout << result[__i];
         }
         cout << "]" << "\\n";'''
+        elif ret_type == 'LinkedList':
+            print_logic = '        __kc_print_linked_list(result);'
         else:
             print_logic = '        cout << result << "\\n";'
 
@@ -1147,6 +1281,15 @@ int main(void) {{
 #include <cstdlib>
 
 using namespace std;
+
+/* ── Platform Types ───────────────────────────────────────────────────── */
+struct ListNode {{
+    int val;
+    ListNode *next;
+    ListNode() : val(0), next(nullptr) {{}}
+    ListNode(int x) : val(x), next(nullptr) {{}}
+    ListNode(int x, ListNode *next) : val(x), next(next) {{}}
+}};
 
 /* ── Minimal JSON helpers ─────────────────────────────────────────────── */
 
@@ -1225,6 +1368,29 @@ static vector<int> __kc_get_int_array(const string& json, const string& key) {{
         }}
     }}
     return result;
+}}
+
+static ListNode* __kc_build_linked_list(const vector<int>& arr) {{
+    if (arr.empty()) return nullptr;
+    ListNode* head = new ListNode(arr[0]);
+    ListNode* curr = head;
+    for (size_t i = 1; i < arr.size(); i++) {{
+        curr->next = new ListNode(arr[i]);
+        curr = curr->next;
+    }}
+    return head;
+}}
+
+static void __kc_print_linked_list(ListNode* head) {{
+    cout << "[";
+    bool first = true;
+    while (head) {{
+        if (!first) cout << ",";
+        cout << head->val;
+        first = false;
+        head = head->next;
+    }}
+    cout << "]\\n";
 }}
 
 /* ── User Code ────────────────────────────────────────────────────────── */

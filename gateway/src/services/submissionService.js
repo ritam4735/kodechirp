@@ -107,16 +107,19 @@ async function submitCode({ problemId, code, language, userId }) {
  * Run code once with stdin (non-judging, for "Run" button).
  * This is still synchronous via HTTP to the worker service.
  */
-async function runCode({ code, language, stdin }) {
+async function runCode({ code, language, stdin, judgeMode, signatureMetadata }) {
   // Strategy: try the Python worker HTTP API first.
   // If it's unavailable (local dev without worker), fall back to
   // direct Docker/Podman sandbox execution via codeRunner.
 
   try {
+    const payload = { code, language, stdin, judgeMode, signatureMetadata };
+    logger.info(`Payload sent from gateway -> worker: ${JSON.stringify(payload)}`);
+    
     const response = await fetch(`${config.worker.apiUrl}/api/execute`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, language, stdin }),
+      body: JSON.stringify(payload),
       signal: AbortSignal.timeout(15000), // 15s timeout
     });
 

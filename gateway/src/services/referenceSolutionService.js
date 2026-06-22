@@ -116,6 +116,17 @@ async function verify(solutionId) {
     verifiedAt: new Date().toISOString(),
   };
 
+  const problemResult = await db.query(
+    'SELECT judge_mode, signature_metadata FROM problems WHERE id = $1',
+    [solution.problem_id]
+  );
+  if (problemResult.rowCount === 0) throw new Error('Problem not found');
+  const problem = problemResult.rows[0];
+  const judgeMode = problem.judge_mode || 'STDIN_STDOUT';
+  const signatureMetadata = typeof problem.signature_metadata === 'string' 
+      ? JSON.parse(problem.signature_metadata || '{}') 
+      : problem.signature_metadata;
+
   // Run against example test cases. This also exercises compilation for compiled
   // languages, without falsely failing input-reading solutions on empty stdin.
   const examples = await db.query(
@@ -131,6 +142,8 @@ async function verify(solutionId) {
         code: solution.source_code,
         language: solution.language,
         stdin: '',
+        judgeMode,
+        signatureMetadata,
       });
 
       if (hasCompilationError(smokeResult.stderr)) {
@@ -159,6 +172,8 @@ async function verify(solutionId) {
         code: solution.source_code,
         language: solution.language,
         stdin: tc.input,
+        judgeMode,
+        signatureMetadata,
       });
 
       if (hasCompilationError(result.stderr)) {
@@ -166,10 +181,14 @@ async function verify(solutionId) {
         await updateVerification(solutionId, 'compile_error', verification);
         return verification;
       }
+      
+      verification.compileOk = true;
 
       const actualOutput = (result.stdout || '').trim();
       const expectedOutput = (tc.expected_output || '').trim();
       const passed = !result.timedOut && result.exitCode === 0 && actualOutput === expectedOutput;
+
+      logger.info(`Mapping from worker result -> frontend verification status: passed=${passed}`);
 
       if (!passed) allPassed = false;
 
@@ -210,10 +229,22 @@ async function runAgainstInput(solutionId, input) {
   const solution = await get(solutionId);
   if (!solution) throw new Error('Reference solution not found');
 
+  const problemResult = await db.query(
+    'SELECT judge_mode, signature_metadata FROM problems WHERE id = $1',
+    [solution.problem_id]
+  );
+  const problem = problemResult.rows[0];
+  const judgeMode = problem ? problem.judge_mode : 'STDIN_STDOUT';
+  const signatureMetadata = problem && typeof problem.signature_metadata === 'string' 
+      ? JSON.parse(problem.signature_metadata || '{}') 
+      : (problem ? problem.signature_metadata : null);
+
   const result = await runCode({
     code: solution.source_code,
     language: solution.language,
     stdin: input,
+    judgeMode,
+    signatureMetadata,
   });
 
   return {
