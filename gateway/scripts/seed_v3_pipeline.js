@@ -26,7 +26,10 @@ const problemsData = {
     },
     templates: {
       python: "def twoSum(nums, target):\n    # Write your code here\n    pass",
-      javascript: "function twoSum(nums, target) {\n    // Write your code here\n}"
+      javascript: "function twoSum(nums, target) {\n    // Write your code here\n}",
+      c: "/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\nint* twoSum(int* nums, int numsSize, int target, int* returnSize) {\n    // Write your code here\n}",
+      cpp: "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        // Write your code here\n    }\n};",
+      java: "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        // Write your code here\n    }\n}"
     },
     ref_code: {
       python: "def twoSum(nums, target):\n    m = {}\n    for i, n in enumerate(nums):\n        if target - n in m:\n            return [m[target - n], i]\n        m[n] = i\n    return []",
@@ -84,7 +87,10 @@ const problemsData = {
     },
     templates: {
       python: "def isValid(s):\n    # Write your code here\n    pass",
-      javascript: "function isValid(s) {\n    // Write your code here\n}"
+      javascript: "function isValid(s) {\n    // Write your code here\n}",
+      c: "int isValid(char* s) {\n    // Write your code here\n}",
+      cpp: "class Solution {\npublic:\n    bool isValid(string s) {\n        // Write your code here\n    }\n};",
+      java: "class Solution {\n    public boolean isValid(String s) {\n        // Write your code here\n    }\n}"
     },
     ref_code: {
       python: "def isValid(s):\n    stack = []\n    mapping = {')': '(', '}': '{', ']': '['}\n    for char in s:\n        if char in mapping:\n            top_element = stack.pop() if stack else '#'\n            if mapping[char] != top_element:\n                return False\n        else:\n            stack.append(char)\n    return not stack",
@@ -195,7 +201,10 @@ const problemsData = {
     },
     templates: {
       python: "def climbStairs(n):\n    # Write your code here\n    pass",
-      javascript: "function climbStairs(n) {\n    // Write your code here\n}"
+      javascript: "function climbStairs(n) {\n    // Write your code here\n}",
+      c: "int climbStairs(int n) {\n    // Write your code here\n}",
+      cpp: "class Solution {\npublic:\n    int climbStairs(int n) {\n        // Write your code here\n    }\n};",
+      java: "class Solution {\n    public int climbStairs(int n) {\n        // Write your code here\n    }\n}"
     },
     ref_code: {
       python: "def climbStairs(n):\n    if n <= 2: return n\n    a, b = 1, 2\n    for i in range(3, n + 1):\n        a, b = b, a + b\n    return b",
@@ -232,7 +241,10 @@ const problemsData = {
     },
     templates: {
       python: "def merge(nums1, m, nums2, n):\n    # Write your code here\n    pass",
-      javascript: "function merge(nums1, m, nums2, n) {\n    // Write your code here\n}"
+      javascript: "function merge(nums1, m, nums2, n) {\n    // Write your code here\n}",
+      c: "/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\nint* merge(int* nums1, int nums1Size, int m, int* nums2, int nums2Size, int n, int* returnSize) {\n    // Write your code here\n}",
+      cpp: "class Solution {\npublic:\n    vector<int> merge(vector<int>& nums1, int m, vector<int>& nums2, int n) {\n        // Write your code here\n    }\n};",
+      java: "class Solution {\n    public int[] merge(int[] nums1, int m, int[] nums2, int n) {\n        // Write your code here\n    }\n}"
     },
     ref_code: {
       python: "def merge(nums1, m, nums2, n):\n    res = nums1[:m] + nums2[:n]\n    res.sort()\n    return res",
@@ -277,7 +289,10 @@ const problemsData = {
     },
     templates: {
       python: "def maxSubArray(nums, n):\n    # Write your code here\n    pass",
-      javascript: "function maxSubArray(nums, n) {\n    // Write your code here\n}"
+      javascript: "function maxSubArray(nums, n) {\n    // Write your code here\n}",
+      c: "int maxSubArray(int* nums, int numsSize, int n) {\n    // Write your code here\n}",
+      cpp: "class Solution {\npublic:\n    int maxSubArray(vector<int>& nums, int n) {\n        // Write your code here\n    }\n};",
+      java: "class Solution {\n    public int maxSubArray(int[] nums, int n) {\n        // Write your code here\n    }\n}"
     },
     ref_code: {
       python: "def maxSubArray(nums, n):\n    max_sum = float('-inf')\n    curr_sum = 0\n    for num in nums:\n        curr_sum = max(num, curr_sum + num)\n        max_sum = max(max_sum, curr_sum)\n    return max_sum",

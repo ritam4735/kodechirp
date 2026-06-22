@@ -56,6 +56,9 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
                 user_code=job.code
             )
             logger.info(f"Submission {submission_id}: Wrapper generated successfully")
+        except NotImplementedError as e:
+            logger.info(f"Submission {submission_id}: Wrapper not implemented for {job.language}, falling back to STDIN_STDOUT mode.")
+            execution_code = job.code
         except Exception as e:
             logger.error(f"Wrapper generation failed: {e}")
             return SubmissionResult(

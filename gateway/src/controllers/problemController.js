@@ -103,7 +103,19 @@ exports.getProblem = async (req, res, next) => {
       [problem.id]
     );
 
+    // Fetch problem templates
+    const templatesResult = await db.query(
+      `SELECT language, starter_code
+       FROM problem_templates
+       WHERE problem_id = $1`,
+      [problem.id]
+    );
+
     problem.testCases = testCasesResult.rows;
+    problem.templates = templatesResult.rows.reduce((acc, row) => {
+      acc[row.language] = row.starter_code;
+      return acc;
+    }, {});
 
     return res.json({ success: true, data: problem });
   } catch (err) {

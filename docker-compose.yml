@@ -126,7 +126,7 @@ services:
       POST: 1
       AUTH: 0
       BUILD: 0
-      EXEC: 0
+      EXEC: 1
       NETWORKS: 0
       NODES: 0
       PLUGINS: 0

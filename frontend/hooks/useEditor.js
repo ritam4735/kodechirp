@@ -5,13 +5,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEditorStore } from '../store/editorStore';
+import { useProblemStore } from '../store/problemStore';
 import { api } from '../lib/api';
 import { DEFAULT_CODE_SNIPPETS } from '../lib/constants';
 
 export const useEditor = () => {
   const store = useEditorStore();
+  const { currentProblem } = useProblemStore();
 
-  const code = store.codes[store.language] ?? (DEFAULT_CODE_SNIPPETS[store.language] || '');
+  const templates = currentProblem?.templates || {};
+  const code = store.codes[store.language] ?? (templates[store.language] || DEFAULT_CODE_SNIPPETS[store.language] || '');
 
   const handleRunCode = async () => {
     store.setIsExecuting(true);

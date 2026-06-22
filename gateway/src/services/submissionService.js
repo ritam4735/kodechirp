@@ -67,8 +67,8 @@ async function submitCode({ problemId, code, language, userId }) {
       let inputStr = tc.input;
       let expectedStr = tc.expected_output;
       if (problem.judge_mode === 'FUNCTION' || problem.judge_mode === 'CLASS') {
-        inputStr = typeof tc.input_json === 'string' ? tc.input_json : JSON.stringify(tc.input_json || {});
-        expectedStr = typeof tc.expected_json === 'string' ? tc.expected_json : JSON.stringify(tc.expected_json || null);
+        inputStr = typeof tc.input_json === 'string' ? tc.input_json : JSON.stringify(tc.input_json ?? {});
+        expectedStr = typeof tc.expected_json === 'string' ? tc.expected_json : JSON.stringify(tc.expected_json ?? null);
       }
       return {
         id: tc.id,
