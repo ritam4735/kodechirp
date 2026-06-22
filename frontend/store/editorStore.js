@@ -6,12 +6,13 @@ export const useEditorStore = create((set) => ({
   output: '',
   isExecuting: false,
   verdict: null,
-  setCode: (code) => set((state) => ({ 
-    codes: { ...state.codes, [state.language]: code } 
+  setCode: (key, code) => set((state) => ({ 
+    codes: { ...state.codes, [key]: code } 
   })),
   setLanguage: (language) => set({ language }),
   setOutput: (output) => set({ output }),
   setIsExecuting: (isExecuting) => set({ isExecuting }),
   setVerdict: (verdict) => set({ verdict }),
   resetConsole: () => set({ output: '', verdict: null }),
+  resetAll: () => set({ codes: {}, output: '', verdict: null, isExecuting: false }),
 }));

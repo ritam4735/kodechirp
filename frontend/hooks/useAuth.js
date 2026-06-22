@@ -1,4 +1,5 @@
 import { useAuthStore } from '../store/authStore';
+import { useEditorStore } from '../store/editorStore';
 
 export const useAuth = () => {
   const { user, token, isAuthenticated, login, logout } = useAuthStore();
@@ -13,6 +14,7 @@ export const useAuth = () => {
     logout();
     localStorage.removeItem('kc_token');
     localStorage.removeItem('kc_user');
+    useEditorStore.getState().resetAll();
   };
 
   // initAuth kept for backward compat but is now a no-op;

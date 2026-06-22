@@ -2,13 +2,14 @@ import Editor from '@monaco-editor/react';
 import { useEditor } from '../../hooks/useEditor';
 
 export const CodeEditor = () => {
-  const { code, language, setCode } = useEditor();
+  const { code, language, setCode, editorPath } = useEditor();
 
   return (
     <div className="flex-1 min-h-0 relative group bg-[#0d1117]">
       <Editor
         height="100%"
         language={language}
+        path={editorPath}
         value={code}
         theme="vs-dark"
         onChange={(value) => setCode(value || '')}

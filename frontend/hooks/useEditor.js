@@ -4,23 +4,36 @@
 // The backend needs { code, language, problem_id } to compile / run correctly.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { useEffect } from 'react';
 import { useEditorStore } from '../store/editorStore';
 import { useProblemStore } from '../store/problemStore';
+import { useAuthStore } from '../store/authStore';
 import { api } from '../lib/api';
 import { DEFAULT_CODE_SNIPPETS } from '../lib/constants';
 
 export const useEditor = () => {
   const store = useEditorStore();
   const { currentProblem } = useProblemStore();
+  const { user } = useAuthStore();
+
+  const userId = user?.id || 'guest';
+  const problemId = currentProblem?.id || 'unknown';
+  const language = store.language;
 
   const templates = currentProblem?.templates || {};
-  const code = store.codes[store.language] ?? (templates[store.language] || DEFAULT_CODE_SNIPPETS[store.language] || '');
+  
+  const cacheKey = `${userId}_${problemId}_${language}`;
+  const code = store.codes[cacheKey] ?? (templates[language] || DEFAULT_CODE_SNIPPETS[language] || '');
+
+  useEffect(() => {
+    store.resetConsole();
+  }, [problemId]);
 
   const handleRunCode = async () => {
     store.setIsExecuting(true);
     store.resetConsole();
     try {
-      const result = await api.runCode(code, store.language);
+      const result = await api.runCode(code, language);
       store.setOutput(result.output || (result.error ? 'Error: no output' : 'No output'));
     } catch (error) {
       store.setOutput(`Failed to execute code: ${error.message}`);
@@ -29,12 +42,11 @@ export const useEditor = () => {
     }
   };
 
-  const handleSubmitCode = async (problemId) => {
+  const handleSubmitCode = async (probId) => {
     store.setIsExecuting(true);
     store.resetConsole();
     try {
-      // BUG FIX: store.language is now passed as the third argument
-      const result = await api.submitCode(problemId, code, store.language);
+      const result = await api.submitCode(probId, code, language);
       store.setVerdict(result);
     } catch (error) {
       store.setOutput(`Failed to submit code: ${error.message}`);
@@ -43,5 +55,9 @@ export const useEditor = () => {
     }
   };
 
-  return { ...store, code, handleRunCode, handleSubmitCode };
+  const setCode = (newCode) => {
+    store.setCode(cacheKey, newCode);
+  };
+
+  return { ...store, code, setCode, handleRunCode, handleSubmitCode, editorPath: cacheKey };
 };
