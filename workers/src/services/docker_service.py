@@ -272,6 +272,7 @@ class DockerService:
         language: str,
         stdin: str = "",
         timeout_ms: int = 5000,
+        use_sh_stdin: bool = False,
     ) -> ExecutionResult:
         config = LANGUAGE_CONFIG.get(language)
         if not config:
@@ -285,11 +286,18 @@ class DockerService:
             timeout_s = min(timeout_ms / 1000, config["timeout"])
             docker_timeout = timeout_s + 5
 
-            docker_args = [
-                "docker", "exec", "-i",
-                container_name,
-                "sh", "-c", config["run_command"],
-            ]
+            if use_sh_stdin:
+                docker_args = [
+                    "docker", "exec", "-i",
+                    container_name,
+                    "sh",
+                ]
+            else:
+                docker_args = [
+                    "docker", "exec", "-i",
+                    container_name,
+                    "sh", "-c", config["run_command"],
+                ]
 
             start_time = time.monotonic()
 
@@ -383,7 +391,11 @@ class DockerService:
             for line in raw_stderr.splitlines():
                 if line.startswith("MEMORY_KB: "):
                     try:
-                        memory_kb = int(line.split("MEMORY_KB: ")[1].strip())
+                        mem = int(line.split("MEMORY_KB: ")[1].strip())
+                        if memory_kb is None:
+                            memory_kb = mem
+                        else:
+                            memory_kb = max(memory_kb, mem)
                     except ValueError:
                         pass
                 else:
