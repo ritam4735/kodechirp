@@ -12,7 +12,8 @@ import { RunButton } from '../../../components/editor/RunButton';
 import { SubmitButton } from '../../../components/editor/SubmitButton';
 import { ConsolePanel } from '../../../components/editor/ConsolePanel';
 import { useEditor } from '../../../hooks/useEditor';
-import { Code2, BookOpen, MessageCircle, Activity, FileCheck, Target, ChevronRight, Terminal } from 'lucide-react';
+import { useAuth } from '../../../hooks/useAuth';
+import { Code2, BookOpen, MessageCircle, Activity, FileCheck, Target, ChevronRight, Terminal, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 
@@ -152,23 +153,36 @@ const LeftPanelContent = ({ currentProblem }) => (
   );
 
 // Editor Content
-const EditorContent = ({ problemId }) => (
-    <div className="flex flex-col h-full bg-[#0d1117]/80 border border-white/10 rounded-2xl backdrop-blur-xl shadow-lg overflow-hidden min-h-0">
+const EditorContent = ({ problemId }) => {
+  const { isAuthenticated } = useAuth();
+  return (
+    <div className="flex flex-col h-full bg-[#0d1117]/80 border border-white/10 rounded-2xl backdrop-blur-xl shadow-lg overflow-hidden min-h-0 relative">
       <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
         <div className="flex items-center gap-2">
           <Code2 size={16} className="text-[#58a6ff]" />
           <LanguageSelector />
         </div>
         <div className="flex items-center gap-3">
-          <RunButton />
-          <SubmitButton problemId={problemId} />
+          <RunButton disabled={!isAuthenticated} />
+          <SubmitButton problemId={problemId} disabled={!isAuthenticated} />
         </div>
       </div>
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col relative">
         <CodeEditor />
+        {!isAuthenticated && (
+          <div className="absolute inset-0 bg-[#0d1117]/60 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
+            <Lock className="w-8 h-8 text-[#8b949e] mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">Login Required</h3>
+            <p className="text-sm text-[#8b949e] mb-4">Please log in to solve this problem.</p>
+            <Link href="/auth" className="px-5 py-2.5 bg-[#58a6ff] hover:bg-[#58a6ff]/90 text-white rounded-lg font-medium transition-colors shadow-[0_0_15px_rgba(88,166,255,0.4)]">
+              Sign In
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
+};
 
 // Bottom Content (Tests & Console)
 const BottomContent = ({ testCases, showConsole }) => (
