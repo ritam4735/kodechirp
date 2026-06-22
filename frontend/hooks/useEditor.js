@@ -4,7 +4,6 @@
 // The backend needs { code, language, problem_id } to compile / run correctly.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect } from 'react';
 import { useEditorStore } from '../store/editorStore';
 import { useProblemStore } from '../store/problemStore';
 import { useAuthStore } from '../store/authStore';
@@ -24,10 +23,6 @@ export const useEditor = () => {
   
   const cacheKey = `${userId}_${problemId}_${language}`;
   const code = store.codes[cacheKey] ?? (templates[language] || DEFAULT_CODE_SNIPPETS[language] || '');
-
-  useEffect(() => {
-    store.resetConsole();
-  }, [problemId]);
 
   const handleRunCode = async () => {
     store.setIsExecuting(true);

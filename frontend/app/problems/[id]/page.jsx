@@ -19,13 +19,16 @@ import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'reac
 export default function ProblemPage() {
   const { id } = useParams();
   const { currentProblem, isLoading, fetchProblemDetails } = useProblem();
-  const { output, verdict } = useEditor();
+  const { output, verdict, resetConsole } = useEditor();
 
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
 
   useEffect(() => {
-    if (id) fetchProblemDetails(id);
+    if (id) {
+      resetConsole();
+      fetchProblemDetails(id);
+    }
     
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
