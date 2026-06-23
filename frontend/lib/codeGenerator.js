@@ -35,7 +35,6 @@ export function generateStarterCode(judgeMode, signature, language) {
       'Matrix<Boolean>': 'List[List[bool]]',
       'LinkedList': 'Optional[ListNode]',
       'BinaryTree': 'Optional[TreeNode]',
-      'Graph': 'Node',
     };
     const args = params.map(p => `${p.name}: ${typeMap[p.type] || 'Any'}`).join(', ');
     const ret = typeMap[returnType] || 'Any';
@@ -57,16 +56,18 @@ export function generateStarterCode(judgeMode, signature, language) {
       'Integer': 'int',
       'Float': 'double',
       'String': language === 'cpp' ? 'string' : 'char*',
-      'Boolean': 'bool',
+      'Boolean': language === 'cpp' ? 'bool' : 'int',
       'Character': 'char',
       'Array<Integer>': language === 'cpp' ? 'vector<int>' : 'int*',
       'Array<Float>': language === 'cpp' ? 'vector<double>' : 'double*',
       'Array<String>': language === 'cpp' ? 'vector<string>' : 'char**',
-      'Array<Boolean>': language === 'cpp' ? 'vector<bool>' : 'bool*',
+      'Array<Boolean>': language === 'cpp' ? 'vector<bool>' : 'int*',
       'Matrix<Integer>': language === 'cpp' ? 'vector<vector<int>>' : 'int**',
+      'Matrix<Float>': language === 'cpp' ? 'vector<vector<double>>' : 'double**',
+      'Matrix<String>': language === 'cpp' ? 'vector<vector<string>>' : 'char***',
+      'Matrix<Boolean>': language === 'cpp' ? 'vector<vector<bool>>' : 'int**',
       'LinkedList': 'ListNode*',
       'BinaryTree': 'TreeNode*',
-      'Graph': 'Node*',
       'Void': 'void'
     };
     const argsArray = params.map(p => `${cTypeMap[p.type] || 'void*'} ${p.name}`);
@@ -94,6 +95,30 @@ export function generateStarterCode(judgeMode, signature, language) {
       }
       return `${doc}${ret} ${name}(${args}) {\n    \n}\n`;
     }
+  }
+
+  if (language === 'java') {
+    const javaTypeMap = {
+      'Integer': 'int',
+      'Float': 'double',
+      'String': 'String',
+      'Boolean': 'boolean',
+      'Character': 'char',
+      'Array<Integer>': 'int[]',
+      'Array<Float>': 'double[]',
+      'Array<String>': 'String[]',
+      'Array<Boolean>': 'boolean[]',
+      'Matrix<Integer>': 'int[][]',
+      'Matrix<Float>': 'double[][]',
+      'Matrix<String>': 'String[][]',
+      'Matrix<Boolean>': 'boolean[][]',
+      'LinkedList': 'ListNode',
+      'BinaryTree': 'TreeNode',
+      'Void': 'void',
+    };
+    const args = params.map(p => `${javaTypeMap[p.type] || 'Object'} ${p.name}`).join(', ');
+    const ret = javaTypeMap[returnType] || 'Object';
+    return `class Solution {\n    public ${ret} ${name}(${args}) {\n        \n    }\n}\n`;
   }
 
   return null;

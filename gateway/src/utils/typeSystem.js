@@ -22,7 +22,7 @@ const DATA_TYPES = {
   // Complex Structures
   LINKED_LIST: 'LinkedList',
   BINARY_TREE: 'BinaryTree',
-  GRAPH: 'Graph',
+  // NOTE: Graph was removed — too many valid representations for automated judging.
 };
 
 const JUDGE_MODES = {
