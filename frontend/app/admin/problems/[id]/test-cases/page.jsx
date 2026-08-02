@@ -33,8 +33,12 @@ export default function TestCaseManager() {
   }, [problemId, router]);
 
   const refresh = async () => {
-    const res = await adminApi.getTestCases(problemId);
-    setTestCases(res.data);
+    try {
+      const res = await adminApi.getTestCases(problemId);
+      setTestCases(res.data || []);
+    } catch (err) {
+      console.error('Failed to refresh test cases:', err);
+    }
   };
 
   const handleAdd = async () => {
@@ -46,7 +50,7 @@ export default function TestCaseManager() {
       await adminApi.createTestCase(problemId, { ...newTC, order_index: testCases.length });
       setNewTC({ input: '', expected_output: '', is_sample: false, explanation: '', order_index: 0 });
       setShowAdd(false);
-      refresh();
+      await refresh();
     } catch (err) {
       alert('Failed: ' + err.message);
     }
@@ -59,19 +63,26 @@ export default function TestCaseManager() {
       await adminApi.bulkImportTestCases(problemId, parsed);
       setBulkJson('');
       setShowBulk(false);
-      refresh();
+      await refresh();
     } catch (err) {
       alert('Import failed: ' + err.message);
     }
   };
 
   const handleDelete = async (tcId) => {
+    if (!tcId) {
+      alert('Invalid test case ID');
+      return;
+    }
     if (!confirm('Delete this test case?')) return;
     try {
+      // Optimistic update
+      setTestCases(prev => prev.filter(tc => tc.id !== tcId));
       await adminApi.deleteTestCase(tcId);
-      refresh();
+      await refresh();
     } catch (err) {
       alert('Failed: ' + err.message);
+      await refresh();
     }
   };
 
@@ -79,7 +90,7 @@ export default function TestCaseManager() {
     try {
       await adminApi.updateTestCase(tcId, updates);
       setEditingId(null);
-      refresh();
+      await refresh();
     } catch (err) {
       alert('Failed: ' + err.message);
     }
@@ -264,8 +275,8 @@ function TestCaseRow({ tc, idx, isEditing, onEdit, onCancel, onSave, onDelete })
       </td>
       <td>
         <div style={{ display: 'flex', gap: '4px' }}>
-          <button className="admin-btn admin-btn-ghost admin-btn-sm" onClick={onEdit}>Edit</button>
-          <button className="admin-btn admin-btn-danger admin-btn-sm" onClick={onDelete}>Del</button>
+          <button type="button" className="admin-btn admin-btn-ghost admin-btn-sm" onClick={(e) => { e.stopPropagation(); onEdit(); }}>Edit</button>
+          <button type="button" className="admin-btn admin-btn-danger admin-btn-sm" onClick={(e) => { e.stopPropagation(); onDelete(); }}>Del</button>
         </div>
       </td>
     </tr>

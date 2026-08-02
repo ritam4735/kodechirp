@@ -71,33 +71,41 @@ export default function AdminProblems() {
   const handleBulkAction = async (action) => {
     if (selected.size === 0) return;
     const confirmMsg = action === 'delete'
-      ? `Delete ${selected.size} problems? This cannot be undone.`
-      : `${action === 'publish' ? 'Publish' : 'Unpublish'} ${selected.size} problems?`;
+      ? `Delete ${selected.size} problem(s)? This cannot be undone.`
+      : `${action === 'publish' ? 'Publish' : 'Unpublish'} ${selected.size} problem(s)?`;
     if (!confirm(confirmMsg)) return;
     try {
+      if (action === 'delete') {
+        const toDelete = new Set(selected);
+        setProblems(prev => prev.filter(p => !toDelete.has(p.id)));
+      }
       await adminApi.bulkAction([...selected], action);
-      fetchProblems();
+      await fetchProblems();
     } catch (err) {
       alert('Bulk action failed: ' + err.message);
+      await fetchProblems();
     }
   };
 
   const handleToggle = async (id, isPublished) => {
     try {
       await adminApi.toggleProblemStatus(id, isPublished ? 'Draft' : 'Published');
-      fetchProblems();
+      await fetchProblems();
     } catch (err) {
       alert('Failed: ' + err.message);
     }
   };
 
   const handleDelete = async (id) => {
+    if (!id) return;
     if (!confirm('Delete this problem permanently?')) return;
     try {
+      setProblems(prev => prev.filter(p => p.id !== id));
       await adminApi.deleteProblem(id);
-      fetchProblems();
+      await fetchProblems();
     } catch (err) {
       alert('Failed: ' + err.message);
+      await fetchProblems();
     }
   };
 
@@ -203,11 +211,11 @@ export default function AdminProblems() {
                 <td>
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                     <Link href={`/admin/problems/${p.id}/edit`} className="admin-btn admin-btn-ghost admin-btn-sm">Edit</Link>
-                    <button onClick={() => handleToggle(p.id, p.status === 'Published')} className={`admin-btn admin-btn-sm ${p.status === 'Published' ? 'admin-btn-ghost' : 'admin-btn-success'}`}>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleToggle(p.id, p.status === 'Published'); }} className={`admin-btn admin-btn-sm ${p.status === 'Published' ? 'admin-btn-ghost' : 'admin-btn-success'}`}>
                       {p.status === 'Published' ? 'Unpublish' : 'Publish'}
                     </button>
                     <Link href={`/admin/problems/${p.id}/test-cases`} className="admin-btn admin-btn-ghost admin-btn-sm">Tests</Link>
-                    <button onClick={() => handleDelete(p.id)} className="admin-btn admin-btn-danger admin-btn-sm">Del</button>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleDelete(p.id); }} className="admin-btn admin-btn-danger admin-btn-sm">Del</button>
                   </div>
                 </td>
               </tr>

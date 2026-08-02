@@ -143,6 +143,25 @@ class CGenerator:
 {indent}    printf("%s", __result[__i] ? "true" : "false");
 {indent}}}
 {indent}printf("]");'''
+        elif ret_type == 'Array<String>':
+            print_logic = f'''{indent}printf("[");
+{indent}for (int __i = 0; __i < __ret_size; __i++) {{
+{indent}    if (__i > 0) printf(",");
+{indent}    __kc_print_string(__result[__i]);
+{indent}}}
+{indent}printf("]");'''
+        elif ret_type == 'Matrix<String>':
+            print_logic = f'''{indent}printf("[");
+{indent}for (int __i = 0; __i < __ret_size; __i++) {{
+{indent}    if (__i > 0) printf(",");
+{indent}    printf("[");
+{indent}    for (int __j = 0; __j < __ret_col_sizes[__i]; __j++) {{
+{indent}        if (__j > 0) printf(",");
+{indent}        __kc_print_string(__result[__i][__j]);
+{indent}    }}
+{indent}    printf("]");
+{indent}}}
+{indent}printf("]");'''
         elif ret_type == 'Matrix<Int>':
             print_logic = f'''{indent}printf("[");
 {indent}for (int __i = 0; __i < __ret_size; __i++) {{
@@ -207,16 +226,22 @@ struct TreeNode {{
 
 /* ── Minimal JSON helpers ─────────────────────────────────────────────── */
 
+static const char* __kc_skip_ws(const char* p) {{
+    if (!p) return NULL;
+    while (*p == ' ' || *p == '\\t' || *p == '\\n' || *p == '\\r') p++;
+    return p;
+}}
+
 static const char* __kc_find_key(const char* json, const char* key) {{
     char pat[256];
     snprintf(pat, sizeof(pat), "\\"%s\\"", key);
     const char* p = json;
     while ((p = strstr(p, pat)) != NULL) {{
         const char* check = p + strlen(pat);
-        while (*check == ' ') check++;
+        while (*check == ' ' || *check == '\\t' || *check == '\\n' || *check == '\\r') check++;
         if (*check == ':') {{
             check++;
-            while (*check == ' ') check++;
+            while (*check == ' ' || *check == '\\t' || *check == '\\n' || *check == '\\r') check++;
             return check;
         }}
         p += strlen(pat);
@@ -225,26 +250,26 @@ static const char* __kc_find_key(const char* json, const char* key) {{
 }}
 
 static int __kc_get_int(const char* json, const char* key) {{
-    const char* p = __kc_find_key(json, key);
+    const char* p = __kc_skip_ws(__kc_find_key(json, key));
     if (!p) return 0;
     return atoi(p);
 }}
 
 static double __kc_get_float(const char* json, const char* key) {{
-    const char* p = __kc_find_key(json, key);
+    const char* p = __kc_skip_ws(__kc_find_key(json, key));
     if (!p) return 0.0;
     return atof(p);
 }}
 
 static int __kc_get_bool(const char* json, const char* key) {{
-    const char* p = __kc_find_key(json, key);
+    const char* p = __kc_skip_ws(__kc_find_key(json, key));
     if (!p) return 0;
     if (strncmp(p, "true", 4) == 0) return 1;
     return 0;
 }}
 
 static void __kc_get_string(const char* json, const char* key, char* out, int maxlen) {{
-    const char* p = __kc_find_key(json, key);
+    const char* p = __kc_skip_ws(__kc_find_key(json, key));
     if (!p || *p != '"') {{ out[0] = 0; return; }}
     p++;
     int i = 0;
@@ -278,12 +303,12 @@ static void __kc_print_string(const char* s) {{
 }}
 
 static int __kc_get_int_array(const char* json, const char* key, int* out, int maxlen) {{
-    const char* p = __kc_find_key(json, key);
+    const char* p = __kc_skip_ws(__kc_find_key(json, key));
     if (!p || *p != '[') return 0;
     p++;
     int count = 0;
     while (*p && *p != ']' && count < maxlen) {{
-        while (*p == ' ' || *p == ',') p++;
+        while (*p == ' ' || *p == ',' || *p == '\\t' || *p == '\\n' || *p == '\\r') p++;
         if (*p == ']') break;
         out[count++] = atoi(p);
         if (*p == '-') p++;
@@ -293,12 +318,12 @@ static int __kc_get_int_array(const char* json, const char* key, int* out, int m
 }}
 
 static int __kc_get_nullable_int_array(const char* json, const char* key, int* out_val, int* out_is_null, int maxlen) {{
-    const char* p = __kc_find_key(json, key);
+    const char* p = __kc_skip_ws(__kc_find_key(json, key));
     if (!p || *p != '[') return 0;
     p++;
     int count = 0;
     while (*p && *p != ']' && count < maxlen) {{
-        while (*p == ' ' || *p == ',') p++;
+        while (*p == ' ' || *p == ',' || *p == '\\t' || *p == '\\n' || *p == '\\r') p++;
         if (*p == ']') break;
         if (strncmp(p, "null", 4) == 0) {{
             out_val[count] = 0;
@@ -316,12 +341,12 @@ static int __kc_get_nullable_int_array(const char* json, const char* key, int* o
 }}
 
 static int __kc_get_float_array(const char* json, const char* key, double* out, int maxlen) {{
-    const char* p = __kc_find_key(json, key);
+    const char* p = __kc_skip_ws(__kc_find_key(json, key));
     if (!p || *p != '[') return 0;
     p++;
     int count = 0;
     while (*p && *p != ']' && count < maxlen) {{
-        while (*p == ' ' || *p == ',') p++;
+        while (*p == ' ' || *p == ',' || *p == '\\t' || *p == '\\n' || *p == '\\r') p++;
         if (*p == ']') break;
         out[count++] = atof(p);
         if (*p == '-') p++;
@@ -331,12 +356,12 @@ static int __kc_get_float_array(const char* json, const char* key, double* out, 
 }}
 
 static int __kc_get_bool_array(const char* json, const char* key, int* out, int maxlen) {{
-    const char* p = __kc_find_key(json, key);
+    const char* p = __kc_skip_ws(__kc_find_key(json, key));
     if (!p || *p != '[') return 0;
     p++;
     int count = 0;
     while (*p && *p != ']' && count < maxlen) {{
-        while (*p == ' ' || *p == ',') p++;
+        while (*p == ' ' || *p == ',' || *p == '\\t' || *p == '\\n' || *p == '\\r') p++;
         if (*p == ']') break;
         out[count++] = (strncmp(p, "true", 4) == 0) ? 1 : 0;
         while (*p && *p != ',' && *p != ']') p++;
@@ -345,12 +370,12 @@ static int __kc_get_bool_array(const char* json, const char* key, int* out, int 
 }}
 
 static int __kc_get_string_array(const char* json, const char* key, char out[][256], int maxrows, int maxcol) {{
-    const char* p = __kc_find_key(json, key);
+    const char* p = __kc_skip_ws(__kc_find_key(json, key));
     if (!p || *p != '[') return 0;
     p++;
     int count = 0;
     while (*p && *p != ']' && count < maxrows) {{
-        while (*p == ' ' || *p == ',') p++;
+        while (*p == ' ' || *p == ',' || *p == '\\t' || *p == '\\n' || *p == '\\r') p++;
         if (*p == ']') break;
         if (*p == '\"') {{
             p++;
@@ -370,19 +395,19 @@ static int __kc_get_string_array(const char* json, const char* key, char out[][2
 }}
 
 static void __kc_get_int_matrix(const char* json, const char* key, int* out_flat, int* out_rows, int* out_cols, int maxlen) {{
-    const char* p = __kc_find_key(json, key);
+    const char* p = __kc_skip_ws(__kc_find_key(json, key));
     *out_rows = 0; *out_cols = 0;
     if (!p || *p != '[') return;
     p++;
     int total = 0;
     int current_cols = 0;
     while (*p && *p != ']' && total < maxlen) {{
-        while (*p == ' ' || *p == ',') p++;
+        while (*p == ' ' || *p == ',' || *p == '\\t' || *p == '\\n' || *p == '\\r') p++;
         if (*p == '[') {{
             p++;
             current_cols = 0;
             while (*p && *p != ']' && total < maxlen) {{
-                while (*p == ' ' || *p == ',') p++;
+                while (*p == ' ' || *p == ',' || *p == '\\t' || *p == '\\n' || *p == '\\r') p++;
                 if (*p == ']') break;
                 out_flat[total++] = atoi(p);
                 current_cols++;
@@ -399,19 +424,19 @@ static void __kc_get_int_matrix(const char* json, const char* key, int* out_flat
 }}
 
 static void __kc_get_float_matrix(const char* json, const char* key, double* out_flat, int* out_rows, int* out_cols, int maxlen) {{
-    const char* p = __kc_find_key(json, key);
+    const char* p = __kc_skip_ws(__kc_find_key(json, key));
     *out_rows = 0; *out_cols = 0;
     if (!p || *p != '[') return;
     p++;
     int total = 0;
     int current_cols = 0;
     while (*p && *p != ']' && total < maxlen) {{
-        while (*p == ' ' || *p == ',') p++;
+        while (*p == ' ' || *p == ',' || *p == '\\t' || *p == '\\n' || *p == '\\r') p++;
         if (*p == '[') {{
             p++;
             current_cols = 0;
             while (*p && *p != ']' && total < maxlen) {{
-                while (*p == ' ' || *p == ',') p++;
+                while (*p == ' ' || *p == ',' || *p == '\\t' || *p == '\\n' || *p == '\\r') p++;
                 if (*p == ']') break;
                 out_flat[total++] = atof(p);
                 current_cols++;

@@ -125,15 +125,21 @@ struct TreeNode {{
 
 /* ── JSON Parsing Helpers ─────────────────────────────────────────────── */
 
+static string::size_type __kc_skip_ws(const string& json, string::size_type pos) {{
+    if (pos == string::npos) return string::npos;
+    while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\\t' || json[pos] == '\\n' || json[pos] == '\\r')) pos++;
+    return pos;
+}}
+
 static string::size_type __kc_find_key(const string& json, const string& key) {{
     string pat = "\\"" + key + "\\"";
     string::size_type pos = 0;
     while ((pos = json.find(pat, pos)) != string::npos) {{
         string::size_type check = pos + pat.size();
-        while (check < json.size() && json[check] == ' ') check++;
+        while (check < json.size() && (json[check] == ' ' || json[check] == '\\t' || json[check] == '\\n' || json[check] == '\\r')) check++;
         if (check < json.size() && json[check] == ':') {{
             check++;
-            while (check < json.size() && json[check] == ' ') check++;
+            while (check < json.size() && (json[check] == ' ' || json[check] == '\\t' || json[check] == '\\n' || json[check] == '\\r')) check++;
             return check;
         }}
         pos += pat.size();
@@ -142,26 +148,26 @@ static string::size_type __kc_find_key(const string& json, const string& key) {{
 }}
 
 static int __kc_get_int(const string& json, const string& key) {{
-    auto pos = __kc_find_key(json, key);
-    if (pos == string::npos) return 0;
+    auto pos = __kc_skip_ws(json, __kc_find_key(json, key));
+    if (pos == string::npos || pos >= json.size()) return 0;
     return atoi(json.c_str() + pos);
 }}
 
 static double __kc_get_float(const string& json, const string& key) {{
-    auto pos = __kc_find_key(json, key);
-    if (pos == string::npos) return 0.0;
+    auto pos = __kc_skip_ws(json, __kc_find_key(json, key));
+    if (pos == string::npos || pos >= json.size()) return 0.0;
     return atof(json.c_str() + pos);
 }}
 
 static bool __kc_get_bool(const string& json, const string& key) {{
-    auto pos = __kc_find_key(json, key);
-    if (pos == string::npos) return false;
+    auto pos = __kc_skip_ws(json, __kc_find_key(json, key));
+    if (pos == string::npos || pos >= json.size()) return false;
     return json.substr(pos, 4) == "true";
 }}
 
 static string __kc_get_string(const string& json, const string& key) {{
-    auto pos = __kc_find_key(json, key);
-    if (pos == string::npos || json[pos] != '"') return "";
+    auto pos = __kc_skip_ws(json, __kc_find_key(json, key));
+    if (pos == string::npos || pos >= json.size() || json[pos] != '"') return "";
     pos++;
     string result;
     while (pos < json.size() && json[pos] != '"') {{
@@ -181,7 +187,8 @@ static string __kc_get_string(const string& json, const string& key) {{
 
 /* Find matching bracket, handling nesting */
 static string::size_type __kc_find_bracket_end(const string& json, string::size_type start) {{
-    if (start >= json.size() || json[start] != '[') return string::npos;
+    start = __kc_skip_ws(json, start);
+    if (start == string::npos || start >= json.size() || json[start] != '[') return string::npos;
     int depth = 1;
     string::size_type pos = start + 1;
     bool in_str = false;
@@ -198,12 +205,12 @@ static string::size_type __kc_find_bracket_end(const string& json, string::size_
 }}
 
 static vector<int> __kc_get_int_array(const string& json, const string& key) {{
-    auto pos = __kc_find_key(json, key);
+    auto pos = __kc_skip_ws(json, __kc_find_key(json, key));
     vector<int> result;
-    if (pos == string::npos || json[pos] != '[') return result;
+    if (pos == string::npos || pos >= json.size() || json[pos] != '[') return result;
     pos++;
     while (pos < json.size() && json[pos] != ']') {{
-        while (pos < json.size() && (json[pos] == ' ' || json[pos] == ',')) pos++;
+        while (pos < json.size() && (json[pos] == ' ' || json[pos] == ',' || json[pos] == '\\t' || json[pos] == '\\n' || json[pos] == '\\r')) pos++;
         if (pos < json.size() && json[pos] != ']') {{
             result.push_back(atoi(json.c_str() + pos));
             if (json[pos] == '-') pos++;
@@ -214,12 +221,12 @@ static vector<int> __kc_get_int_array(const string& json, const string& key) {{
 }}
 
 static vector<double> __kc_get_float_array(const string& json, const string& key) {{
-    auto pos = __kc_find_key(json, key);
+    auto pos = __kc_skip_ws(json, __kc_find_key(json, key));
     vector<double> result;
-    if (pos == string::npos || json[pos] != '[') return result;
+    if (pos == string::npos || pos >= json.size() || json[pos] != '[') return result;
     pos++;
     while (pos < json.size() && json[pos] != ']') {{
-        while (pos < json.size() && (json[pos] == ' ' || json[pos] == ',')) pos++;
+        while (pos < json.size() && (json[pos] == ' ' || json[pos] == ',' || json[pos] == '\\t' || json[pos] == '\\n' || json[pos] == '\\r')) pos++;
         if (pos < json.size() && json[pos] != ']') {{
             result.push_back(atof(json.c_str() + pos));
             if (json[pos] == '-') pos++;
@@ -230,12 +237,12 @@ static vector<double> __kc_get_float_array(const string& json, const string& key
 }}
 
 static vector<string> __kc_get_string_array(const string& json, const string& key) {{
-    auto pos = __kc_find_key(json, key);
+    auto pos = __kc_skip_ws(json, __kc_find_key(json, key));
     vector<string> result;
-    if (pos == string::npos || json[pos] != '[') return result;
+    if (pos == string::npos || pos >= json.size() || json[pos] != '[') return result;
     pos++;
     while (pos < json.size() && json[pos] != ']') {{
-        while (pos < json.size() && (json[pos] == ' ' || json[pos] == ',')) pos++;
+        while (pos < json.size() && (json[pos] == ' ' || json[pos] == ',' || json[pos] == '\\t' || json[pos] == '\\n' || json[pos] == '\\r')) pos++;
         if (pos >= json.size() || json[pos] == ']') break;
         if (json[pos] == '"') {{
             pos++;
@@ -262,12 +269,12 @@ static vector<string> __kc_get_string_array(const string& json, const string& ke
 }}
 
 static vector<bool> __kc_get_bool_array(const string& json, const string& key) {{
-    auto pos = __kc_find_key(json, key);
+    auto pos = __kc_skip_ws(json, __kc_find_key(json, key));
     vector<bool> result;
-    if (pos == string::npos || json[pos] != '[') return result;
+    if (pos == string::npos || pos >= json.size() || json[pos] != '[') return result;
     pos++;
     while (pos < json.size() && json[pos] != ']') {{
-        while (pos < json.size() && (json[pos] == ' ' || json[pos] == ',')) pos++;
+        while (pos < json.size() && (json[pos] == ' ' || json[pos] == ',' || json[pos] == '\\t' || json[pos] == '\\n' || json[pos] == '\\r')) pos++;
         if (pos >= json.size() || json[pos] == ']') break;
         result.push_back(json.substr(pos, 4) == "true");
         while (pos < json.size() && json[pos] != ',' && json[pos] != ']') pos++;
@@ -277,12 +284,12 @@ static vector<bool> __kc_get_bool_array(const string& json, const string& key) {
 
 /* Nullable int array for BinaryTree level-order (supports null entries) */
 static vector<pair<int, bool>> __kc_get_nullable_array(const string& json, const string& key) {{
-    auto pos = __kc_find_key(json, key);
+    auto pos = __kc_skip_ws(json, __kc_find_key(json, key));
     vector<pair<int, bool>> result; // (value, is_valid)
-    if (pos == string::npos || json[pos] != '[') return result;
+    if (pos == string::npos || pos >= json.size() || json[pos] != '[') return result;
     pos++;
     while (pos < json.size() && json[pos] != ']') {{
-        while (pos < json.size() && (json[pos] == ' ' || json[pos] == ',')) pos++;
+        while (pos < json.size() && (json[pos] == ' ' || json[pos] == ',' || json[pos] == '\\t' || json[pos] == '\\n' || json[pos] == '\\r')) pos++;
         if (pos >= json.size() || json[pos] == ']') break;
         if (json.substr(pos, 4) == "null") {{
             result.push_back({{0, false}});
@@ -298,20 +305,25 @@ static vector<pair<int, bool>> __kc_get_nullable_array(const string& json, const
 
 /* Matrix parsing helpers — extract nested JSON arrays */
 static string __kc_extract_array_at(const string& json, string::size_type pos) {{
-    if (pos >= json.size() || json[pos] != '[') return "[]";
+    pos = __kc_skip_ws(json, pos);
+    if (pos == string::npos || pos >= json.size() || json[pos] != '[') return "[]";
     auto end = __kc_find_bracket_end(json, pos);
+    if (end == string::npos) return "[]";
     return json.substr(pos, end - pos + 1);
 }}
 
 static vector<string> __kc_split_outer_arrays(const string& json) {{
     vector<string> result;
-    if (json.size() < 2 || json[0] != '[') return result;
-    string::size_type pos = 1;
+    size_t pos_start = 0;
+    while (pos_start < json.size() && (json[pos_start] == ' ' || json[pos_start] == '\\t' || json[pos_start] == '\\n' || json[pos_start] == '\\r')) pos_start++;
+    if (pos_start >= json.size() || json[pos_start] != '[') return result;
+    string::size_type pos = pos_start + 1;
     while (pos < json.size() && json[pos] != ']') {{
-        while (pos < json.size() && (json[pos] == ' ' || json[pos] == ',')) pos++;
+        while (pos < json.size() && (json[pos] == ' ' || json[pos] == ',' || json[pos] == '\\t' || json[pos] == '\\n' || json[pos] == '\\r')) pos++;
         if (pos >= json.size() || json[pos] == ']') break;
         if (json[pos] == '[') {{
             auto end = __kc_find_bracket_end(json, pos);
+            if (end == string::npos) break;
             result.push_back(json.substr(pos, end - pos + 1));
             pos = end + 1;
         }} else {{
@@ -322,16 +334,17 @@ static vector<string> __kc_split_outer_arrays(const string& json) {{
 }}
 
 static vector<vector<int>> __kc_get_matrix_int(const string& json, const string& key) {{
-    auto pos = __kc_find_key(json, key);
+    auto pos = __kc_skip_ws(json, __kc_find_key(json, key));
     vector<vector<int>> result;
-    if (pos == string::npos || json[pos] != '[') return result;
+    if (pos == string::npos || pos >= json.size() || json[pos] != '[') return result;
     auto end = __kc_find_bracket_end(json, pos);
+    if (end == string::npos) return result;
     string outer = json.substr(pos, end - pos + 1);
     for (auto& row_str : __kc_split_outer_arrays(outer)) {{
         vector<int> row;
         string::size_type rp = 1;
         while (rp < row_str.size() && row_str[rp] != ']') {{
-            while (rp < row_str.size() && (row_str[rp] == ' ' || row_str[rp] == ',')) rp++;
+            while (rp < row_str.size() && (row_str[rp] == ' ' || row_str[rp] == ',' || row_str[rp] == '\\t' || row_str[rp] == '\\n' || row_str[rp] == '\\r')) rp++;
             if (rp < row_str.size() && row_str[rp] != ']') {{
                 row.push_back(atoi(row_str.c_str() + rp));
                 if (row_str[rp] == '-') rp++;
@@ -344,16 +357,17 @@ static vector<vector<int>> __kc_get_matrix_int(const string& json, const string&
 }}
 
 static vector<vector<double>> __kc_get_matrix_double(const string& json, const string& key) {{
-    auto pos = __kc_find_key(json, key);
+    auto pos = __kc_skip_ws(json, __kc_find_key(json, key));
     vector<vector<double>> result;
-    if (pos == string::npos || json[pos] != '[') return result;
+    if (pos == string::npos || pos >= json.size() || json[pos] != '[') return result;
     auto end = __kc_find_bracket_end(json, pos);
+    if (end == string::npos) return result;
     string outer = json.substr(pos, end - pos + 1);
     for (auto& row_str : __kc_split_outer_arrays(outer)) {{
         vector<double> row;
         string::size_type rp = 1;
         while (rp < row_str.size() && row_str[rp] != ']') {{
-            while (rp < row_str.size() && (row_str[rp] == ' ' || row_str[rp] == ',')) rp++;
+            while (rp < row_str.size() && (row_str[rp] == ' ' || row_str[rp] == ',' || row_str[rp] == '\\t' || row_str[rp] == '\\n' || row_str[rp] == '\\r')) rp++;
             if (rp < row_str.size() && row_str[rp] != ']') {{
                 row.push_back(atof(row_str.c_str() + rp));
                 if (row_str[rp] == '-') rp++;
@@ -366,10 +380,11 @@ static vector<vector<double>> __kc_get_matrix_double(const string& json, const s
 }}
 
 static vector<vector<string>> __kc_get_matrix_string(const string& json, const string& key) {{
-    auto pos = __kc_find_key(json, key);
+    auto pos = __kc_skip_ws(json, __kc_find_key(json, key));
     vector<vector<string>> result;
-    if (pos == string::npos || json[pos] != '[') return result;
+    if (pos == string::npos || pos >= json.size() || json[pos] != '[') return result;
     auto end = __kc_find_bracket_end(json, pos);
+    if (end == string::npos) return result;
     string outer = json.substr(pos, end - pos + 1);
     for (auto& row_str : __kc_split_outer_arrays(outer)) {{
         // Re-parse as a string array
@@ -380,10 +395,11 @@ static vector<vector<string>> __kc_get_matrix_string(const string& json, const s
 }}
 
 static vector<vector<bool>> __kc_get_matrix_bool(const string& json, const string& key) {{
-    auto pos = __kc_find_key(json, key);
+    auto pos = __kc_skip_ws(json, __kc_find_key(json, key));
     vector<vector<bool>> result;
-    if (pos == string::npos || json[pos] != '[') return result;
+    if (pos == string::npos || pos >= json.size() || json[pos] != '[') return result;
     auto end = __kc_find_bracket_end(json, pos);
+    if (end == string::npos) return result;
     string outer = json.substr(pos, end - pos + 1);
     for (auto& row_str : __kc_split_outer_arrays(outer)) {{
         string fake_json = "{{\\"__r\\":" + row_str + "}}";

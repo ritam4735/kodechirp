@@ -27,7 +27,7 @@ from src.api.metrics import router as metrics_router
 from src.api.monitoring import router as monitoring_router
 from src.models.submission import RunCodeRequest
 from src.utils.sanitizer import normalise_output
-from src.utils.batch_parser import parse_batch_outputs, BATCH_DELIMITER
+from src.utils.batch_parser import parse_batch_outputs, parse_batch_segment, BATCH_DELIMITER
 from src.utils.logger import logger
 
 
@@ -247,8 +247,13 @@ async def execute_code(request: RunCodeRequest):
         success=(result.exitCode == 0 and not result.timedOut),
     )
 
+    stdout_out = result.stdout
+    if request.judgeMode == "FUNCTION" and request.signatureMetadata:
+        actual_output, user_console = parse_batch_segment(result.stdout)
+        stdout_out = actual_output
+
     return {
-        "stdout": result.stdout,
+        "stdout": stdout_out,
         "stderr": result.stderr,
         "exitCode": result.exitCode,
         "timedOut": result.timedOut,

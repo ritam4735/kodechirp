@@ -159,8 +159,8 @@ async function runCode({ code, language, stdin, problemId, judgeMode, signatureM
           let inputStr = tc.input;
           let expectedStr = tc.expected_output;
           if (effectiveJudgeMode === 'FUNCTION') {
-            inputStr = typeof tc.input_json === 'string' ? tc.input_json : JSON.stringify(tc.input_json ?? {});
-            expectedStr = typeof tc.expected_json === 'string' ? tc.expected_json : JSON.stringify(tc.expected_json ?? null);
+            inputStr = typeof tc.input_json === 'string' ? tc.input_json : (tc.input_json != null ? JSON.stringify(tc.input_json) : tc.input);
+            expectedStr = typeof tc.expected_json === 'string' ? tc.expected_json : (tc.expected_json != null ? JSON.stringify(tc.expected_json) : tc.expected_output);
           }
           return {
             id: tc.id,

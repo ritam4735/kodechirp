@@ -1410,13 +1410,6 @@ exports.generateTests = async (req, res, next) => {
   try {
     const { visible_count, hidden_count, dry_run } = req.body;
 
-    if (!testGenerationService.isAIConfigured()) {
-      return res.status(400).json({
-        success: false,
-        error: 'AI service is not configured. Set AI_API_URL and AI_API_KEY.',
-      });
-    }
-
     const result = await testGenerationService.generateTests(req.params.id, {
       visibleCount: visible_count || 10,
       hiddenCount: hidden_count || 50,
@@ -1429,8 +1422,7 @@ exports.generateTests = async (req, res, next) => {
     if (err.message && (
       err.message.includes('not found') ||
       err.message.includes('no reference') ||
-      err.message.includes('not verified') ||
-      err.message.includes('AI')
+      err.message.includes('not verified')
     )) {
       return res.status(400).json({ success: false, error: err.message });
     }

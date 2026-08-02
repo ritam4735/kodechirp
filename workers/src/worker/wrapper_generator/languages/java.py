@@ -141,17 +141,28 @@ public class Main {{
 
     /* ── JSON Parsing Helpers ─────────────────────────────────────────── */
 
+    static int __kcSkipWs(String json, int pos) {{
+        if (pos < 0) return -1;
+        while (pos < json.length() && (json.charAt(pos) == ' ' || json.charAt(pos) == '\\t' || json.charAt(pos) == '\\n' || json.charAt(pos) == '\\r')) pos++;
+        return pos < json.length() ? pos : -1;
+    }}
+
     static int __kcFindKey(String json, String key) {{
         String pat = "\\"" + key + "\\"";
         int pos = json.indexOf(pat);
         if (pos < 0) return -1;
         pos += pat.length();
-        while (pos < json.length() && (json.charAt(pos) == ' ' || json.charAt(pos) == ':')) pos++;
-        return pos;
+        while (pos < json.length() && (json.charAt(pos) == ' ' || json.charAt(pos) == '\\t' || json.charAt(pos) == '\\n' || json.charAt(pos) == '\\r')) pos++;
+        if (pos < json.length() && json.charAt(pos) == ':') {{
+            pos++;
+            while (pos < json.length() && (json.charAt(pos) == ' ' || json.charAt(pos) == '\\t' || json.charAt(pos) == '\\n' || json.charAt(pos) == '\\r')) pos++;
+            return pos;
+        }}
+        return -1;
     }}
 
     static int __kcGetInt(String json, String key) {{
-        int pos = __kcFindKey(json, key);
+        int pos = __kcSkipWs(json, __kcFindKey(json, key));
         if (pos < 0) return 0;
         int end = pos;
         if (end < json.length() && json.charAt(end) == '-') end++;
@@ -160,13 +171,13 @@ public class Main {{
     }}
 
     static boolean __kcGetBool(String json, String key) {{
-        int pos = __kcFindKey(json, key);
+        int pos = __kcSkipWs(json, __kcFindKey(json, key));
         if (pos < 0) return false;
         return json.substring(pos).startsWith("true");
     }}
 
     static String __kcGetString(String json, String key) {{
-        int pos = __kcFindKey(json, key);
+        int pos = __kcSkipWs(json, __kcFindKey(json, key));
         if (pos < 0 || json.charAt(pos) != '"') return "";
         pos++;
         StringBuilder sb = new StringBuilder();
@@ -187,7 +198,7 @@ public class Main {{
     }}
 
     static double __kcGetFloat(String json, String key) {{
-        int pos = __kcFindKey(json, key);
+        int pos = __kcSkipWs(json, __kcFindKey(json, key));
         if (pos < 0) return 0.0;
         int end = pos;
         while (end < json.length() && ((json.charAt(end) >= '0' && json.charAt(end) <= '9') || json.charAt(end) == '.' || json.charAt(end) == '-' || json.charAt(end) == 'e' || json.charAt(end) == 'E' || json.charAt(end) == '+')) end++;
@@ -200,7 +211,8 @@ public class Main {{
     }}
 
     static int __kcFindBracketEnd(String json, int start) {{
-        if (start >= json.length() || json.charAt(start) != '[') return -1;
+        start = __kcSkipWs(json, start);
+        if (start < 0 || json.charAt(start) != '[') return -1;
         int depth = 1;
         int pos = start + 1;
         boolean inStr = false;
@@ -218,9 +230,9 @@ public class Main {{
     }}
 
     static int[] __kcGetIntArray(String json, String key) {{
-        int pos = __kcFindKey(json, key);
+        int pos = __kcSkipWs(json, __kcFindKey(json, key));
         if (pos < 0 || json.charAt(pos) != '[') return new int[0];
-        int end = json.indexOf(']', pos);
+        int end = __kcFindBracketEnd(json, pos);
         if (end < 0) return new int[0];
         String inner = json.substring(pos + 1, end).trim();
         if (inner.isEmpty()) return new int[0];
@@ -233,9 +245,9 @@ public class Main {{
     }}
 
     static double[] __kcGetFloatArray(String json, String key) {{
-        int pos = __kcFindKey(json, key);
+        int pos = __kcSkipWs(json, __kcFindKey(json, key));
         if (pos < 0 || json.charAt(pos) != '[') return new double[0];
-        int end = json.indexOf(']', pos);
+        int end = __kcFindBracketEnd(json, pos);
         if (end < 0) return new double[0];
         String inner = json.substring(pos + 1, end).trim();
         if (inner.isEmpty()) return new double[0];
@@ -248,13 +260,13 @@ public class Main {{
     }}
 
     static String[] __kcGetStringArray(String json, String key) {{
-        int pos = __kcFindKey(json, key);
+        int pos = __kcSkipWs(json, __kcFindKey(json, key));
         if (pos < 0 || json.charAt(pos) != '[') return new String[0];
         List<String> list = new ArrayList<>();
         pos++;
         while (pos < json.length() && json.charAt(pos) != ']') {{
-            while (pos < json.length() && (json.charAt(pos) == ' ' || json.charAt(pos) == ',')) pos++;
-            if (json.charAt(pos) == ']') break;
+            while (pos < json.length() && (json.charAt(pos) == ' ' || json.charAt(pos) == ',' || json.charAt(pos) == '\\t' || json.charAt(pos) == '\\n' || json.charAt(pos) == '\\r')) pos++;
+            if (pos >= json.length() || json.charAt(pos) == ']') break;
             if (json.charAt(pos) == '"') {{
                 pos++;
                 StringBuilder sb = new StringBuilder();
@@ -281,9 +293,9 @@ public class Main {{
     }}
 
     static boolean[] __kcGetBooleanArray(String json, String key) {{
-        int pos = __kcFindKey(json, key);
+        int pos = __kcSkipWs(json, __kcFindKey(json, key));
         if (pos < 0 || json.charAt(pos) != '[') return new boolean[0];
-        int end = json.indexOf(']', pos);
+        int end = __kcFindBracketEnd(json, pos);
         if (end < 0) return new boolean[0];
         String inner = json.substring(pos + 1, end).trim();
         if (inner.isEmpty()) return new boolean[0];
@@ -296,9 +308,9 @@ public class Main {{
     }}
 
     static Integer[] __kcGetIntegerArrayNullable(String json, String key) {{
-        int pos = __kcFindKey(json, key);
+        int pos = __kcSkipWs(json, __kcFindKey(json, key));
         if (pos < 0 || json.charAt(pos) != '[') return new Integer[0];
-        int end = json.indexOf(']', pos);
+        int end = __kcFindBracketEnd(json, pos);
         if (end < 0) return new Integer[0];
         String inner = json.substring(pos + 1, end).trim();
         if (inner.isEmpty()) return new Integer[0];
@@ -316,15 +328,17 @@ public class Main {{
 
     static List<String> __kcSplitOuterArrays(String json) {{
         List<String> result = new ArrayList<>();
-        if (json.length() < 2 || json.charAt(0) != '[') return result;
-        int pos = 1;
+        int posStart = __kcSkipWs(json, 0);
+        if (posStart < 0 || json.charAt(posStart) != '[') return result;
+        int pos = posStart + 1;
         while (pos < json.length() && json.charAt(pos) != ']') {{
-            while (pos < json.length() && (json.charAt(pos) == ' ' || json.charAt(pos) == ',')) pos++;
+            while (pos < json.length() && (json.charAt(pos) == ' ' || json.charAt(pos) == ',' || json.charAt(pos) == '\\t' || json.charAt(pos) == '\\n' || json.charAt(pos) == '\\r')) pos++;
             if (pos >= json.length() || json.charAt(pos) == ']') break;
             if (json.charAt(pos) == '[') {{
                 int end = __kcFindBracketEnd(json, pos);
-                result.add(json.substring(pos, end + 1));
-                pos = end + 1;
+                if (end < 0) break;
+                result.add(json.substring(pos, end));
+                pos = end;
             }} else {{
                 while (pos < json.length() && json.charAt(pos) != ',' && json.charAt(pos) != ']') pos++;
             }}
@@ -333,10 +347,11 @@ public class Main {{
     }}
 
     static int[][] __kcGetIntMatrix(String json, String key) {{
-        int pos = __kcFindKey(json, key);
+        int pos = __kcSkipWs(json, __kcFindKey(json, key));
         if (pos < 0 || json.charAt(pos) != '[') return new int[0][0];
         int end = __kcFindBracketEnd(json, pos);
-        String outer = json.substring(pos, end + 1);
+        if (end < 0) return new int[0][0];
+        String outer = json.substring(pos, end);
         List<String> rows = __kcSplitOuterArrays(outer);
         int[][] result = new int[rows.size()][];
         for (int r = 0; r < rows.size(); r++) {{
@@ -347,10 +362,11 @@ public class Main {{
     }}
 
     static double[][] __kcGetFloatMatrix(String json, String key) {{
-        int pos = __kcFindKey(json, key);
+        int pos = __kcSkipWs(json, __kcFindKey(json, key));
         if (pos < 0 || json.charAt(pos) != '[') return new double[0][0];
         int end = __kcFindBracketEnd(json, pos);
-        String outer = json.substring(pos, end + 1);
+        if (end < 0) return new double[0][0];
+        String outer = json.substring(pos, end);
         List<String> rows = __kcSplitOuterArrays(outer);
         double[][] result = new double[rows.size()][];
         for (int r = 0; r < rows.size(); r++) {{
@@ -361,10 +377,11 @@ public class Main {{
     }}
 
     static String[][] __kcGetStringMatrix(String json, String key) {{
-        int pos = __kcFindKey(json, key);
+        int pos = __kcSkipWs(json, __kcFindKey(json, key));
         if (pos < 0 || json.charAt(pos) != '[') return new String[0][0];
         int end = __kcFindBracketEnd(json, pos);
-        String outer = json.substring(pos, end + 1);
+        if (end < 0) return new String[0][0];
+        String outer = json.substring(pos, end);
         List<String> rows = __kcSplitOuterArrays(outer);
         String[][] result = new String[rows.size()][];
         for (int r = 0; r < rows.size(); r++) {{
@@ -375,10 +392,11 @@ public class Main {{
     }}
 
     static boolean[][] __kcGetBooleanMatrix(String json, String key) {{
-        int pos = __kcFindKey(json, key);
+        int pos = __kcSkipWs(json, __kcFindKey(json, key));
         if (pos < 0 || json.charAt(pos) != '[') return new boolean[0][0];
         int end = __kcFindBracketEnd(json, pos);
-        String outer = json.substring(pos, end + 1);
+        if (end < 0) return new boolean[0][0];
+        String outer = json.substring(pos, end);
         List<String> rows = __kcSplitOuterArrays(outer);
         boolean[][] result = new boolean[rows.size()][];
         for (int r = 0; r < rows.size(); r++) {{

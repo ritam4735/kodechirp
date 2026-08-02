@@ -5,6 +5,7 @@
 
 const db = require('../config/database');
 const { runCode } = require('./submissionService');
+const { normaliseOutput } = require('../utils/helpers');
 const logger = require('../utils/logger');
 
 function hasCompilationError(stderr = '') {
@@ -130,7 +131,7 @@ async function verify(solutionId) {
   // Run against example test cases. This also exercises compilation for compiled
   // languages, without falsely failing input-reading solutions on empty stdin.
   const examples = await db.query(
-    `SELECT id, input, expected_output FROM test_cases
+    `SELECT id, input, expected_output, input_json, expected_json FROM test_cases
      WHERE problem_id = $1 AND is_sample = TRUE
      ORDER BY order_index ASC`,
     [solution.problem_id]
@@ -168,10 +169,17 @@ async function verify(solutionId) {
 
   for (const tc of examples.rows) {
     try {
+      let inputStr = tc.input;
+      let expectedOutput = tc.expected_output;
+      if (judgeMode === 'FUNCTION') {
+        inputStr = typeof tc.input_json === 'string' ? tc.input_json : (tc.input_json != null ? JSON.stringify(tc.input_json) : tc.input);
+        expectedOutput = typeof tc.expected_json === 'string' ? tc.expected_json : (tc.expected_json != null ? JSON.stringify(tc.expected_json) : tc.expected_output);
+      }
+
       const result = await runCode({
         code: solution.source_code,
         language: solution.language,
-        stdin: tc.input,
+        stdin: inputStr,
         judgeMode,
         signatureMetadata,
       });
@@ -184,9 +192,32 @@ async function verify(solutionId) {
       
       verification.compileOk = true;
 
-      const actualOutput = (result.stdout || '').trim();
-      const expectedOutput = (tc.expected_output || '').trim();
-      const passed = !result.timedOut && result.exitCode === 0 && actualOutput === expectedOutput;
+      let actualOutput = (result.stdout || '').trim();
+      if (judgeMode === 'FUNCTION' && actualOutput.startsWith('{') && actualOutput.includes('"result"')) {
+        try {
+          const parsed = JSON.parse(actualOutput);
+          if (parsed && 'result' in parsed) {
+            actualOutput = typeof parsed.result === 'object' ? JSON.stringify(parsed.result) : String(parsed.result);
+          }
+        } catch (e) {}
+      }
+
+      const expectedStr = (expectedOutput || '').trim();
+      let passed = !result.timedOut && result.exitCode === 0;
+
+      if (passed) {
+        if (judgeMode === 'FUNCTION') {
+          try {
+            const actualParsed = JSON.parse(actualOutput);
+            const expectedParsed = JSON.parse(expectedStr);
+            passed = JSON.stringify(actualParsed) === JSON.stringify(expectedParsed);
+          } catch (e) {
+            passed = normaliseOutput(actualOutput) === normaliseOutput(expectedStr);
+          }
+        } else {
+          passed = normaliseOutput(actualOutput) === normaliseOutput(expectedStr);
+        }
+      }
 
       logger.info(`Mapping from worker result -> frontend verification status: passed=${passed}`);
 
@@ -194,8 +225,8 @@ async function verify(solutionId) {
 
       verification.exampleResults.push({
         testCaseId: tc.id,
-        input: tc.input.substring(0, 200),
-        expected: expectedOutput.substring(0, 200),
+        input: (inputStr || '').substring(0, 200),
+        expected: expectedStr.substring(0, 200),
         actual: actualOutput.substring(0, 200),
         passed,
         stderr: result.stderr ? result.stderr.substring(0, 200) : null,
@@ -206,8 +237,8 @@ async function verify(solutionId) {
       allPassed = false;
       verification.exampleResults.push({
         testCaseId: tc.id,
-        input: tc.input.substring(0, 200),
-        expected: tc.expected_output.substring(0, 200),
+        input: (tc.input || '').substring(0, 200),
+        expected: (tc.expected_output || '').substring(0, 200),
         actual: null,
         passed: false,
         error: err.message,
@@ -247,8 +278,18 @@ async function runAgainstInput(solutionId, input) {
     signatureMetadata,
   });
 
+  let outputStr = (result.stdout || '').trim();
+  if (judgeMode === 'FUNCTION' && outputStr.startsWith('{') && outputStr.includes('"result"')) {
+    try {
+      const parsed = JSON.parse(outputStr);
+      if (parsed && 'result' in parsed) {
+        outputStr = typeof parsed.result === 'object' ? JSON.stringify(parsed.result) : String(parsed.result);
+      }
+    } catch (e) {}
+  }
+
   return {
-    stdout: (result.stdout || '').trim(),
+    stdout: outputStr,
     stderr: result.stderr || '',
     exitCode: result.exitCode,
     timedOut: result.timedOut || false,

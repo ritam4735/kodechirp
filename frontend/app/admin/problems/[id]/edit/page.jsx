@@ -477,8 +477,8 @@ export default function EditProblem() {
         ) : (
           <div>
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
-              Generate 10 visible + 50 hidden test cases using AI-generated inputs and your verified reference solution.
-              Tests are categorized by type (edge cases, random, adversarial).
+              Generate 10 visible + 50 hidden test cases using deterministic candidate inputs (with optional AI enhancement) and your verified reference solution.
+              Tests are categorized by type (edge cases, boundary, random, adversarial).
             </p>
             <button
               className="admin-btn admin-btn-primary"
