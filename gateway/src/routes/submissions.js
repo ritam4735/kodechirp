@@ -19,6 +19,10 @@ router.post(
   body('code').isString().isLength({ min: 1, max: 65535 }).withMessage('Code must be between 1 and 65535 characters'),
   body('language').isString().isIn(LANGUAGES).withMessage(`Supported languages: ${LANGUAGES.join(', ')}`),
   body('stdin').optional().isString().isLength({ max: 65535 }).withMessage('Stdin must not exceed 65535 characters'),
+  body('problem_id').optional().matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i).withMessage('problem_id must be a valid UUID'),
+  body('problemId').optional().matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i).withMessage('problemId must be a valid UUID'),
+  body('judgeMode').optional().isString(),
+  body('signatureMetadata').optional(),
   validateRequest,
   submissionController.runCode
 );

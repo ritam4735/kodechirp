@@ -27,7 +27,7 @@ export const useEditor = () => {
   const cacheKey = `${userId}_${problemId}_${language}`;
   
   let defaultCode;
-  if (judgeMode === 'FUNCTION' || judgeMode === 'CLASS') {
+  if (judgeMode === 'FUNCTION') {
     defaultCode = generateStarterCode(judgeMode, signature, language) || templates[language] || DEFAULT_CODE_SNIPPETS[language] || '';
   } else {
     defaultCode = templates[language] || DEFAULT_CODE_SNIPPETS[language] || '';
@@ -39,8 +39,15 @@ export const useEditor = () => {
     store.setIsExecuting(true);
     store.resetConsole();
     try {
-      const result = await api.runCode(code, language);
-      store.setOutput(result.output || (result.error ? 'Error: no output' : 'No output'));
+      const result = await api.runCode(code, language, '', currentProblem?.id, judgeMode, signature);
+      if (result.testCaseResults && result.testCaseResults.length > 0) {
+        store.setTestCaseResults(result.testCaseResults);
+        if (result.compileError || result.stderr) {
+          store.setOutput(result.compileError || result.stderr);
+        }
+      } else {
+        store.setOutput(result.stdout || result.output || result.stderr || (result.error ? 'Error: execution failed' : 'No output'));
+      }
     } catch (error) {
       store.setOutput(`Failed to execute code: ${error.message}`);
     } finally {

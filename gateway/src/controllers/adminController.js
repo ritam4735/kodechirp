@@ -44,10 +44,10 @@ async function validatePublish(problemId) {
   }
   const prob = probResult.rows[0];
 
-  // Signature validation for FUNCTION/CLASS
-  if (prob.judge_mode === 'FUNCTION' || prob.judge_mode === 'CLASS') {
+  // Signature validation for FUNCTION mode
+  if (prob.judge_mode === 'FUNCTION') {
     if (!validateSignature(prob.signature_metadata)) {
-      errors.push('A valid function signature must be defined for FUNCTION/CLASS judge modes.');
+      errors.push('A valid function signature must be defined for FUNCTION judge mode.');
     }
   }
 

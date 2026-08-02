@@ -28,6 +28,4 @@ export const DATA_TYPES = {
 export const JUDGE_MODES = {
   STDIN_STDOUT: 'STDIN_STDOUT',
   FUNCTION: 'FUNCTION',
-  CLASS: 'CLASS',
-  CUSTOM: 'CUSTOM',
 };

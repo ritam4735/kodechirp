@@ -17,7 +17,8 @@ router.post(
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
     .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
     .matches(/[0-9]/).withMessage('Password must contain at least one number'),
-  body('username').isString().isLength({ min: 3, max: 50 })
+  body('username').isString()
+    .isLength({ min: 3, max: 50 }).withMessage('Username must be between 3 and 50 characters')
     .matches(/^[a-zA-Z0-9_-]+$/).withMessage('Username can only contain letters, numbers, underscores, hyphens'),
   validateRequest,
   authController.signup
@@ -71,7 +72,7 @@ router.get(
 
 router.post(
   '/resend-verification',
-  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('email').notEmpty().withMessage('Email or username is required'),
   validateRequest,
   authController.resendVerification
 );

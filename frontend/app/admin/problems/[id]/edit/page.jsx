@@ -264,7 +264,7 @@ export default function EditProblem() {
             <p className="text-xs text-gray-500 mt-1">Select FUNCTION for modern DSA problems, STDIN_STDOUT for competitive programming.</p>
           </div>
 
-          {(form.judge_mode === JUDGE_MODES.FUNCTION || form.judge_mode === JUDGE_MODES.CLASS) && (
+          {form.judge_mode === JUDGE_MODES.FUNCTION && (
             <SignatureBuilder 
               signature={form.signature_metadata} 
               onChange={(sig) => updateField('signature_metadata', sig)} 

@@ -56,7 +56,7 @@ const LANGUAGE_CONFIG = {
     memory: '256m',
     cpus: '1',
     tmpfsSize: '32m',
-    runCommand: 'javac main.java && java main',
+    runCommand: 'javac Main.java && java Main',
   },
 };
 
@@ -165,7 +165,8 @@ async function executeLocal(code, language, stdin = '') {
   fs.mkdirSync(runDir, { recursive: true });
   fs.chmodSync(runDir, 0o777);
 
-  const srcPath = path.join(runDir, `main.${config.extension}`);
+  const fileName = language === 'java' ? 'Main.java' : `main.${config.extension}`;
+  const srcPath = path.join(runDir, fileName);
 
   try {
     fs.writeFileSync(srcPath, code, 'utf8');

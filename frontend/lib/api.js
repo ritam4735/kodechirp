@@ -177,15 +177,25 @@ export const api = {
   // ── Code execution ──────────────────────────────────────────────────────────
 
   // BUG FIX: was a mock that always returned 'Mock execution successful.'
-  runCode: async (code, language, stdin = '') => {
+  runCode: async (code, language, stdin = '', problemId = null, judgeMode = null, signatureMetadata = null) => {
+    const body = { code, language, stdin };
+    if (problemId) body.problem_id = problemId;
+    if (judgeMode) body.judgeMode = judgeMode;
+    if (signatureMetadata) body.signatureMetadata = signatureMetadata;
     const data = await request('/api/submissions/run', {
       method: 'POST',
-      body: JSON.stringify({ code, language, stdin }),
+      body: JSON.stringify(body),
     });
-    // Backend returns { success, output, error (bool), stderr }
     return {
       output: data.output || '',
+      stdout: data.stdout || '',
       error: data.error || false,
+      stderr: data.stderr || '',
+      exitCode: data.exitCode,
+      timedOut: data.timedOut || false,
+      testCaseResults: data.testCaseResults || [],
+      allPassed: data.allPassed,
+      compileError: data.compileError,
     };
   },
 
@@ -263,6 +273,10 @@ function buildDetails(result) {
 
   if (result.verdict === 'Time Limit Exceeded') {
     return `Time limit exceeded on test case ${result.passed + 1} of ${result.total}.`;
+  }
+
+  if (result.verdict === 'Internal Error') {
+    return `Internal Error: ${result.error || 'Unknown error occurred on the server.'}`;
   }
 
   return result.verdict;

@@ -9,6 +9,7 @@ class PythonGenerator:
         wrapper = f"""
 import sys
 import json
+import io
 from typing import List, Dict, Any, Optional
 
 # --- Platform Types ---
@@ -86,9 +87,7 @@ def __main():
         line = line.strip()
         if not line:
             continue
-        print(f"DEBUG raw JSON: {{line}}", file=sys.stderr)
         tc = json.loads(line)
-        print(f"DEBUG parsed JSON: {{tc}}", file=sys.stderr)
         args = []
 """
             for param in signature.get('params', []):
@@ -97,7 +96,6 @@ def __main():
                 wrapper += f"        a_{pn} = tc.get('{pn}')\n"
                 if pt == 'LinkedList':
                     wrapper += f"        a_{pn} = __build_linked_list(a_{pn})\n"
-                    wrapper += f"        print(f'DEBUG deserialized {pn}: {{__serialize_linked_list(a_{pn})}}', file=sys.stderr)\n"
                 elif pt == 'BinaryTree':
                     wrapper += f"        a_{pn} = __build_binary_tree(a_{pn})\n"
                 elif pt == 'Character':
@@ -105,20 +103,32 @@ def __main():
                 wrapper += f"        args.append(a_{pn})\n"
 
             wrapper += f"""
-        sol = Solution()
-        r = sol.{func_name}(*args)
+        __old_stdout = sys.stdout
+        __cap_stdout = io.StringIO()
+        sys.stdout = __cap_stdout
+
+        try:
+            if 'Solution' in globals():
+                sol = Solution()
+                fn = getattr(sol, '{func_name}', None) or globals().get('{func_name}')
+                r = fn(*args)
+            else:
+                r = globals()['{func_name}'](*args)
+        finally:
+            sys.stdout = __old_stdout
+
+        __user_console = __cap_stdout.getvalue()
 """
             if ret_type == 'Void':
-                wrapper += "        print('null')\n"
+                wrapper += "        __res_val = None\n"
             elif ret_type == 'LinkedList':
-                wrapper += "        print(json.dumps(__serialize_linked_list(r), separators=(',', ':')))\n"
+                wrapper += "        __res_val = __serialize_linked_list(r)\n"
             elif ret_type == 'BinaryTree':
-                wrapper += "        print(json.dumps(__serialize_binary_tree(r), separators=(',', ':')))\n"
-            elif ret_type in ['Boolean', 'Character']:
-                wrapper += "        print(json.dumps(r, separators=(',', ':')))\n"
+                wrapper += "        __res_val = __serialize_binary_tree(r)\n"
             else:
-                wrapper += "        print(json.dumps(r, separators=(',', ':')))\n"
+                wrapper += "        __res_val = r\n"
 
+            wrapper += "        print(json.dumps({'stdout': __user_console, 'result': __res_val}))\n"
             wrapper += "        print('___KC_BATCH_SEP___', flush=True)\n"
         else:
             wrapper += f"""
@@ -147,22 +157,36 @@ def __main():
                 wrapper += f"    args.append(arg_{pn})\n"
 
             wrapper += f"""
-    sol = Solution()
-    result = sol.{func_name}(*args)
+    __old_stdout = sys.stdout
+    __cap_stdout = io.StringIO()
+    sys.stdout = __cap_stdout
+
+    try:
+        if 'Solution' in globals():
+            sol = Solution()
+            fn = getattr(sol, '{func_name}', None) or globals().get('{func_name}')
+            result = fn(*args)
+        else:
+            result = globals()['{func_name}'](*args)
+    finally:
+        sys.stdout = __old_stdout
+
+    __user_console = __cap_stdout.getvalue()
 """
             if ret_type == 'Void':
-                wrapper += "    print('null')\n"
+                wrapper += "    __res_val = None\n"
             elif ret_type == 'LinkedList':
-                wrapper += "    print(json.dumps(__serialize_linked_list(result), separators=(',', ':')))\n"
+                wrapper += "    __res_val = __serialize_linked_list(result)\n"
             elif ret_type == 'BinaryTree':
-                wrapper += "    print(json.dumps(__serialize_binary_tree(result), separators=(',', ':')))\n"
-            elif ret_type in ['Boolean', 'Character']:
-                wrapper += "    print(json.dumps(result, separators=(',', ':')))\n"
+                wrapper += "    __res_val = __serialize_binary_tree(result)\n"
             else:
-                wrapper += "    print(json.dumps(result, separators=(',', ':')))\n"
+                wrapper += "    __res_val = result\n"
+
+            wrapper += "    print(json.dumps({'stdout': __user_console, 'result': __res_val}))\n"
 
         wrapper += """
 if __name__ == "__main__":
     __main()
 """
         return wrapper
+

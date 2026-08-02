@@ -27,6 +27,12 @@ function requestLogger(req, res, next) {
     } else {
       logger.info(logData, 'Request completed');
     }
+
+    // Record to monitoring (skip /health and /monitoring to avoid noise)
+    if (!req.originalUrl.startsWith('/health') && !req.originalUrl.startsWith('/monitoring')) {
+      const { recordRequest } = require('../services/monitorService');
+      recordRequest(req, res, duration);
+    }
   });
 
   next();

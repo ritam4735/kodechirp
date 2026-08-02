@@ -98,15 +98,12 @@ function __main() {{
     for (let line of lines) {{
         line = line.trim();
         if (!line) continue;
-        console.error(`DEBUG raw JSON: ${{line}}`);
         let tc;
         try {{
             tc = JSON.parse(line);
         }} catch (e) {{
-            console.error("Invalid JSON input");
             continue;
         }}
-        console.error(`DEBUG parsed JSON: ${{JSON.stringify(tc)}}`);
         let args = [];
 """
             for param in signature.get('params', []):
@@ -115,7 +112,6 @@ function __main() {{
                 wrapper += f"        let a_{pn} = tc['{pn}'];\n"
                 if pt == 'LinkedList':
                     wrapper += f"        a_{pn} = __buildLinkedList(a_{pn});\n"
-                    wrapper += f"        console.error(`DEBUG deserialized {pn}: ${{JSON.stringify(__serializeLinkedList(a_{pn}))}}`);\n"
                 elif pt == 'BinaryTree':
                     wrapper += f"        a_{pn} = __buildBinaryTree(a_{pn});\n"
                 elif pt == 'Character':
@@ -123,16 +119,43 @@ function __main() {{
                 wrapper += f"        args.push(a_{pn});\n"
 
             wrapper += f"""
-        let r = {func_name}(...args);
+        let __user_console = '';
+        const __orig_log = console.log;
+        const __orig_info = console.info;
+        const __orig_error = console.error;
+        const __orig_write = process.stdout.write;
+
+        console.log = (...a) => {{ __user_console += a.map(x => typeof x === 'object' ? JSON.stringify(x) : String(x)).join(' ') + '\\n'; }};
+        console.info = console.log;
+        console.error = (...a) => {{ __user_console += a.map(x => typeof x === 'object' ? JSON.stringify(x) : String(x)).join(' ') + '\\n'; }};
+        process.stdout.write = (str) => {{ __user_console += String(str); return true; }};
+
+        let r;
+        try {{
+            if (typeof Solution !== 'undefined') {{
+                const sol = new Solution();
+                const fn = sol.{func_name} || {func_name};
+                r = fn.call(sol, ...args);
+            }} else {{
+                r = {func_name}(...args);
+            }}
+        }} finally {{
+            console.log = __orig_log;
+            console.info = __orig_info;
+            console.error = __orig_error;
+            process.stdout.write = __orig_write;
+        }}
 """
             if ret_type == 'Void':
-                wrapper += f"        console.log('null');\n"
+                wrapper += f"        let __res_val = null;\n"
             elif ret_type == 'LinkedList':
-                wrapper += f"        console.log(JSON.stringify(__serializeLinkedList(r)));\n"
+                wrapper += f"        let __res_val = __serializeLinkedList(r);\n"
             elif ret_type == 'BinaryTree':
-                wrapper += f"        console.log(JSON.stringify(__serializeBinaryTree(r)));\n"
+                wrapper += f"        let __res_val = __serializeBinaryTree(r);\n"
             else:
-                wrapper += f"        console.log(JSON.stringify(r));\n"
+                wrapper += f"        let __res_val = r;\n"
+
+            wrapper += f"        console.log(JSON.stringify({{ stdout: __user_console, result: __res_val }}));\n"
             wrapper += f"        console.log('___KC_BATCH_SEP___');\n"
             wrapper += f"    }}\n"
         else:
@@ -163,17 +186,43 @@ function __main() {{
                 wrapper += f"    args.push(arg_{p_name});\n"
 
             wrapper += f"""
-    // Call user function
-    let result = {func_name}(...args);
+    let __user_console = '';
+    const __orig_log = console.log;
+    const __orig_info = console.info;
+    const __orig_error = console.error;
+    const __orig_write = process.stdout.write;
+
+    console.log = (...a) => {{ __user_console += a.map(x => typeof x === 'object' ? JSON.stringify(x) : String(x)).join(' ') + '\\n'; }};
+    console.info = console.log;
+    console.error = (...a) => {{ __user_console += a.map(x => typeof x === 'object' ? JSON.stringify(x) : String(x)).join(' ') + '\\n'; }};
+    process.stdout.write = (str) => {{ __user_console += String(str); return true; }};
+
+    let result;
+    try {{
+        if (typeof Solution !== 'undefined') {{
+            const sol = new Solution();
+            const fn = sol.{func_name} || {func_name};
+            result = fn.call(sol, ...args);
+        }} else {{
+            result = {func_name}(...args);
+        }}
+    }} finally {{
+        console.log = __orig_log;
+        console.info = __orig_info;
+        console.error = __orig_error;
+        process.stdout.write = __orig_write;
+    }}
 """
             if ret_type == 'Void':
-                wrapper += f"    console.log('null');\n"
+                wrapper += f"    let __res_val = null;\n"
             elif ret_type == 'LinkedList':
-                wrapper += f"    console.log(JSON.stringify(__serializeLinkedList(result)));\n"
+                wrapper += f"    let __res_val = __serializeLinkedList(result);\n"
             elif ret_type == 'BinaryTree':
-                wrapper += f"    console.log(JSON.stringify(__serializeBinaryTree(result)));\n"
+                wrapper += f"    let __res_val = __serializeBinaryTree(result);\n"
             else:
-                wrapper += f"    console.log(JSON.stringify(result));\n"
+                wrapper += f"    let __res_val = result;\n"
+
+            wrapper += f"    console.log(JSON.stringify({{ stdout: __user_console, result: __res_val }}));\n"
 
         wrapper += """
 }

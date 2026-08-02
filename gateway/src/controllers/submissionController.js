@@ -11,9 +11,16 @@ const submissionService = require('../services/submissionService');
  */
 exports.runCode = async (req, res, next) => {
   try {
-    const { code, language, stdin = '' } = req.body;
+    const { code, language, stdin = '', problem_id, problemId, judgeMode, signatureMetadata } = req.body;
 
-    const result = await submissionService.runCode({ code, language, stdin });
+    const result = await submissionService.runCode({
+      code,
+      language,
+      stdin,
+      problemId: problem_id || problemId,
+      judgeMode,
+      signatureMetadata,
+    });
 
     return res.json({
       success: true,
@@ -22,6 +29,9 @@ exports.runCode = async (req, res, next) => {
       stderr: result.stderr,
       exitCode: result.exitCode,
       timedOut: result.timedOut || false,
+      testCaseResults: result.testCaseResults || [],
+      allPassed: result.allPassed,
+      compileError: result.compileError,
     });
   } catch (err) {
     next(err);

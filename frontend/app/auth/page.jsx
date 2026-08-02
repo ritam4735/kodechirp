@@ -97,9 +97,11 @@ export default function AuthPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div>
-              <label className="block text-sm font-medium text-[#8b949e] mb-1">Name</label>
+              <label className="block text-sm font-medium text-[#8b949e] mb-1">Username</label>
               <input
                 required
+                minLength={3}
+                maxLength={50}
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}

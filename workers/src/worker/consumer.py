@@ -21,6 +21,7 @@ from src.config import settings
 from src.models.submission import SubmissionJob, SubmissionResult
 from src.services.redis_service import redis_service
 from src.services.db_service import db_service
+from src.services.monitor_service import monitor
 from src.worker.evaluator import evaluate_submission, WORKER_ID
 from src.utils.constants import Verdict
 from src.utils.logger import logger
@@ -156,6 +157,7 @@ class QueueConsumer:
                         if await redis.lpos(self._active_key, job_id) is not None:
                             if await redis.get(lock_key) is None:
                                 logger.warning(f"Detected stalled job {job_id}, attempting recovery...")
+                                await monitor.queue_job_stalled(job_id)
                                 job_data_raw = await redis.hgetall(f"bull:{settings.submission_queue}:{job_id}")
                                 if job_data_raw and "data" in job_data_raw:
                                     job_data = json.loads(job_data_raw["data"])
@@ -186,7 +188,9 @@ class QueueConsumer:
                 return
 
             job = SubmissionJob(**job_data)
+            job_start_time = time.time()
             logger.info(f"Processing job {job_id}: submission={job.submissionId} by {WORKER_ID}")
+            await monitor.queue_job_received(job_id, job.submissionId)
 
             # Set initial lock and start heartbeat
             await redis.set(lock_key, worker_token, ex=15)
@@ -233,6 +237,9 @@ class QueueConsumer:
                 f"passed={result.testCasesPassed}/{result.testCasesTotal}"
             )
 
+            job_elapsed_ms = int((time.time() - job_start_time) * 1000)
+            await monitor.queue_job_completed(job_id, result.submissionId, duration_ms=job_elapsed_ms)
+
         except Exception as e:
             logger.error(f"Job {job_id} failed: {e}\n{traceback.format_exc()}")
 
@@ -240,6 +247,7 @@ class QueueConsumer:
             current_lock = await redis.get(lock_key)
             if current_lock == worker_token:
                 await self._handle_failure(job_id, job_data, str(e))
+                await monitor.queue_job_failed(job_id, str(e), 0, settings.max_retries)
             else:
                 logger.warning(f"Job {job_id} failed but lock was lost. Skipping failure handling.")
 
@@ -276,6 +284,7 @@ class QueueConsumer:
                 await redis.lpush(self._queue_key, job_id)
 
                 logger.info(f"Job {job_id} re-queued (attempt {attempt}/{settings.max_retries})")
+                await monitor.queue_job_retried(job_id, attempt, settings.max_retries)
             else:
                 # Move to failed set (dead letter queue)
                 await redis.lrem(self._active_key, 1, job_id)
@@ -303,6 +312,7 @@ class QueueConsumer:
                     })
 
                 logger.error(f"Job {job_id} permanently failed after {settings.max_retries} attempts")
+                await monitor.queue_job_dead(job_id, submission_id or "", error)
 
         except Exception as e:
             logger.error(f"Failed to handle failure for job {job_id}: {e}")

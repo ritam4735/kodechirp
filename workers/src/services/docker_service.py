@@ -17,6 +17,7 @@ from src.utils.logger import logger
 from src.utils.constants import LANGUAGE_CONFIG
 from src.utils.sanitizer import sanitize_output
 from src.models.submission import ExecutionResult
+from src.services.monitor_service import monitor
 
 
 class DockerService:
@@ -134,6 +135,14 @@ class DockerService:
                     combined_output += "\n"
                 combined_output += raw_stderr
 
+            # Monitor compilation result
+            await monitor.compile_completed(
+                language=language,
+                exit_code=proc.returncode or 0,
+                duration_ms=elapsed_ms,
+                submission_id=submission_id,
+            )
+
             return run_dir, ExecutionResult(
                 stdout=sanitize_output(raw_stdout),
                 stderr=sanitize_output(combined_output), # Put combined in stderr
@@ -250,20 +259,39 @@ class DockerService:
         ]
 
         try:
+            start_time = time.monotonic()
             proc = await asyncio.create_subprocess_exec(
                 *docker_args,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout_bytes, stderr_bytes = await asyncio.wait_for(proc.communicate(), timeout=10.0)
+            elapsed_ms = int((time.monotonic() - start_time) * 1000)
             
             if proc.returncode != 0:
-                logger.error(f"Failed to start sandbox container: {stderr_bytes.decode('utf-8')}")
+                error_msg = stderr_bytes.decode('utf-8', errors='replace')
+                logger.error(f"Failed to start sandbox container: {error_msg}")
+                await monitor.container_start_failed(
+                    error=error_msg[:500],
+                    language=language,
+                    submission_id=submission_id,
+                )
                 return None
-                
+            
+            await monitor.container_started(
+                container_name=container_name,
+                language=language,
+                submission_id=submission_id,
+                duration_ms=elapsed_ms,
+            )
             return container_name
         except Exception as e:
             logger.error(f"Error starting sandbox: {e}")
+            await monitor.container_start_failed(
+                error=str(e),
+                language=language,
+                submission_id=submission_id,
+            )
             return None
 
     async def execute_in_sandbox(
@@ -353,6 +381,9 @@ class DockerService:
                     await proc.wait()
                 except Exception:
                     pass
+                await monitor.execution_timeout(
+                    language=language, duration_ms=elapsed_ms,
+                )
                 return ExecutionResult(
                     stdout="",
                     stderr="Time Limit Exceeded",
@@ -405,6 +436,16 @@ class DockerService:
 
             stdout = sanitize_output(raw_stdout)
             stderr = sanitize_output(raw_stderr)
+
+            # Monitor execution result
+            if exit_code == 137:
+                await monitor.execution_oom(language=language)
+            else:
+                await monitor.execution_completed(
+                    language=language,
+                    exit_code=exit_code or 0,
+                    duration_ms=elapsed_ms,
+                )
 
             return ExecutionResult(
                 stdout=stdout,

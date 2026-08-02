@@ -2,7 +2,7 @@ require('dotenv').config({ path: '../.env' });
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  connectionString: 'postgresql://kodechirp:ritam123@localhost:5433/kodechirp'
+  connectionString: process.env.DATABASE_URL || 'postgresql://kodechirp:ritam123@kodechirp-postgres:5432/kodechirp'
 });
 
 const problemsData = {

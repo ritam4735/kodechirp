@@ -6,6 +6,7 @@ export const useEditorStore = create((set) => ({
   output: '',
   isExecuting: false,
   verdict: null,
+  testCaseResults: null,
   setCode: (key, code) => set((state) => ({ 
     codes: { ...state.codes, [key]: code } 
   })),
@@ -13,6 +14,8 @@ export const useEditorStore = create((set) => ({
   setOutput: (output) => set({ output }),
   setIsExecuting: (isExecuting) => set({ isExecuting }),
   setVerdict: (verdict) => set({ verdict }),
-  resetConsole: () => set({ output: '', verdict: null }),
-  resetAll: () => set({ codes: {}, output: '', verdict: null, isExecuting: false }),
+  setTestCaseResults: (testCaseResults) => set({ testCaseResults }),
+  resetConsole: () => set({ output: '', verdict: null, testCaseResults: null }),
+  resetAll: () => set({ codes: {}, output: '', verdict: null, testCaseResults: null, isExecuting: false }),
 }));
+

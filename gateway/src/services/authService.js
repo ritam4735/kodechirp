@@ -385,7 +385,7 @@ async function verifyEmail(token, email) {
  */
 async function resendVerification(email) {
   const result = await db.query(
-    'SELECT id, email, email_verified FROM users WHERE email = $1 AND is_active = TRUE',
+    'SELECT id, email, email_verified FROM users WHERE (email = $1 OR username = $1) AND is_active = TRUE',
     [email]
   );
 

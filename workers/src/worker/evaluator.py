@@ -10,8 +10,10 @@ from src.models.submission import (
 from src.services.docker_service import docker_service
 from src.services.redis_service import redis_service
 from src.services.db_service import db_service
+from src.services.monitor_service import monitor
 from src.utils.constants import Verdict
 from src.utils.sanitizer import normalise_output, truncate
+from src.utils.batch_parser import parse_batch_outputs, BATCH_DELIMITER
 from src.utils.logger import logger
 from src.worker.wrapper_generator import WrapperGenerator
 
@@ -50,7 +52,7 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
     execution_code = job.code
     is_batch = False
     
-    if job.judgeMode in ("FUNCTION", "CLASS") and job.signatureMetadata:
+    if job.judgeMode == "FUNCTION" and job.signatureMetadata:
         try:
             execution_code = WrapperGenerator.generate_batch(
                 language=job.language,
@@ -59,6 +61,7 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
             )
             is_batch = True
             logger.info(f"Submission {submission_id}: Batch wrapper generated successfully")
+            await monitor.wrapper_generated(job.language, "BATCH", submission_id)
         except NotImplementedError:
             try:
                 # Fallback to single wrapper if batch not implemented (shouldn't happen)
@@ -68,14 +71,17 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
                     user_code=job.code
                 )
                 logger.info(f"Submission {submission_id}: Single wrapper generated")
+                await monitor.wrapper_generated(job.language, "SINGLE", submission_id)
             except Exception as e:
                 logger.error(f"Wrapper generation failed: {e}")
+                await monitor.wrapper_failed(job.language, str(e), submission_id)
                 return SubmissionResult(
                     submissionId=submission_id, userId=job.userId, verdict=Verdict.INTERNAL_ERROR,
                     testCasesPassed=0, testCasesTotal=total, error=f"Wrapper generation failed: {str(e)}", workerId=WORKER_ID
                 )
         except Exception as e:
             logger.error(f"Batch wrapper generation failed: {e}")
+            await monitor.wrapper_failed(job.language, str(e), submission_id)
             return SubmissionResult(
                 submissionId=submission_id, userId=job.userId, verdict=Verdict.INTERNAL_ERROR,
                 testCasesPassed=0, testCasesTotal=total, error=f"Batch wrapper generation failed: {str(e)}", workerId=WORKER_ID
@@ -159,8 +165,9 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
         runtime_ms = result.runtimeMs or 0
         memory_kb = result.memoryKb or 0
 
-        # Split output by delimiter
-        raw_outputs = result.stdout.split("___KC_BATCH_SEP___")
+        # Split and parse batch outputs
+        parsed_results = parse_batch_outputs(result.stdout, len(job.testCases))
+        raw_outputs = result.stdout.split(BATCH_DELIMITER)
 
         for idx, tc in enumerate(job.testCases):
             await redis_service.publish_progress({
@@ -168,10 +175,7 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
                 "testCaseIndex": idx + 1, "testCasesTotal": total, "status": "running",
             })
 
-            tc_actual_output = ""
-            if idx < len(raw_outputs):
-                tc_actual_output = raw_outputs[idx].strip("\n")
-
+            tc_actual_output, user_console = parsed_results[idx]
             is_completed = (idx < len(raw_outputs) - 1)
             
             # Check for errors if it didn't complete
@@ -223,10 +227,15 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
             passed += 1
 
         logger.info(f"Submission {submission_id}: Accepted ({passed}/{total})")
-        return SubmissionResult(
+        verdict_result = SubmissionResult(
             submissionId=submission_id, userId=job.userId, verdict=Verdict.ACCEPTED,
             testCasesPassed=passed, testCasesTotal=total, runtimeMs=runtime_ms, memoryKb=memory_kb, workerId=WORKER_ID
         )
+        await monitor.judge_verdict(
+            verdict=Verdict.ACCEPTED, submission_id=submission_id,
+            language=job.language, passed=passed, total=total, duration_ms=runtime_ms,
+        )
+        return verdict_result
     finally:
         await docker_service.stop_sandbox(container_name)
         await docker_service.cleanup_submission(run_dir)

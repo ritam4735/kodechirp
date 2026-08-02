@@ -71,31 +71,43 @@ class JavaGenerator:
         else:
             call_logic = f"{indent}{java_ret} result = sol.{func_name}({args_str});"
 
+        # Serialize the return value
         if ret_type == 'Int':
-            print_logic = f'{indent}System.out.println(result);'
+            serialize_logic = f'{indent}String __kcResult = String.valueOf(result);'
         elif ret_type == 'Float':
-            print_logic = f'{indent}System.out.println(String.format(Locale.US, "%.17g", result));'
+            serialize_logic = f'{indent}String __kcResult = String.format(Locale.US, "%.17g", result);'
         elif ret_type == 'Boolean':
-            print_logic = f'{indent}System.out.println(result ? "true" : "false");'
+            serialize_logic = f'{indent}String __kcResult = result ? "true" : "false";'
         elif ret_type == 'String':
-            print_logic = f'{indent}__kcPrintString(result);'
+            serialize_logic = f'{indent}String __kcResult = __kcJsonString(result);'
         elif ret_type == 'Character':
-            print_logic = f'{indent}System.out.println("\\"" + result + "\\"");'
+            serialize_logic = f'{indent}String __kcResult = "\\"" + result + "\\"";'
         elif ret_type.startswith('Array') or ret_type.startswith('Matrix'):
-            print_logic = f'{indent}System.out.println(__kcSerializeJson(result));'
+            serialize_logic = f'{indent}String __kcResult = __kcSerializeJson(result);'
         elif ret_type == 'LinkedList':
-            print_logic = f'{indent}System.out.println(__kcSerializeLinkedList(result));'
+            serialize_logic = f'{indent}String __kcResult = __kcSerializeLinkedList(result);'
         elif ret_type == 'BinaryTree':
-            print_logic = f'{indent}System.out.println(__kcSerializeBinaryTree(result));'
+            serialize_logic = f'{indent}String __kcResult = __kcSerializeBinaryTree(result);'
         elif ret_type == 'Void':
-            print_logic = f'{indent}System.out.println("null");'
+            serialize_logic = f'{indent}String __kcResult = "null";'
         else:
-            print_logic = f'{indent}System.out.println(result);'
+            serialize_logic = f'{indent}String __kcResult = String.valueOf(result);'
 
-        user_code = re.sub(r'public\s+class\s+Solution', 'class Solution', user_code)
+        # Extract any imports from user_code and move to top
+        user_imports = []
+        user_code_lines = []
+        for line in user_code.splitlines():
+            if line.strip().startswith('import ') and line.strip().endswith(';'):
+                user_imports.append(line.strip())
+            else:
+                user_code_lines.append(line)
+
+        clean_user_code = re.sub(r'public\s+class\s+Solution', 'class Solution', '\n'.join(user_code_lines))
+        extra_imports = '\n'.join(set(user_imports))
 
         wrapper = f'''import java.io.*;
 import java.util.*;
+{extra_imports}
 
 /* ── Platform Types ───────────────────────────────────────────────────── */
 class ListNode {{
@@ -121,13 +133,13 @@ class TreeNode {{
 
 /* ── User Code ────────────────────────────────────────────────────────── */
 
-{user_code}
+{clean_user_code}
 
 /* ── Driver ───────────────────────────────────────────────────────────── */
 
 public class Main {{
 
-    /* ── Minimal JSON helpers ─────────────────────────────────────────── */
+    /* ── JSON Parsing Helpers ─────────────────────────────────────────── */
 
     static int __kcFindKey(String json, String key) {{
         String pat = "\\"" + key + "\\"";
@@ -161,12 +173,48 @@ public class Main {{
         while (pos < json.length() && json.charAt(pos) != '"') {{
             if (json.charAt(pos) == '\\\\' && pos + 1 < json.length()) {{
                 pos++;
-                sb.append(json.charAt(pos++));
+                char c = json.charAt(pos);
+                if (c == 'n') sb.append('\\n');
+                else if (c == 'r') sb.append('\\r');
+                else if (c == 't') sb.append('\\t');
+                else sb.append(c);
+                pos++;
             }} else {{
                 sb.append(json.charAt(pos++));
             }}
         }}
         return sb.toString();
+    }}
+
+    static double __kcGetFloat(String json, String key) {{
+        int pos = __kcFindKey(json, key);
+        if (pos < 0) return 0.0;
+        int end = pos;
+        while (end < json.length() && ((json.charAt(end) >= '0' && json.charAt(end) <= '9') || json.charAt(end) == '.' || json.charAt(end) == '-' || json.charAt(end) == 'e' || json.charAt(end) == 'E' || json.charAt(end) == '+')) end++;
+        return Double.parseDouble(json.substring(pos, end));
+    }}
+
+    static char __kcGetChar(String json, String key) {{
+        String s = __kcGetString(json, key);
+        return s.length() > 0 ? s.charAt(0) : 0;
+    }}
+
+    static int __kcFindBracketEnd(String json, int start) {{
+        if (start >= json.length() || json.charAt(start) != '[') return -1;
+        int depth = 1;
+        int pos = start + 1;
+        boolean inStr = false;
+        while (pos < json.length() && depth > 0) {{
+            char c = json.charAt(pos);
+            if (c == '\\\\' && inStr) {{ pos += 2; continue; }}
+            if (c == '"') inStr = !inStr;
+            else if (!inStr) {{
+                if (c == '[') depth++;
+                else if (c == ']') depth--;
+            }}
+            if (depth > 0) pos++;
+        }}
+        return pos;
     }}
 
     static int[] __kcGetIntArray(String json, String key) {{
@@ -182,19 +230,6 @@ public class Main {{
             result[i] = Integer.parseInt(parts[i].trim());
         }}
         return result;
-    }}
-
-    static double __kcGetFloat(String json, String key) {{
-        int pos = __kcFindKey(json, key);
-        if (pos < 0) return 0.0;
-        int end = pos;
-        while (end < json.length() && ((json.charAt(end) >= '0' && json.charAt(end) <= '9') || json.charAt(end) == '.' || json.charAt(end) == '-' || json.charAt(end) == 'e' || json.charAt(end) == 'E' || json.charAt(end) == '+')) end++;
-        return Double.parseDouble(json.substring(pos, end));
-    }}
-
-    static char __kcGetChar(String json, String key) {{
-        String s = __kcGetString(json, key);
-        return s.length() > 0 ? s.charAt(0) : 0;
     }}
 
     static double[] __kcGetFloatArray(String json, String key) {{
@@ -224,8 +259,17 @@ public class Main {{
                 pos++;
                 StringBuilder sb = new StringBuilder();
                 while (pos < json.length() && json.charAt(pos) != '"') {{
-                    if (json.charAt(pos) == '\\\\' && pos + 1 < json.length()) {{ pos++; sb.append(json.charAt(pos++)); }}
-                    else {{ sb.append(json.charAt(pos++)); }}
+                    if (json.charAt(pos) == '\\\\' && pos + 1 < json.length()) {{
+                        pos++;
+                        char c = json.charAt(pos);
+                        if (c == 'n') sb.append('\\n');
+                        else if (c == 'r') sb.append('\\r');
+                        else if (c == 't') sb.append('\\t');
+                        else sb.append(c);
+                        pos++;
+                    }} else {{
+                        sb.append(json.charAt(pos++));
+                    }}
                 }}
                 list.add(sb.toString());
                 if (pos < json.length() && json.charAt(pos) == '"') pos++;
@@ -268,10 +312,83 @@ public class Main {{
         return result;
     }}
 
-    static int[][] __kcGetIntMatrix(String json, String key) {{ return new int[0][0]; /* Simplified for space */ }}
-    static double[][] __kcGetFloatMatrix(String json, String key) {{ return new double[0][0]; }}
-    static String[][] __kcGetStringMatrix(String json, String key) {{ return new String[0][0]; }}
-    static boolean[][] __kcGetBooleanMatrix(String json, String key) {{ return new boolean[0][0]; }}
+    /* ── Matrix Parsing ──────────────────────────────────────────────── */
+
+    static List<String> __kcSplitOuterArrays(String json) {{
+        List<String> result = new ArrayList<>();
+        if (json.length() < 2 || json.charAt(0) != '[') return result;
+        int pos = 1;
+        while (pos < json.length() && json.charAt(pos) != ']') {{
+            while (pos < json.length() && (json.charAt(pos) == ' ' || json.charAt(pos) == ',')) pos++;
+            if (pos >= json.length() || json.charAt(pos) == ']') break;
+            if (json.charAt(pos) == '[') {{
+                int end = __kcFindBracketEnd(json, pos);
+                result.add(json.substring(pos, end + 1));
+                pos = end + 1;
+            }} else {{
+                while (pos < json.length() && json.charAt(pos) != ',' && json.charAt(pos) != ']') pos++;
+            }}
+        }}
+        return result;
+    }}
+
+    static int[][] __kcGetIntMatrix(String json, String key) {{
+        int pos = __kcFindKey(json, key);
+        if (pos < 0 || json.charAt(pos) != '[') return new int[0][0];
+        int end = __kcFindBracketEnd(json, pos);
+        String outer = json.substring(pos, end + 1);
+        List<String> rows = __kcSplitOuterArrays(outer);
+        int[][] result = new int[rows.size()][];
+        for (int r = 0; r < rows.size(); r++) {{
+            String fakeJson = "{{\\"__r\\":" + rows.get(r) + "}}";
+            result[r] = __kcGetIntArray(fakeJson, "__r");
+        }}
+        return result;
+    }}
+
+    static double[][] __kcGetFloatMatrix(String json, String key) {{
+        int pos = __kcFindKey(json, key);
+        if (pos < 0 || json.charAt(pos) != '[') return new double[0][0];
+        int end = __kcFindBracketEnd(json, pos);
+        String outer = json.substring(pos, end + 1);
+        List<String> rows = __kcSplitOuterArrays(outer);
+        double[][] result = new double[rows.size()][];
+        for (int r = 0; r < rows.size(); r++) {{
+            String fakeJson = "{{\\"__r\\":" + rows.get(r) + "}}";
+            result[r] = __kcGetFloatArray(fakeJson, "__r");
+        }}
+        return result;
+    }}
+
+    static String[][] __kcGetStringMatrix(String json, String key) {{
+        int pos = __kcFindKey(json, key);
+        if (pos < 0 || json.charAt(pos) != '[') return new String[0][0];
+        int end = __kcFindBracketEnd(json, pos);
+        String outer = json.substring(pos, end + 1);
+        List<String> rows = __kcSplitOuterArrays(outer);
+        String[][] result = new String[rows.size()][];
+        for (int r = 0; r < rows.size(); r++) {{
+            String fakeJson = "{{\\"__r\\":" + rows.get(r) + "}}";
+            result[r] = __kcGetStringArray(fakeJson, "__r");
+        }}
+        return result;
+    }}
+
+    static boolean[][] __kcGetBooleanMatrix(String json, String key) {{
+        int pos = __kcFindKey(json, key);
+        if (pos < 0 || json.charAt(pos) != '[') return new boolean[0][0];
+        int end = __kcFindBracketEnd(json, pos);
+        String outer = json.substring(pos, end + 1);
+        List<String> rows = __kcSplitOuterArrays(outer);
+        boolean[][] result = new boolean[rows.size()][];
+        for (int r = 0; r < rows.size(); r++) {{
+            String fakeJson = "{{\\"__r\\":" + rows.get(r) + "}}";
+            result[r] = __kcGetBooleanArray(fakeJson, "__r");
+        }}
+        return result;
+    }}
+
+    /* ── Data Structure Builders ─────────────────────────────────────── */
 
     static ListNode __kcBuildLinkedList(int[] arr) {{
         if (arr == null || arr.length == 0) return null;
@@ -306,6 +423,26 @@ public class Main {{
         return root;
     }}
 
+    /* ── JSON Serialization ──────────────────────────────────────────── */
+
+    static String __kcJsonEscape(String s) {{
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {{
+            char c = s.charAt(i);
+            if (c == '\\\\') sb.append("\\\\\\\\");
+            else if (c == '"') sb.append("\\\\\\"");
+            else if (c == '\\n') sb.append("\\\\n");
+            else if (c == '\\r') sb.append("\\\\r");
+            else if (c == '\\t') sb.append("\\\\t");
+            else sb.append(c);
+        }}
+        return sb.toString();
+    }}
+
+    static String __kcJsonString(String s) {{
+        return "\\"" + __kcJsonEscape(s) + "\\"";
+    }}
+
     static String __kcSerializeLinkedList(ListNode head) {{
         StringBuilder sb = new StringBuilder("[");
         boolean first = true;
@@ -321,45 +458,127 @@ public class Main {{
 
     static String __kcSerializeBinaryTree(TreeNode root) {{
         if (root == null) return "[]";
-        List<Integer> res = new ArrayList<>();
+        List<String> res = new ArrayList<>();
         Queue<TreeNode> q = new LinkedList<>();
         q.add(root);
         while (!q.isEmpty()) {{
             TreeNode node = q.poll();
             if (node != null) {{
-                res.add(node.val);
+                res.add(String.valueOf(node.val));
                 q.add(node.left);
                 q.add(node.right);
             }} else {{
-                res.add(null);
+                res.add("null");
             }}
         }}
-        while (!res.isEmpty() && res.get(res.size() - 1) == null) res.remove(res.size() - 1);
+        while (!res.isEmpty() && res.get(res.size() - 1).equals("null")) res.remove(res.size() - 1);
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < res.size(); i++) {{
             if (i > 0) sb.append(",");
-            sb.append(res.get(i) == null ? "null" : res.get(i));
+            sb.append(res.get(i));
+        }}
+        sb.append("]");
+        return sb.toString();
+    }}
+
+    static String __kcSerializeJson(int[] arr) {{
+        if (arr == null) return "null";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < arr.length; i++) {{
+            if (i > 0) sb.append(",");
+            sb.append(arr[i]);
+        }}
+        sb.append("]");
+        return sb.toString();
+    }}
+
+    static String __kcSerializeJson(double[] arr) {{
+        if (arr == null) return "null";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < arr.length; i++) {{
+            if (i > 0) sb.append(",");
+            sb.append(arr[i]);
+        }}
+        sb.append("]");
+        return sb.toString();
+    }}
+
+    static String __kcSerializeJson(String[] arr) {{
+        if (arr == null) return "null";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < arr.length; i++) {{
+            if (i > 0) sb.append(",");
+            sb.append(__kcJsonString(arr[i]));
+        }}
+        sb.append("]");
+        return sb.toString();
+    }}
+
+    static String __kcSerializeJson(boolean[] arr) {{
+        if (arr == null) return "null";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < arr.length; i++) {{
+            if (i > 0) sb.append(",");
+            sb.append(arr[i]);
+        }}
+        sb.append("]");
+        return sb.toString();
+    }}
+
+    static String __kcSerializeJson(int[][] mat) {{
+        if (mat == null) return "null";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < mat.length; i++) {{
+            if (i > 0) sb.append(",");
+            sb.append(__kcSerializeJson(mat[i]));
+        }}
+        sb.append("]");
+        return sb.toString();
+    }}
+
+    static String __kcSerializeJson(double[][] mat) {{
+        if (mat == null) return "null";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < mat.length; i++) {{
+            if (i > 0) sb.append(",");
+            sb.append(__kcSerializeJson(mat[i]));
+        }}
+        sb.append("]");
+        return sb.toString();
+    }}
+
+    static String __kcSerializeJson(String[][] mat) {{
+        if (mat == null) return "null";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < mat.length; i++) {{
+            if (i > 0) sb.append(",");
+            sb.append(__kcSerializeJson(mat[i]));
+        }}
+        sb.append("]");
+        return sb.toString();
+    }}
+
+    static String __kcSerializeJson(boolean[][] mat) {{
+        if (mat == null) return "null";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < mat.length; i++) {{
+            if (i > 0) sb.append(",");
+            sb.append(__kcSerializeJson(mat[i]));
         }}
         sb.append("]");
         return sb.toString();
     }}
 
     static String __kcSerializeJson(Object obj) {{
+        if (obj instanceof int[]) return __kcSerializeJson((int[]) obj);
+        if (obj instanceof double[]) return __kcSerializeJson((double[]) obj);
+        if (obj instanceof String[]) return __kcSerializeJson((String[]) obj);
+        if (obj instanceof boolean[]) return __kcSerializeJson((boolean[]) obj);
+        if (obj instanceof int[][]) return __kcSerializeJson((int[][]) obj);
+        if (obj instanceof double[][]) return __kcSerializeJson((double[][]) obj);
+        if (obj instanceof String[][]) return __kcSerializeJson((String[][]) obj);
+        if (obj instanceof boolean[][]) return __kcSerializeJson((boolean[][]) obj);
         return "[]";
-    }}
-
-    static void __kcPrintString(String s) {{
-        System.out.print("\\"");
-        for (int i = 0; i < s.length(); i++) {{
-            char c = s.charAt(i);
-            if (c == '\\\\') System.out.print("\\\\\\\\");
-            else if (c == '"') System.out.print("\\\\\\"");
-            else if (c == '\\n') System.out.print("\\\\n");
-            else if (c == '\\r') System.out.print("\\\\r");
-            else if (c == '\\t') System.out.print("\\\\t");
-            else System.out.print(c);
-        }}
-        System.out.println("\\"");
     }}
 
     public static void main(String[] args) throws Exception {{
@@ -373,12 +592,24 @@ public class Main {{
             input = input.trim();
             if (input.isEmpty()) continue;
 
+            // Capture stdout
+            PrintStream __kcOrigOut = System.out;
+            ByteArrayOutputStream __kcCapture = new ByteArrayOutputStream();
+            System.setOut(new PrintStream(__kcCapture));
+
 {decls}
 
             Solution sol = new Solution();
 {call_logic}
 
-{print_logic}
+            // Restore stdout
+            System.setOut(__kcOrigOut);
+            String __kcUserStdout = __kcCapture.toString("UTF-8");
+
+{serialize_logic}
+
+            // Output structured JSON
+            System.out.println("{{\\"stdout\\":\\"" + __kcJsonEscape(__kcUserStdout) + "\\",\\"result\\":" + __kcResult + "}}");
             System.out.println("___KC_BATCH_SEP___");
             System.out.flush();
         }}
@@ -393,12 +624,24 @@ public class Main {{
         String input = sb.toString().trim();
         if (input.isEmpty()) return;
 
+        // Capture stdout
+        PrintStream __kcOrigOut = System.out;
+        ByteArrayOutputStream __kcCapture = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(__kcCapture));
+
 {decls}
 
         Solution sol = new Solution();
 {call_logic}
 
-{print_logic}
+        // Restore stdout
+        System.setOut(__kcOrigOut);
+        String __kcUserStdout = __kcCapture.toString("UTF-8");
+
+{serialize_logic}
+
+        // Output structured JSON
+        System.out.println("{{\\"stdout\\":\\"" + __kcJsonEscape(__kcUserStdout) + "\\",\\"result\\":" + __kcResult + "}}");
     }}
 }}
 '''

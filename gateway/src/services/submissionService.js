@@ -10,6 +10,7 @@ const config = require('../config');
 const { enqueueSubmission } = require('../queue/producer');
 const logger = require('../utils/logger');
 const { STATUS } = require('../utils/constants');
+const { recordSubmissionQueued, recordRunCode, recordWorkerUnreachable } = require('./monitorService');
 
 /**
  * Submit code for judging (async — enqueue to worker).
@@ -66,7 +67,7 @@ async function submitCode({ problemId, code, language, userId }) {
     testCases: tcResult.rows.map(tc => {
       let inputStr = tc.input;
       let expectedStr = tc.expected_output;
-      if (problem.judge_mode === 'FUNCTION' || problem.judge_mode === 'CLASS') {
+      if (problem.judge_mode === 'FUNCTION') {
         inputStr = typeof tc.input_json === 'string' ? tc.input_json : JSON.stringify(tc.input_json ?? {});
         expectedStr = typeof tc.expected_json === 'string' ? tc.expected_json : JSON.stringify(tc.expected_json ?? null);
       }
@@ -95,6 +96,9 @@ async function submitCode({ problemId, code, language, userId }) {
     testCases: tcResult.rows.length,
   }, '[Submission] Job enqueued');
 
+  // Record monitoring event
+  recordSubmissionQueued(submissionId, userId, language, problemId);
+
   return {
     submissionId,
     status: STATUS.QUEUED,
@@ -107,13 +111,78 @@ async function submitCode({ problemId, code, language, userId }) {
  * Run code once with stdin (non-judging, for "Run" button).
  * This is still synchronous via HTTP to the worker service.
  */
-async function runCode({ code, language, stdin, judgeMode, signatureMetadata }) {
-  // Strategy: try the Python worker HTTP API first.
-  // If it's unavailable (local dev without worker), fall back to
-  // direct Docker/Podman sandbox execution via codeRunner.
-
+async function runCode({ code, language, stdin, problemId, judgeMode, signatureMetadata }) {
   try {
-    const payload = { code, language, stdin, judgeMode, signatureMetadata };
+    let effectiveJudgeMode = judgeMode;
+    let effectiveSignatureMetadata = signatureMetadata;
+    let effectiveStdin = stdin;
+    let sampleTestCases = [];
+
+    if (problemId) {
+      if (!effectiveJudgeMode || !effectiveSignatureMetadata) {
+        const problemResult = await db.query(
+          "SELECT judge_mode, signature_metadata FROM problems WHERE id = $1",
+          [problemId]
+        );
+        if (problemResult.rows.length > 0) {
+          const problem = problemResult.rows[0];
+          effectiveJudgeMode = effectiveJudgeMode || problem.judge_mode;
+          if (!effectiveSignatureMetadata) {
+            effectiveSignatureMetadata = typeof problem.signature_metadata === 'string'
+              ? JSON.parse(problem.signature_metadata || '{}')
+              : problem.signature_metadata;
+          }
+        }
+      }
+
+      // Fetch sample test cases for per-testcase execution
+      let tcResult = await db.query(
+        `SELECT id, input, expected_output, input_json, expected_json, is_sample, order_index
+         FROM test_cases
+         WHERE problem_id = $1 AND is_sample = true
+         ORDER BY order_index ASC`,
+        [problemId]
+      );
+      if (tcResult.rows.length === 0) {
+        tcResult = await db.query(
+          `SELECT id, input, expected_output, input_json, expected_json, is_sample, order_index
+           FROM test_cases
+           WHERE problem_id = $1
+           ORDER BY order_index ASC
+           LIMIT 5`,
+          [problemId]
+        );
+      }
+
+      if (tcResult.rows.length > 0) {
+        sampleTestCases = tcResult.rows.map(tc => {
+          let inputStr = tc.input;
+          let expectedStr = tc.expected_output;
+          if (effectiveJudgeMode === 'FUNCTION') {
+            inputStr = typeof tc.input_json === 'string' ? tc.input_json : JSON.stringify(tc.input_json ?? {});
+            expectedStr = typeof tc.expected_json === 'string' ? tc.expected_json : JSON.stringify(tc.expected_json ?? null);
+          }
+          return {
+            id: tc.id,
+            input: inputStr || '',
+            expectedOutput: expectedStr || '',
+            isSample: tc.is_sample,
+          };
+        });
+        if (!effectiveStdin && sampleTestCases.length > 0) {
+          effectiveStdin = sampleTestCases[0].input;
+        }
+      }
+    }
+
+    const payload = {
+      code,
+      language,
+      stdin: effectiveStdin || '',
+      judgeMode: effectiveJudgeMode || 'STDIN_STDOUT',
+      signatureMetadata: effectiveSignatureMetadata || null,
+      testCases: sampleTestCases.length > 0 ? sampleTestCases : null,
+    };
     logger.info(`Payload sent from gateway -> worker: ${JSON.stringify(payload)}`);
     
     const response = await fetch(`${config.worker.apiUrl}/api/execute`, {
@@ -127,7 +196,9 @@ async function runCode({ code, language, stdin, judgeMode, signatureMetadata }) 
       throw new Error(`Worker returned ${response.status}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    recordRunCode(language, result.runtimeMs || 0, result.exitCode === 0, null);
+    return result;
   } catch (err) {
     // If worker is not reachable, fall back to local execution
     const isNetworkError = err.code === 'ECONNREFUSED' || err.type === 'system'
@@ -136,8 +207,9 @@ async function runCode({ code, language, stdin, judgeMode, signatureMetadata }) 
 
     if (isNetworkError) {
       logger.info('[Submission] Worker unavailable, falling back to local Docker execution');
+      recordWorkerUnreachable(err.message);
       const { executeLocal } = require('./codeRunner');
-      const result = await executeLocal(code, language, stdin);
+      const result = await executeLocal(code, language, stdin, judgeMode, signatureMetadata);
       return result;
     }
 

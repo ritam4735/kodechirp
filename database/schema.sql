@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS problems (
     constraint_source VARCHAR(20),
     review_status VARCHAR(50) DEFAULT 'imported',
     reference_solution_id UUID,  -- FK added after reference_solutions table
-    judge_mode VARCHAR(20) DEFAULT 'STDIN_STDOUT' CHECK (judge_mode IN ('STDIN_STDOUT', 'FUNCTION', 'CLASS', 'CUSTOM')),
+    judge_mode VARCHAR(20) DEFAULT 'STDIN_STDOUT' CHECK (judge_mode IN ('STDIN_STDOUT', 'FUNCTION')),
     signature_metadata JSONB,
     execution_version INTEGER DEFAULT 1,
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -272,6 +272,30 @@ CREATE TABLE IF NOT EXISTS rate_limit_violations (
     violation_count INTEGER DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ── System Events (monitoring & audit log) ──────────────────────────────────
+CREATE TABLE IF NOT EXISTS system_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_type VARCHAR(50) NOT NULL,       -- container.start, container.fail, execution.success, queue.stall, service.health, etc.
+    severity VARCHAR(20) NOT NULL DEFAULT 'info' CHECK (severity IN ('debug', 'info', 'warning', 'error', 'critical')),
+    service VARCHAR(50) NOT NULL,          -- gateway, worker, docker-proxy, redis, postgres
+    component VARCHAR(100),                -- specific component (docker_service, consumer, evaluator, etc.)
+    message TEXT NOT NULL,
+    metadata JSONB DEFAULT '{}'::jsonb,    -- structured details (submission_id, container_name, error_stack, etc.)
+    submission_id UUID REFERENCES submissions(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    duration_ms INTEGER,                   -- operation duration if applicable
+    ip_address INET,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_system_events_type ON system_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_system_events_severity ON system_events(severity);
+CREATE INDEX IF NOT EXISTS idx_system_events_service ON system_events(service);
+CREATE INDEX IF NOT EXISTS idx_system_events_created ON system_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_events_submission ON system_events(submission_id);
+-- Partial index for fast alerting queries on errors
+CREATE INDEX IF NOT EXISTS idx_system_events_errors ON system_events(created_at DESC) WHERE severity IN ('error', 'critical');
 
 -- ── Updated At Trigger ──────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION update_updated_at_column()

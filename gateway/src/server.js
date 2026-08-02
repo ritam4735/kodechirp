@@ -64,6 +64,7 @@ app.use('/api/leaderboard', require('./routes/leaderboard'));
 app.use('/api/chirps',      require('./routes/chirps'));
 app.use('/api/admin',       require('./routes/admin'));
 app.use('/health',          require('./routes/health'));
+app.use('/monitoring',      require('./routes/monitoring'));
 
 // ── 404 handler ──────────────────────────────────────────────────────────────
 
@@ -101,6 +102,10 @@ async function start() {
         env: config.env,
         cors: config.cors.origin,
       }, `🐦 KodeChirp API Gateway running on http://localhost:${config.port}`);
+
+      // Record service start
+      const { recordServiceStart } = require('./services/monitorService');
+      recordServiceStart();
     });
   } catch (err) {
     logger.fatal({ err }, 'Failed to start gateway');
@@ -115,6 +120,8 @@ async function shutdown(signal) {
 
   server.close(async () => {
     try {
+      const monitorService = require('./services/monitorService');
+      await monitorService.shutdown();
       await closeQueue();
       await closeRedis();
       await pool.end();

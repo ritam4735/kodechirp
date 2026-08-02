@@ -28,8 +28,6 @@ const DATA_TYPES = {
 const JUDGE_MODES = {
   STDIN_STDOUT: 'STDIN_STDOUT',
   FUNCTION: 'FUNCTION',
-  CLASS: 'CLASS',
-  CUSTOM: 'CUSTOM',
 };
 
 function validateSignature(metadata) {

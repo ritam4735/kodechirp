@@ -77,3 +77,5 @@ class RunCodeRequest(BaseModel):
     stdin: str = ""
     judgeMode: str = "STDIN_STDOUT"
     signatureMetadata: Optional[Dict[str, Any]] = None
+    testCases: Optional[List[Dict[str, Any]]] = None
+

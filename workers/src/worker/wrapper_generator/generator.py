@@ -8,7 +8,7 @@ from .languages.java import JavaGenerator
 
 class WrapperGenerator:
     """
-    Generates execution wrappers for FUNCTION and CLASS judge modes.
+    Generates execution wrappers for FUNCTION judge mode.
     Takes the user's implementation and wraps it with JSON serialization/deserialization logic.
     """
 

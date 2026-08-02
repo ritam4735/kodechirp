@@ -2,8 +2,16 @@
 
 import { JUDGE_MODES } from './typeSystem';
 
+function normalizeType(t) {
+  if (!t) return 'Int';
+  if (t === 'Integer') return 'Int';
+  if (t.startsWith('Array<Integer>')) return t.replace('Integer', 'Int');
+  if (t.startsWith('Matrix<Integer>')) return t.replace('Integer', 'Int');
+  return t;
+}
+
 export function generateStarterCode(judgeMode, signature, language) {
-  if (judgeMode !== JUDGE_MODES.FUNCTION && judgeMode !== JUDGE_MODES.CLASS) {
+  if (judgeMode !== JUDGE_MODES.FUNCTION) {
     return null;
   }
   if (!signature) {
@@ -11,41 +19,56 @@ export function generateStarterCode(judgeMode, signature, language) {
   }
 
   const { name, params, returnType } = signature;
+  const normalizedParams = (params || []).map(p => ({ ...p, type: normalizeType(p.type) }));
+  const normalizedReturnType = normalizeType(returnType || 'Void');
 
   if (language === 'javascript') {
-    const args = params.map(p => p.name).join(', ');
-    const jsDocParams = params.map(p => ` * @param {${p.type}} ${p.name}`).join('\n');
-    return `/**\n${jsDocParams}\n * @return {${returnType}}\n */\nvar ${name} = function(${args}) {\n    \n};\n`;
+    const args = normalizedParams.map(p => p.name).join(', ');
+    const jsDocParams = normalizedParams.map(p => ` * @param {${p.type}} ${p.name}`).join('\n');
+    return `/**\n${jsDocParams}\n * @return {${normalizedReturnType}}\n */\nvar ${name} = function(${args}) {\n    \n};\n`;
   }
 
   if (language === 'python') {
     const typeMap = {
-      'Integer': 'int',
+      'Int': 'int',
       'Float': 'float',
       'String': 'str',
       'Boolean': 'bool',
       'Character': 'str',
-      'Array<Integer>': 'List[int]',
+      'Array<Int>': 'List[int]',
       'Array<Float>': 'List[float]',
       'Array<String>': 'List[str]',
       'Array<Boolean>': 'List[bool]',
-      'Matrix<Integer>': 'List[List[int]]',
+      'Matrix<Int>': 'List[List[int]]',
       'Matrix<Float>': 'List[List[float]]',
       'Matrix<String>': 'List[List[str]]',
       'Matrix<Boolean>': 'List[List[bool]]',
       'LinkedList': 'Optional[ListNode]',
       'BinaryTree': 'Optional[TreeNode]',
+      'Void': 'None',
     };
-    const args = params.map(p => `${p.name}: ${typeMap[p.type] || 'Any'}`).join(', ');
-    const ret = typeMap[returnType] || 'Any';
+
+    const mapPyType = (t) => {
+      if (typeMap[t]) return typeMap[t];
+      if (t.startsWith('Array<')) return `List[${mapPyType(t.slice(6, -1))}]`;
+      if (t.startsWith('Matrix<')) return `List[List[${mapPyType(t.slice(7, -1))}]]`;
+      return t;
+    };
+
+    const args = normalizedParams.map(p => `${p.name}: ${mapPyType(p.type)}`).join(', ');
+    const ret = mapPyType(normalizedReturnType);
+    
+    const allTypes = [...normalizedParams.map(p => p.type), normalizedReturnType];
+    const needsList = allTypes.some(t => t && (t.startsWith('Array') || t.startsWith('Matrix')));
+    const needsOptional = allTypes.some(t => t === 'LinkedList' || t === 'BinaryTree');
+
+    let typingImports = [];
+    if (needsList) typingImports.push('List');
+    if (needsOptional) typingImports.push('Optional');
     
     let imports = '';
-    const allTypes = [...params.map(p => p.type), returnType];
-    if (allTypes.some(t => t && (t.startsWith('Array') || t.startsWith('Matrix')))) {
-      imports += `from typing import List\n`;
-    }
-    if (allTypes.some(t => t === 'LinkedList' || t === 'BinaryTree')) {
-      imports += `from typing import Optional\n`;
+    if (typingImports.length > 0) {
+      imports = `from typing import ${typingImports.join(', ')}\n`;
     }
     
     return `${imports}${imports ? '\n' : ''}class Solution:\n    def ${name}(self, ${args}) -> ${ret}:\n        pass\n`;
@@ -53,33 +76,33 @@ export function generateStarterCode(judgeMode, signature, language) {
 
   if (language === 'c' || language === 'cpp') {
     const cTypeMap = {
-      'Integer': 'int',
+      'Int': 'int',
       'Float': 'double',
       'String': language === 'cpp' ? 'string' : 'char*',
       'Boolean': language === 'cpp' ? 'bool' : 'int',
       'Character': 'char',
-      'Array<Integer>': language === 'cpp' ? 'vector<int>' : 'int*',
+      'Array<Int>': language === 'cpp' ? 'vector<int>' : 'int*',
       'Array<Float>': language === 'cpp' ? 'vector<double>' : 'double*',
       'Array<String>': language === 'cpp' ? 'vector<string>' : 'char**',
       'Array<Boolean>': language === 'cpp' ? 'vector<bool>' : 'int*',
-      'Matrix<Integer>': language === 'cpp' ? 'vector<vector<int>>' : 'int**',
+      'Matrix<Int>': language === 'cpp' ? 'vector<vector<int>>' : 'int**',
       'Matrix<Float>': language === 'cpp' ? 'vector<vector<double>>' : 'double**',
       'Matrix<String>': language === 'cpp' ? 'vector<vector<string>>' : 'char***',
       'Matrix<Boolean>': language === 'cpp' ? 'vector<vector<bool>>' : 'int**',
-      'LinkedList': 'ListNode*',
-      'BinaryTree': 'TreeNode*',
+      'LinkedList': language === 'cpp' ? 'ListNode*' : 'struct ListNode*',
+      'BinaryTree': language === 'cpp' ? 'TreeNode*' : 'struct TreeNode*',
       'Void': 'void'
     };
-    const argsArray = params.map(p => `${cTypeMap[p.type] || 'void*'} ${p.name}`);
-    if (language === 'c' && returnType.startsWith('Array')) {
+    const argsArray = normalizedParams.map(p => `${cTypeMap[p.type] || 'void*'} ${p.name}`);
+    if (language === 'c' && normalizedReturnType.startsWith('Array')) {
         argsArray.push('int* returnSize');
     }
     const args = argsArray.join(', ');
-    const ret = cTypeMap[returnType] || 'void*';
+    const ret = cTypeMap[normalizedReturnType] || 'void*';
     
     if (language === 'cpp') {
       let imports = '';
-      const allTypes = [...params.map(p => p.type), returnType];
+      const allTypes = [...normalizedParams.map(p => p.type), normalizedReturnType];
       if (allTypes.some(t => t && (t.startsWith('Array') || t.startsWith('Matrix')))) {
         imports += `#include <vector>\n`;
       }
@@ -90,7 +113,7 @@ export function generateStarterCode(judgeMode, signature, language) {
       return `${imports}class Solution {\npublic:\n    ${ret} ${name}(${args}) {\n        \n    }\n};\n`;
     } else {
       let doc = '';
-      if (returnType.startsWith('Array')) {
+      if (normalizedReturnType.startsWith('Array')) {
           doc = `/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\n`;
       }
       return `${doc}${ret} ${name}(${args}) {\n    \n}\n`;
@@ -99,16 +122,16 @@ export function generateStarterCode(judgeMode, signature, language) {
 
   if (language === 'java') {
     const javaTypeMap = {
-      'Integer': 'int',
+      'Int': 'int',
       'Float': 'double',
       'String': 'String',
       'Boolean': 'boolean',
       'Character': 'char',
-      'Array<Integer>': 'int[]',
+      'Array<Int>': 'int[]',
       'Array<Float>': 'double[]',
       'Array<String>': 'String[]',
       'Array<Boolean>': 'boolean[]',
-      'Matrix<Integer>': 'int[][]',
+      'Matrix<Int>': 'int[][]',
       'Matrix<Float>': 'double[][]',
       'Matrix<String>': 'String[][]',
       'Matrix<Boolean>': 'boolean[][]',
@@ -116,10 +139,11 @@ export function generateStarterCode(judgeMode, signature, language) {
       'BinaryTree': 'TreeNode',
       'Void': 'void',
     };
-    const args = params.map(p => `${javaTypeMap[p.type] || 'Object'} ${p.name}`).join(', ');
-    const ret = javaTypeMap[returnType] || 'Object';
+    const args = normalizedParams.map(p => `${javaTypeMap[p.type] || 'Object'} ${p.name}`).join(', ');
+    const ret = javaTypeMap[normalizedReturnType] || 'Object';
     return `class Solution {\n    public ${ret} ${name}(${args}) {\n        \n    }\n}\n`;
   }
 
   return null;
 }
+
