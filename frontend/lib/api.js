@@ -223,6 +223,12 @@ export const api = {
       verdict: submission.status,
       runtime: submission.runtime_ms ? `${submission.runtime_ms} ms` : 'N/A',
       memory: submission.memory_kb ? `${(submission.memory_kb / 1024).toFixed(1)} MB` : 'N/A',
+      failedInput: submission.failed_test_input,
+      failedExpected: submission.failed_test_expected,
+      failedActual: submission.failed_test_actual,
+      passed: submission.test_cases_passed || 0,
+      total: submission.test_cases_total || 0,
+      errorMessage: submission.error_message,
       details: buildDetails({
         verdict: submission.status,
         passed: submission.test_cases_passed || 0,

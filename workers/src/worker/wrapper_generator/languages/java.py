@@ -337,8 +337,8 @@ public class Main {{
             if (json.charAt(pos) == '[') {{
                 int end = __kcFindBracketEnd(json, pos);
                 if (end < 0) break;
-                result.add(json.substring(pos, end));
-                pos = end;
+                result.add(json.substring(pos, end + 1));
+                pos = end + 1;
             }} else {{
                 while (pos < json.length() && json.charAt(pos) != ',' && json.charAt(pos) != ']') pos++;
             }}
@@ -351,7 +351,7 @@ public class Main {{
         if (pos < 0 || json.charAt(pos) != '[') return new int[0][0];
         int end = __kcFindBracketEnd(json, pos);
         if (end < 0) return new int[0][0];
-        String outer = json.substring(pos, end);
+        String outer = json.substring(pos, end + 1);
         List<String> rows = __kcSplitOuterArrays(outer);
         int[][] result = new int[rows.size()][];
         for (int r = 0; r < rows.size(); r++) {{
@@ -366,7 +366,7 @@ public class Main {{
         if (pos < 0 || json.charAt(pos) != '[') return new double[0][0];
         int end = __kcFindBracketEnd(json, pos);
         if (end < 0) return new double[0][0];
-        String outer = json.substring(pos, end);
+        String outer = json.substring(pos, end + 1);
         List<String> rows = __kcSplitOuterArrays(outer);
         double[][] result = new double[rows.size()][];
         for (int r = 0; r < rows.size(); r++) {{
@@ -381,7 +381,7 @@ public class Main {{
         if (pos < 0 || json.charAt(pos) != '[') return new String[0][0];
         int end = __kcFindBracketEnd(json, pos);
         if (end < 0) return new String[0][0];
-        String outer = json.substring(pos, end);
+        String outer = json.substring(pos, end + 1);
         List<String> rows = __kcSplitOuterArrays(outer);
         String[][] result = new String[rows.size()][];
         for (int r = 0; r < rows.size(); r++) {{
@@ -396,7 +396,7 @@ public class Main {{
         if (pos < 0 || json.charAt(pos) != '[') return new boolean[0][0];
         int end = __kcFindBracketEnd(json, pos);
         if (end < 0) return new boolean[0][0];
-        String outer = json.substring(pos, end);
+        String outer = json.substring(pos, end + 1);
         List<String> rows = __kcSplitOuterArrays(outer);
         boolean[][] result = new boolean[rows.size()][];
         for (int r = 0; r < rows.size(); r++) {{

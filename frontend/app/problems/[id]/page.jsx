@@ -74,7 +74,7 @@ export default function ProblemPage() {
             <div className="flex-1 min-h-0">
               {activeTab === 'description' && <LeftPanelContent currentProblem={currentProblem} />}
               {activeTab === 'editor' && <EditorContent problemId={currentProblem.id} />}
-              {activeTab === 'tests' && <BottomContent testCases={currentProblem.testCases} showConsole={showConsole} />}
+              {activeTab === 'tests' && <BottomContent testCases={currentProblem.testCases} showConsole={showConsole} problem={currentProblem} />}
             </div>
           </div>
         ) : (
@@ -94,7 +94,7 @@ export default function ProblemPage() {
                 <ResizeHandle direction="vertical" />
 
                 <Panel defaultSize={25} minSize={15} className="flex flex-col min-h-0">
-                  <BottomContent testCases={currentProblem.testCases} showConsole={showConsole} />
+                  <BottomContent testCases={currentProblem.testCases} showConsole={showConsole} problem={currentProblem} />
                 </Panel>
               </PanelGroup>
             </Panel>
@@ -185,28 +185,56 @@ const EditorContent = ({ problemId }) => {
 };
 
 // Bottom Content (Tests & Console)
-const BottomContent = ({ testCases, showConsole }) => (
+const BottomContent = ({ testCases, showConsole, problem }) => {
+  const [tab, setTab] = useState('tests');
+
+  useEffect(() => {
+    if (showConsole) {
+      setTab('console');
+    }
+  }, [showConsole]);
+
+  return (
     <div className="flex flex-col h-full bg-[#0d1117]/80 border border-white/10 rounded-2xl backdrop-blur-xl shadow-lg overflow-hidden min-h-0">
-      <div className="flex items-center gap-6 px-4 py-3 border-b border-white/10 bg-white/[0.02] shrink-0">
-        <div className="flex items-center gap-2">
-          <FileCheck size={16} className="text-[#22c55e]" />
-          <span className="text-sm font-semibold text-[#e6edf3]">Test Cases</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Terminal size={16} className="text-[#8b949e]" />
-          <span className="text-sm font-semibold text-[#8b949e]">Console</span>
-        </div>
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
+        <button
+          onClick={() => setTab('tests')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+            tab === 'tests'
+              ? 'bg-[#22c55e]/15 text-[#22c55e] border border-[#22c55e]/30'
+              : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-white/5 border border-transparent'
+          }`}
+        >
+          <FileCheck size={14} className={tab === 'tests' ? 'text-[#22c55e]' : 'text-[#8b949e]'} />
+          <span>Test Cases</span>
+        </button>
+
+        <button
+          onClick={() => setTab('console')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors relative cursor-pointer ${
+            tab === 'console'
+              ? 'bg-[#58a6ff]/15 text-[#58a6ff] border border-[#58a6ff]/30'
+              : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-white/5 border border-transparent'
+          }`}
+        >
+          <Terminal size={14} className={tab === 'console' ? 'text-[#58a6ff]' : 'text-[#8b949e]'} />
+          <span>Console</span>
+          {showConsole && tab !== 'console' && (
+            <span className="w-1.5 h-1.5 rounded-full bg-[#58a6ff] animate-pulse" />
+          )}
+        </button>
       </div>
-      <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-5 flex flex-col gap-6">
-        <TestCases testCases={testCases} />
-        {showConsole && (
-          <div className="border-t border-white/10 pt-4 mt-2">
-            <ConsolePanel />
-          </div>
+
+      <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-5">
+        {tab === 'tests' ? (
+          <TestCases testCases={testCases} problem={problem} />
+        ) : (
+          <ConsolePanel />
         )}
       </div>
     </div>
   );
+};
 
 
 const ResizeHandle = ({ direction }) => (
