@@ -39,6 +39,7 @@ def normalize_signature(sig: dict) -> dict:
 
 def c_type(sig_type: str) -> str:
     """Map signature type to C type string."""
+    sig_type = normalize_type(sig_type)
     mapping = {
         'Int': 'int',
         'Float': 'double',
@@ -61,6 +62,7 @@ def c_type(sig_type: str) -> str:
 
 def cpp_type(sig_type: str) -> str:
     """Map signature type to C++ type string."""
+    sig_type = normalize_type(sig_type)
     mapping = {
         'Int': 'int',
         'Float': 'double',
@@ -83,6 +85,7 @@ def cpp_type(sig_type: str) -> str:
 
 def java_type(sig_type: str) -> str:
     """Map signature type to Java type string."""
+    sig_type = normalize_type(sig_type)
     mapping = {
         'Int': 'int',
         'Float': 'double',

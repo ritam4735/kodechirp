@@ -6,6 +6,7 @@
 const db = require('../config/database');
 const { runCode } = require('./submissionService');
 const { normaliseOutput } = require('../utils/helpers');
+const { parseAssignmentInput } = require('../utils/assignmentParser');
 const logger = require('../utils/logger');
 
 function hasCompilationError(stderr = '') {
@@ -172,7 +173,33 @@ async function verify(solutionId) {
       let inputStr = tc.input;
       let expectedOutput = tc.expected_output;
       if (judgeMode === 'FUNCTION') {
-        inputStr = typeof tc.input_json === 'string' ? tc.input_json : (tc.input_json != null ? JSON.stringify(tc.input_json) : tc.input);
+        let parsedInput = null;
+        if (tc.input_json != null) {
+          try {
+            parsedInput = typeof tc.input_json === 'object' ? tc.input_json : JSON.parse(tc.input_json);
+          } catch (_) {
+            parsedInput = tc.input_json;
+          }
+        } else {
+          parsedInput = parseAssignmentInput(tc.input, signatureMetadata);
+        }
+
+        // Validate parameter completeness against signature
+        const requiredParams = Array.isArray(signatureMetadata?.params)
+          ? signatureMetadata.params.map(p => p.name).filter(Boolean)
+          : [];
+        if (requiredParams.length > 0 && parsedInput && typeof parsedInput === 'object') {
+          for (const reqParam of requiredParams) {
+            if (!(reqParam in parsedInput)) {
+              const provided = Object.keys(parsedInput).join(', ') || 'none';
+              throw new Error(
+                `Parameter mismatch: signature expects parameter "${reqParam}", but test case provides "${provided}"`
+              );
+            }
+          }
+        }
+
+        inputStr = parsedInput ? JSON.stringify(parsedInput) : tc.input;
         expectedOutput = typeof tc.expected_json === 'string' ? tc.expected_json : (tc.expected_json != null ? JSON.stringify(tc.expected_json) : tc.expected_output);
       }
 

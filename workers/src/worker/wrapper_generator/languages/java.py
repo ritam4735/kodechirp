@@ -1,9 +1,10 @@
 import re
-from ..types import java_type
+from ..types import java_type, normalize_signature
 
 class JavaGenerator:
     @staticmethod
     def generate(signature: dict, user_code: str, batch: bool = False) -> str:
+        signature = normalize_signature(signature)
         params = signature.get('params', [])
         func_name = signature.get('name', 'solve')
         ret_type = signature.get('returnType', 'Int')
@@ -16,7 +17,7 @@ class JavaGenerator:
         for p in params:
             pn = p['name']
             pt = p['type']
-            if pt == 'Int':
+            if pt in ('Int', 'Integer'):
                 decl_lines.append(f'{indent}int arg_{pn} = __kcGetInt(input, "{pn}");')
                 call_args.append(f'arg_{pn}')
             elif pt == 'Float':

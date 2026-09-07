@@ -1056,3 +1056,85 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Problem Authoring Examples Section ────────────────────────── */
+.author-examples-section {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.author-examples-section.highlight-error {
+  border-color: #f85149 !important;
+  animation: pulse-error 2s infinite ease-in-out;
+}
+
+@keyframes pulse-error {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(248, 81, 73, 0.25), 0 0 16px rgba(248, 81, 73, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(248, 81, 73, 0.4), 0 0 28px rgba(248, 81, 73, 0.55);
+  }
+}
+
+.author-example-card {
+  background: rgba(13, 17, 35, 0.55);
+  border: 1px solid rgba(100, 140, 255, 0.12);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+  transition: border-color 0.2s, background-color 0.2s, transform 0.15s, opacity 0.2s;
+  position: relative;
+}
+
+.author-example-card:hover {
+  border-color: rgba(100, 140, 255, 0.25);
+}
+
+.author-example-card.dragging {
+  opacity: 0.4;
+  transform: scale(0.99);
+  border-style: dashed;
+  border-color: #58a6ff;
+}
+
+.author-example-card.drag-over {
+  border-color: #58a6ff !important;
+  box-shadow: 0 0 14px rgba(88, 166, 255, 0.35);
+  background: rgba(88, 166, 255, 0.08);
+}
+
+.author-example-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.author-example-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  color: var(--text-muted);
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.author-example-drag-handle:hover {
+  color: #58a6ff;
+  background: rgba(88, 166, 255, 0.12);
+}
+
+.author-example-drag-handle:active {
+  cursor: grabbing;
+}
+
+.author-code-input {
+  font-family: var(--font-code, 'Fira Code', monospace) !important;
+  font-size: 12.5px !important;
+  line-height: 1.45 !important;
+}

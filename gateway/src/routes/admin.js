@@ -21,6 +21,7 @@ router.get('/normalization/ai-status', adminController.getAIStatus);
 // Problems management
 router.get('/problems', adminController.getProblems);
 router.post('/problems', adminController.createProblem);
+router.post('/problems/generate-examples', adminController.generateExamples);
 router.post('/problems/bulk-action', adminController.bulkAction);
 router.get('/problems/:id', adminController.getProblem);
 router.put('/problems/:id', adminController.updateProblem);

@@ -204,6 +204,7 @@ function getAIStatus() {
 
 module.exports = {
   normalize,
+  callAI,
   isAIConfigured,
   getAIStatus,
 };

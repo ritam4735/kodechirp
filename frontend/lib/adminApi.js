@@ -36,6 +36,8 @@ export const adminApi = {
   getProblem: (id) => requestAdmin(`/problems/${id}`),
   createProblem: (data) =>
     requestAdmin('/problems', { method: 'POST', body: JSON.stringify(data) }),
+  generateExamples: (data) =>
+    requestAdmin('/problems/generate-examples', { method: 'POST', body: JSON.stringify(data) }),
   updateProblem: (id, data) =>
     requestAdmin(`/problems/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteProblem: (id) =>

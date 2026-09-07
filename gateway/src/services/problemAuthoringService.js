@@ -34,6 +34,34 @@ function validateAuthoringPayload(payload) {
     );
   }
 
+  // Validate parameter completeness for FUNCTION mode
+  if (payload.judge_mode === 'FUNCTION' && payload.signature_metadata) {
+    const sig = typeof payload.signature_metadata === 'string'
+      ? JSON.parse(payload.signature_metadata || '{}')
+      : payload.signature_metadata;
+    const requiredParams = Array.isArray(sig?.params) ? sig.params.map(p => p.name).filter(Boolean) : [];
+
+    if (requiredParams.length > 0 && Array.isArray(payload.verificationCases)) {
+      for (let idx = 0; idx < payload.verificationCases.length; idx++) {
+        const tc = payload.verificationCases[idx];
+        const inputStr = tc.input !== undefined ? String(tc.input) : '';
+        const parsed = parseAssignmentInput(inputStr, sig);
+        if (!parsed || typeof parsed !== 'object') {
+          errors.push(`Test case #${idx + 1}: input could not be parsed into function parameters`);
+          continue;
+        }
+        for (const reqParam of requiredParams) {
+          if (!(reqParam in parsed)) {
+            const providedKeys = Object.keys(parsed);
+            errors.push(
+              `Test case #${idx + 1}: Parameter mismatch - signature expects parameter "${reqParam}", but test case provides "${providedKeys.join(', ') || 'none'}"`
+            );
+          }
+        }
+      }
+    }
+  }
+
   return {
     valid: errors.length === 0,
     errors,
@@ -144,7 +172,7 @@ async function authorProblem(payload, userId) {
 
     if (isFunctionMode) {
       if (!inputJson && inputStr) {
-        inputJson = parseAssignmentInput(inputStr, signature);
+        inputJson = parseAssignmentInput(inputStr, effectiveSigMeta);
       }
       if (!expectedJson && expectedStr) {
         try { expectedJson = JSON.parse(expectedStr); } catch (_) {}

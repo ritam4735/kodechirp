@@ -4,11 +4,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const db = require('../config/database');
+const logger = require('../utils/logger');
 const { parseProblem } = require('../services/problemParser');
 const normalizationService = require('../services/problemNormalizationService');
 const referenceSolutionService = require('../services/referenceSolutionService');
 const testGenerationService = require('../services/testGenerationService');
 const { validateSignature } = require('../utils/typeSystem');
+const { parseAssignmentInput } = require('../utils/assignmentParser');
 
 const REVIEW_STATUSES = Object.freeze({
   IMPORTED: 'imported',
@@ -375,25 +377,97 @@ exports.createProblem = async (req, res, next) => {
       title, slug, description, difficulty, status,
       input_format, output_format, constraints,
       time_limit_ms, memory_limit_mb, tags, metadata, source,
-      judge_mode, signature_metadata
+      judge_mode, signature_metadata,
+      examples, examples_json
     } = req.body;
 
     const finalSlug = slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+    const rawExamples = examples !== undefined ? examples : (examples_json || []);
+    const validExamples = Array.isArray(rawExamples)
+      ? rawExamples
+          .filter(e => e && typeof e === 'object' && String(e.input || '').trim() && String(e.output || '').trim())
+          .map(e => ({
+            input: String(e.input).trim(),
+            output: String(e.output).trim(),
+            explanation: e.explanation ? String(e.explanation).trim() : '',
+          }))
+      : [];
+
+    // In FUNCTION mode, validate example test cases against signature parameters
+    if (judge_mode === 'FUNCTION' && signature_metadata) {
+      const sig = typeof signature_metadata === 'string'
+        ? JSON.parse(signature_metadata || '{}')
+        : signature_metadata;
+      const requiredParams = Array.isArray(sig?.params) ? sig.params.map(p => p.name).filter(Boolean) : [];
+      if (requiredParams.length > 0) {
+        for (let idx = 0; idx < validExamples.length; idx++) {
+          const ex = validExamples[idx];
+          const parsed = parseAssignmentInput(ex.input, sig);
+          if (!parsed || typeof parsed !== 'object') {
+            return res.status(400).json({
+              success: false,
+              message: `Example #${idx + 1}: input could not be parsed into function parameters`
+            });
+          }
+          for (const reqParam of requiredParams) {
+            if (!(reqParam in parsed)) {
+              const provided = Object.keys(parsed).join(', ') || 'none';
+              return res.status(400).json({
+                success: false,
+                message: `Example #${idx + 1}: Parameter mismatch - signature expects parameter "${reqParam}", but test case provides "${provided}"`
+              });
+            }
+          }
+        }
+      }
+    }
+
     const result = await db.query(`
       INSERT INTO problems (title, slug, description, difficulty, status, created_by,
-        input_format, output_format, constraints, time_limit_ms, memory_limit_mb, tags, metadata, source, judge_mode, signature_metadata)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        input_format, output_format, constraints, time_limit_ms, memory_limit_mb, tags, metadata, source, judge_mode, signature_metadata, examples_json)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *
     `, [
       title, finalSlug, description, difficulty || 'Medium', status || 'Draft', req.user.id,
       input_format || null, output_format || null, constraints || null,
       time_limit_ms || 2000, memory_limit_mb || 256,
       JSON.stringify(tags || []), JSON.stringify(metadata || {}), source || 'kodechirp',
-      judge_mode || 'STDIN_STDOUT', signature_metadata ? JSON.stringify(signature_metadata) : null
+      judge_mode || 'STDIN_STDOUT', signature_metadata ? JSON.stringify(signature_metadata) : null,
+      JSON.stringify(validExamples)
     ]);
 
-    res.status(201).json({ success: true, data: result.rows[0] });
+    const createdProblem = result.rows[0];
+
+    // Sync examples into test_cases as sample test cases
+    for (let idx = 0; idx < validExamples.length; idx++) {
+      const ex = validExamples[idx];
+      let inputJson = null;
+      let expectedJson = null;
+      if (judge_mode === 'FUNCTION') {
+        inputJson = parseAssignmentInput(ex.input, signature_metadata);
+        try { expectedJson = JSON.parse(ex.output); } catch (_) {}
+      }
+      await db.query(`
+        INSERT INTO test_cases (
+          problem_id, input, expected_output, input_json, expected_json, is_sample, explanation, order_index, category, generated_by, verified
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `, [
+        createdProblem.id,
+        ex.input,
+        ex.output,
+        inputJson ? JSON.stringify(inputJson) : null,
+        expectedJson ? JSON.stringify(expectedJson) : null,
+        true,
+        ex.explanation || `Example ${idx + 1}`,
+        idx,
+        'example',
+        'author',
+        true
+      ]);
+    }
+
+    res.status(201).json({ success: true, data: createdProblem });
   } catch (err) {
     next(err);
   }
@@ -405,10 +479,97 @@ exports.updateProblem = async (req, res, next) => {
       title, description, difficulty, status,
       input_format, output_format, constraints,
       time_limit_ms, memory_limit_mb, tags, metadata, slug, source,
-      judge_mode, signature_metadata
+      judge_mode, signature_metadata,
+      examples, examples_json
     } = req.body;
 
-    // Validate publish requirements if transitioning to Published
+    // If examples are provided, update examples_json and sync sample test cases first
+    if (examples !== undefined || examples_json !== undefined) {
+      const rawExamples = examples !== undefined ? examples : examples_json;
+      const validExamples = Array.isArray(rawExamples)
+        ? rawExamples
+            .filter(e => e && typeof e === 'object' && String(e.input || '').trim() && String(e.output || '').trim())
+            .map(e => ({
+              input: String(e.input).trim(),
+              output: String(e.output).trim(),
+              explanation: e.explanation ? String(e.explanation).trim() : '',
+            }))
+        : [];
+
+      let effectiveJudgeMode = judge_mode;
+      let effectiveSigMeta = signature_metadata;
+      if (effectiveJudgeMode === undefined || effectiveSigMeta === undefined) {
+        const pRes = await db.query('SELECT judge_mode, signature_metadata FROM problems WHERE id = $1', [req.params.id]);
+        if (pRes.rowCount > 0) {
+          if (effectiveJudgeMode === undefined) effectiveJudgeMode = pRes.rows[0].judge_mode;
+          if (effectiveSigMeta === undefined) effectiveSigMeta = pRes.rows[0].signature_metadata;
+        }
+      }
+
+      if (effectiveJudgeMode === 'FUNCTION' && effectiveSigMeta) {
+        const sig = typeof effectiveSigMeta === 'string'
+          ? JSON.parse(effectiveSigMeta || '{}')
+          : effectiveSigMeta;
+        const requiredParams = Array.isArray(sig?.params) ? sig.params.map(p => p.name).filter(Boolean) : [];
+        if (requiredParams.length > 0) {
+          for (let idx = 0; idx < validExamples.length; idx++) {
+            const ex = validExamples[idx];
+            const parsed = parseAssignmentInput(ex.input, sig);
+            if (!parsed || typeof parsed !== 'object') {
+              return res.status(400).json({
+                success: false,
+                message: `Example #${idx + 1}: input could not be parsed into function parameters`
+              });
+            }
+            for (const reqParam of requiredParams) {
+              if (!(reqParam in parsed)) {
+                const provided = Object.keys(parsed).join(', ') || 'none';
+                return res.status(400).json({
+                  success: false,
+                  message: `Example #${idx + 1}: Parameter mismatch - signature expects parameter "${reqParam}", but test case provides "${provided}"`
+                });
+              }
+            }
+          }
+        }
+      }
+
+      await db.query('UPDATE problems SET examples_json = $1 WHERE id = $2', [
+        JSON.stringify(validExamples),
+        req.params.id,
+      ]);
+
+      // Synchronize sample test cases: replace previous sample test cases with updated examples
+      await db.query('DELETE FROM test_cases WHERE problem_id = $1 AND is_sample = TRUE', [req.params.id]);
+      for (let idx = 0; idx < validExamples.length; idx++) {
+        const ex = validExamples[idx];
+        let inputJson = null;
+        let expectedJson = null;
+        if (effectiveJudgeMode === 'FUNCTION') {
+          inputJson = parseAssignmentInput(ex.input, effectiveSigMeta);
+          try { expectedJson = JSON.parse(ex.output); } catch (_) {}
+        }
+        await db.query(`
+          INSERT INTO test_cases (
+            problem_id, input, expected_output, input_json, expected_json, is_sample, explanation, order_index, category, generated_by, verified
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        `, [
+          req.params.id,
+          ex.input,
+          ex.output,
+          inputJson ? JSON.stringify(inputJson) : null,
+          expectedJson ? JSON.stringify(expectedJson) : null,
+          true,
+          ex.explanation || `Example ${idx + 1}`,
+          idx,
+          'example',
+          'author',
+          true
+        ]);
+      }
+    }
+
+    // Validate publish requirements if transitioning to Published (after saving examples)
     if (status === 'Published') {
       const validation = await validatePublish(req.params.id);
       if (!validation.valid) {
@@ -438,7 +599,7 @@ exports.updateProblem = async (req, res, next) => {
           judge_mode = COALESCE($15, judge_mode),
           signature_metadata = COALESCE($16, signature_metadata),
           execution_version = CASE WHEN ($15 IS NOT NULL AND $15 != judge_mode) OR ($16 IS NOT NULL AND $16::text != signature_metadata::text) THEN execution_version + 1 ELSE execution_version END,
-          review_status = CASE WHEN $4 = 'Published' THEN '${REVIEW_STATUSES.PUBLISHED}' ELSE review_status END,
+          review_status = CASE WHEN $4::varchar = 'Published' THEN '${REVIEW_STATUSES.PUBLISHED}' ELSE review_status END,
           updated_at = NOW()
       WHERE id = $14 RETURNING *
     `, [
@@ -492,8 +653,8 @@ exports.toggleProblemStatus = async (req, res, next) => {
 
     const result = await db.query(
       `UPDATE problems
-       SET status = $1,
-           review_status = CASE WHEN $1 = 'Published' THEN $3 ELSE review_status END,
+       SET status = $1::varchar,
+           review_status = CASE WHEN $1::varchar = 'Published' THEN $3::varchar ELSE review_status END,
            updated_at = NOW()
        WHERE id = $2 RETURNING *`,
       [status, req.params.id, REVIEW_STATUSES.PUBLISHED]
@@ -1426,6 +1587,103 @@ exports.generateTests = async (req, res, next) => {
     )) {
       return res.status(400).json({ success: false, error: err.message });
     }
+    next(err);
+  }
+};
+
+// ── AI/Parser Example Generation Endpoint ───────────────────────────────────
+
+exports.generateExamples = async (req, res, next) => {
+  try {
+    const { title, description, constraints, input_format, output_format, judge_mode, signature_metadata } = req.body;
+    const probText = description || '';
+
+    // First: If AI is configured, use LLM to generate high-quality examples
+    if (normalizationService.isAIConfigured()) {
+      try {
+        const systemPrompt = `You are an expert competitive programming problem designer.
+Given a problem's title, description, constraints, and signature, generate 2 to 3 clear, diverse, and correct examples.
+Each example must have:
+- "input": exact input string format (e.g. "nums = [2,7,11,15], target = 9" or standard STDIN)
+- "output": exact output string format (e.g. "[0,1]")
+- "explanation": optional clear explanation string explaining why this output is correct
+
+Return JSON format:
+{
+  "examples": [
+    { "input": "...", "output": "...", "explanation": "..." }
+  ]
+}`;
+
+        const userPrompt = `Title: ${title || 'Untitled Problem'}
+Description:
+${probText}
+
+Constraints:
+${constraints || 'None specified'}
+
+Input Format: ${input_format || 'Standard'}
+Output Format: ${output_format || 'Standard'}
+Judge Mode: ${judge_mode || 'STDIN_STDOUT'}
+${signature_metadata ? `Signature: ${JSON.stringify(signature_metadata)}` : ''}
+
+Generate 2-3 examples now.`;
+
+        const aiResult = await normalizationService.callAI(systemPrompt, userPrompt);
+        if (Array.isArray(aiResult?.examples) && aiResult.examples.length > 0) {
+          const cleanExamples = aiResult.examples
+            .filter(e => e && (e.input !== undefined || e.output !== undefined))
+            .map(e => ({
+              input: String(e.input ?? '').trim(),
+              output: String(e.output ?? '').trim(),
+              explanation: e.explanation ? String(e.explanation).trim() : '',
+            }))
+            .filter(e => e.input && e.output);
+
+          if (cleanExamples.length > 0) {
+            return res.status(200).json({
+              success: true,
+              source: 'ai',
+              examples: cleanExamples,
+            });
+          }
+        }
+      } catch (aiErr) {
+        logger.warn({ err: aiErr }, '[adminController.generateExamples] AI generation failed, falling back to parser');
+      }
+    }
+
+    // Fallback: Deterministic parser from description
+    if (probText) {
+      const parseResult = parseProblem(probText);
+      if (Array.isArray(parseResult?.parsed?.examples) && parseResult.parsed.examples.length > 0) {
+        const parsedExamples = parseResult.parsed.examples
+          .filter(e => e && e.input && e.output)
+          .map(e => ({
+            input: String(e.input).trim(),
+            output: String(e.output).trim(),
+            explanation: e.explanation ? String(e.explanation).trim() : '',
+          }));
+
+        if (parsedExamples.length > 0) {
+          return res.status(200).json({
+            success: true,
+            source: 'parsed',
+            examples: parsedExamples,
+          });
+        }
+      }
+    }
+
+    return res.status(200).json({
+      success: false,
+      source: 'none',
+      message: normalizationService.isAIConfigured()
+        ? 'Could not generate examples. Please provide more details in the description or add examples manually.'
+        : 'AI service is not configured and no examples were found in the description text. Please enter examples manually.',
+      examples: [],
+    });
+  } catch (err) {
     next(err);
   }
 };

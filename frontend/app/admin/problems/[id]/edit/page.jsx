@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { adminApi } from '../../../../../lib/adminApi';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import SignatureBuilder from '../../components/SignatureBuilder';
+import ExamplesEditor from '../../components/ExamplesEditor';
 import { JUDGE_MODES } from '../../../../../lib/typeSystem';
 
 export default function EditProblem() {
@@ -14,6 +15,16 @@ export default function EditProblem() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(null);
   const [validation, setValidation] = useState(null);
+
+  // Examples state
+  const [examples, setExamples] = useState([]);
+  const [examplesError, setExamplesError] = useState(null);
+  const [examplesHighlighted, setExamplesHighlighted] = useState(false);
+  const examplesRef = useRef(null);
+
+  // AI status
+  const [aiConfigured, setAiConfigured] = useState(false);
+  const [generatingExamples, setGeneratingExamples] = useState(false);
 
   // Reference solution state
   const [refSolution, setRefSolution] = useState(null);
@@ -32,7 +43,9 @@ export default function EditProblem() {
       adminApi.getProblem(id),
       adminApi.validateProblem(id).catch(() => null),
       adminApi.getReferenceSolution(id).catch(() => ({ data: null })),
-    ]).then(([probRes, valRes, refRes]) => {
+      adminApi.getTestCases(id).catch(() => ({ data: [] })),
+      adminApi.getAIStatus().catch(() => ({ data: { configured: false } })),
+    ]).then(([probRes, valRes, refRes, tcRes, aiRes]) => {
       const p = probRes.data;
       setForm({
         title: p.title || '',
@@ -50,6 +63,34 @@ export default function EditProblem() {
         judge_mode: p.judge_mode || JUDGE_MODES.STDIN_STDOUT,
         signature_metadata: p.signature_metadata || { name: '', params: [], returnType: 'Void' },
       });
+
+      // Populate examples: check examples_json, then sample test cases, then default to 1 empty card
+      if (Array.isArray(p.examples_json) && p.examples_json.length > 0) {
+        setExamples(p.examples_json.map((ex, i) => ({
+          id: 'ex-' + i,
+          input: ex.input || '',
+          output: ex.output || '',
+          explanation: ex.explanation || '',
+        })));
+      } else {
+        const sampleCases = (tcRes?.data || []).filter(tc => tc.is_sample);
+        if (sampleCases.length > 0) {
+          setExamples(sampleCases.map((tc, i) => ({
+            id: 'ex-tc-' + (tc.id || i),
+            input: tc.input || '',
+            output: tc.expected_output || '',
+            explanation: tc.explanation || '',
+          })));
+        } else {
+          // Display one empty Example card by default
+          setExamples([{ id: 'ex-1', input: '', output: '', explanation: '' }]);
+        }
+      }
+
+      if (aiRes?.data) {
+        setAiConfigured(!!aiRes.data.configured);
+      }
+
       if (valRes) setValidation(valRes);
       if (refRes.data) {
         setRefSolution(refRes.data);
@@ -72,12 +113,89 @@ export default function EditProblem() {
 
   const updateField = (field, value) => setForm(f => ({ ...f, [field]: value }));
 
+  const handleExamplesChange = (newExamples) => {
+    setExamples(newExamples);
+    const hasValid = newExamples.some(e => e.input.trim() && e.output.trim());
+    if (hasValid && examplesHighlighted) {
+      setExamplesHighlighted(false);
+      setExamplesError(null);
+    }
+  };
+
+  const handleGenerateExamples = async () => {
+    if (!form.title.trim() && !form.description.trim()) {
+      alert('Please enter a problem title or description first before generating examples.');
+      return;
+    }
+    setGeneratingExamples(true);
+    try {
+      const res = await adminApi.generateExamples({
+        title: form.title,
+        description: form.description,
+        constraints: form.constraints,
+        input_format: form.input_format,
+        output_format: form.output_format,
+        judge_mode: form.judge_mode,
+        signature_metadata: form.signature_metadata,
+      });
+
+      if (res.success && Array.isArray(res.examples) && res.examples.length > 0) {
+        const newCards = res.examples.map((ex, idx) => ({
+          id: 'ex-gen-' + Date.now() + '-' + idx,
+          input: ex.input || '',
+          output: ex.output || '',
+          explanation: ex.explanation || '',
+        }));
+
+        const hasOnlyEmptyCard = examples.length === 1 && !examples[0].input.trim() && !examples[0].output.trim();
+        if (hasOnlyEmptyCard) {
+          setExamples(newCards);
+        } else {
+          setExamples(prev => [...prev, ...newCards]);
+        }
+        setExamplesError(null);
+        setExamplesHighlighted(false);
+        alert(`Successfully generated ${newCards.length} example(s) (${res.source === 'ai' ? 'AI' : 'parsed from description'})!`);
+      } else {
+        alert(res.message || 'No examples could be generated.');
+      }
+    } catch (err) {
+      alert('Failed to generate examples: ' + err.message);
+    } finally {
+      setGeneratingExamples(false);
+    }
+  };
+
   const handleSave = async (publish = null) => {
+    // Client-side validation when attempting to publish: must have at least one example
+    if (publish === true) {
+      const validExamples = examples.filter(ex => ex && ex.input.trim() && ex.output.trim());
+      if (validExamples.length === 0) {
+        setExamplesError('Problem requires at least one example with both Input and Output before publishing.');
+        setExamplesHighlighted(true);
+        if (examplesRef.current) {
+          examplesRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+      setExamplesError(null);
+      setExamplesHighlighted(false);
+    }
+
     setSaving(true);
     try {
+      const formattedExamples = examples
+        .filter(ex => ex && (ex.input.trim() || ex.output.trim()))
+        .map(ex => ({
+          input: ex.input.trim(),
+          output: ex.output.trim(),
+          explanation: ex.explanation ? ex.explanation.trim() : '',
+        }));
+
       const payload = {
         ...form,
         tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        examples: formattedExamples,
       };
       if (publish !== null) payload.status = publish ? 'Published' : 'Draft';
       await adminApi.updateProblem(id, payload);
@@ -193,10 +311,10 @@ export default function EditProblem() {
             <button
               className="admin-btn admin-btn-primary"
               onClick={() => handleSave(true)}
-              disabled={saving || !canPublish}
-              title={canPublish ? 'Publish this problem' : 'Fix validation errors before publishing'}
+              disabled={saving}
+              title="Publish this problem"
             >
-              Publish
+              {saving ? 'Publishing...' : 'Publish'}
             </button>
           )}
         </div>
@@ -214,9 +332,30 @@ export default function EditProblem() {
         }}>
           <div style={{ color: '#f85149', fontWeight: 600, marginBottom: '6px' }}>⚠️ Cannot Publish — Fix the following:</div>
           <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)' }}>
-            {validation.errors.map((err, i) => (
-              <li key={i} style={{ marginBottom: '2px' }}>{err}</li>
-            ))}
+            {validation.errors.map((err, i) => {
+              const isExampleError = err.toLowerCase().includes('example');
+              return (
+                <li
+                  key={i}
+                  style={{
+                    marginBottom: '2px',
+                    cursor: isExampleError ? 'pointer' : 'default',
+                    color: isExampleError ? '#58a6ff' : undefined,
+                    textDecoration: isExampleError ? 'underline' : 'none',
+                  }}
+                  onClick={() => {
+                    if (isExampleError) {
+                      setExamplesHighlighted(true);
+                      examplesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  }}
+                  title={isExampleError ? 'Click to jump to Examples section' : undefined}
+                >
+                  {err}
+                  {isExampleError && ' ↗'}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -319,6 +458,18 @@ export default function EditProblem() {
           </div>
         </div>
       </div>
+
+      {/* ── Examples Section ────────────────────────────────────────────── */}
+      <ExamplesEditor
+        examples={examples}
+        onChange={handleExamplesChange}
+        error={examplesError}
+        isHighlighted={examplesHighlighted}
+        sectionRef={examplesRef}
+        onGenerateExamples={handleGenerateExamples}
+        generatingExamples={generatingExamples}
+        aiConfigured={aiConfigured}
+      />
 
       {/* ── Reference Solution Section ──────────────────────────────────── */}
       <div className="admin-section-card" style={{ marginTop: '28px' }}>

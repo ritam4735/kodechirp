@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { adminApi } from '../../../../lib/adminApi';
 import { useRouter } from 'next/navigation';
 import SignatureBuilder from '../components/SignatureBuilder';
+import ExamplesEditor from '../components/ExamplesEditor';
 import { JUDGE_MODES } from '../../../../lib/typeSystem';
 
 export default function NewProblem() {
@@ -16,20 +17,118 @@ export default function NewProblem() {
     judge_mode: JUDGE_MODES.STDIN_STDOUT, signature_metadata: { name: '', params: [], returnType: 'Void' },
   });
 
+  // Examples state
+  const [examples, setExamples] = useState([
+    { id: 'ex-1', input: '', output: '', explanation: '' },
+  ]);
+  const [examplesError, setExamplesError] = useState(null);
+  const [examplesHighlighted, setExamplesHighlighted] = useState(false);
+  const examplesRef = useRef(null);
+
+  // AI status
+  const [aiConfigured, setAiConfigured] = useState(false);
+  const [generatingExamples, setGeneratingExamples] = useState(false);
+
+  useEffect(() => {
+    adminApi.getAIStatus()
+      .then(res => setAiConfigured(!!res?.data?.configured))
+      .catch(() => setAiConfigured(false));
+  }, []);
+
   const updateField = (field, value) => setForm(f => ({ ...f, [field]: value }));
+
+  const handleExamplesChange = (newExamples) => {
+    setExamples(newExamples);
+    // Clear highlight if at least one example now has input and output
+    const hasValid = newExamples.some(e => e.input.trim() && e.output.trim());
+    if (hasValid && examplesHighlighted) {
+      setExamplesHighlighted(false);
+      setExamplesError(null);
+    }
+  };
+
+  const handleGenerateExamples = async () => {
+    if (!form.title.trim() && !form.description.trim()) {
+      alert('Please enter a problem title or description first before generating examples.');
+      return;
+    }
+    setGeneratingExamples(true);
+    try {
+      const res = await adminApi.generateExamples({
+        title: form.title,
+        description: form.description,
+        constraints: form.constraints,
+        input_format: form.input_format,
+        output_format: form.output_format,
+        judge_mode: form.judge_mode,
+        signature_metadata: form.signature_metadata,
+      });
+
+      if (res.success && Array.isArray(res.examples) && res.examples.length > 0) {
+        const newCards = res.examples.map((ex, idx) => ({
+          id: 'ex-gen-' + Date.now() + '-' + idx,
+          input: ex.input || '',
+          output: ex.output || '',
+          explanation: ex.explanation || '',
+        }));
+
+        const hasOnlyEmptyCard = examples.length === 1 && !examples[0].input.trim() && !examples[0].output.trim();
+        if (hasOnlyEmptyCard) {
+          setExamples(newCards);
+        } else {
+          setExamples(prev => [...prev, ...newCards]);
+        }
+        setExamplesError(null);
+        setExamplesHighlighted(false);
+        alert(`Successfully generated ${newCards.length} example(s) (${res.source === 'ai' ? 'AI' : 'parsed from description'})!`);
+      } else {
+        alert(res.message || 'No examples could be generated.');
+      }
+    } catch (err) {
+      alert('Failed to generate examples: ' + err.message);
+    } finally {
+      setGeneratingExamples(false);
+    }
+  };
 
   const handleSave = async (publish = false) => {
     if (!form.title.trim() || !form.description.trim()) {
       alert('Title and description are required');
       return;
     }
+
+    // Client-side validation for Publish: at least one example with input and output required
+    if (publish) {
+      const validExamples = examples.filter(ex => ex && ex.input.trim() && ex.output.trim());
+      if (validExamples.length === 0) {
+        setExamplesError('Problem requires at least one example with both Input and Output before publishing.');
+        setExamplesHighlighted(true);
+        if (examplesRef.current) {
+          examplesRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+      setExamplesError(null);
+      setExamplesHighlighted(false);
+    }
+
     setSaving(true);
     try {
+      const formattedExamples = examples
+        .filter(ex => ex && (ex.input.trim() || ex.output.trim()))
+        .map(ex => ({
+          input: ex.input.trim(),
+          output: ex.output.trim(),
+          explanation: ex.explanation ? ex.explanation.trim() : '',
+        }));
+
       const payload = {
         ...form,
         tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         status: publish ? 'Published' : 'Draft',
+        examples: formattedExamples,
       };
+
       const res = await adminApi.createProblem(payload);
       router.push(`/admin/problems/${res.data.id}/edit`);
     } catch (err) {
@@ -137,6 +236,18 @@ export default function NewProblem() {
           </div>
         </div>
       </div>
+
+      {/* Examples Section */}
+      <ExamplesEditor
+        examples={examples}
+        onChange={handleExamplesChange}
+        error={examplesError}
+        isHighlighted={examplesHighlighted}
+        sectionRef={examplesRef}
+        onGenerateExamples={handleGenerateExamples}
+        generatingExamples={generatingExamples}
+        aiConfigured={aiConfigured}
+      />
     </div>
   );
 }
