@@ -589,8 +589,8 @@ exports.createTestCase = async (req, res, next) => {
       req.params.id, 
       input, 
       expected_output, 
-      input_json ? JSON.stringify(input_json) : null,
-      expected_json ? JSON.stringify(expected_json) : null,
+      input_json != null ? JSON.stringify(input_json) : null,
+      expected_json != null ? JSON.stringify(expected_json) : null,
       is_sample || false, 
       explanation, 
       order_index || 0
@@ -666,8 +666,8 @@ exports.updateTestCase = async (req, res, next) => {
     `, [
       input, 
       expected_output, 
-      input_json ? JSON.stringify(input_json) : null,
-      expected_json ? JSON.stringify(expected_json) : null,
+      input_json != null ? JSON.stringify(input_json) : null,
+      expected_json != null ? JSON.stringify(expected_json) : null,
       is_sample, 
       explanation, 
       order_index, 

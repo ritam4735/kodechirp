@@ -32,6 +32,7 @@ class DockerService:
         submission_id: str,
         code: str,
         language: str,
+        is_submission: bool = True,
     ) -> Tuple[Optional[Path], Optional[ExecutionResult]]:
         """
         Prepare directory and optionally compile the code.
@@ -136,11 +137,12 @@ class DockerService:
                 combined_output += raw_stderr
 
             # Monitor compilation result
+            sub_id = submission_id if is_submission else None
             await monitor.compile_completed(
                 language=language,
                 exit_code=proc.returncode or 0,
                 duration_ms=elapsed_ms,
-                submission_id=submission_id,
+                submission_id=sub_id,
             )
 
             return run_dir, ExecutionResult(
@@ -178,6 +180,7 @@ class DockerService:
                 submission_id=submission_id,
                 code=code,
                 language=language,
+                is_submission=False,
             )
 
             if compile_result and compile_result.exitCode != 0:
@@ -193,6 +196,7 @@ class DockerService:
                 run_dir=run_dir,
                 submission_id=submission_id,
                 language=language,
+                is_submission=False,
             )
 
             if not container_name:
@@ -232,6 +236,7 @@ class DockerService:
         submission_id: str,
         language: str,
         memory_mb: int = 256,
+        is_submission: bool = True,
     ) -> Optional[str]:
         config = LANGUAGE_CONFIG.get(language)
         if not config:
@@ -268,29 +273,31 @@ class DockerService:
             stdout_bytes, stderr_bytes = await asyncio.wait_for(proc.communicate(), timeout=10.0)
             elapsed_ms = int((time.monotonic() - start_time) * 1000)
             
+            sub_id = submission_id if is_submission else None
             if proc.returncode != 0:
                 error_msg = stderr_bytes.decode('utf-8', errors='replace')
                 logger.error(f"Failed to start sandbox container: {error_msg}")
                 await monitor.container_start_failed(
                     error=error_msg[:500],
                     language=language,
-                    submission_id=submission_id,
+                    submission_id=sub_id,
                 )
                 return None
             
             await monitor.container_started(
                 container_name=container_name,
                 language=language,
-                submission_id=submission_id,
+                submission_id=sub_id,
                 duration_ms=elapsed_ms,
             )
             return container_name
         except Exception as e:
             logger.error(f"Error starting sandbox: {e}")
+            sub_id = submission_id if is_submission else None
             await monitor.container_start_failed(
                 error=str(e),
                 language=language,
-                submission_id=submission_id,
+                submission_id=sub_id,
             )
             return None
 

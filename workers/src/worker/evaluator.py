@@ -124,15 +124,17 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
         import uuid
         from src.utils.constants import LANGUAGE_CONFIG
 
+        from src.utils.assignment_parser import parse_assignment_input
+
         if is_batch:
             # --- BATCH EXECUTION ---
             # Prepare batch stdin (NDJSON)
             batch_inputs = []
             for tc in job.testCases:
-                try:
-                    parsed = json.loads(tc.input)
+                parsed = parse_assignment_input(tc.input, job.signatureMetadata)
+                if parsed is not None:
                     batch_inputs.append(json.dumps(parsed))
-                except Exception:
+                else:
                     batch_inputs.append(tc.input.replace("\n", ""))
             batch_stdin = "\n".join(batch_inputs) + "\n"
             use_sh_stdin = False

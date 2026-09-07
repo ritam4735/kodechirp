@@ -9,6 +9,7 @@ const db = require('../config/database');
 const config = require('../config');
 const { enqueueSubmission } = require('../queue/producer');
 const logger = require('../utils/logger');
+const { parseAssignmentInput } = require('../utils/assignmentParser');
 const { STATUS } = require('../utils/constants');
 const { recordSubmissionQueued, recordRunCode, recordWorkerUnreachable } = require('./monitorService');
 
@@ -68,8 +69,20 @@ async function submitCode({ problemId, code, language, userId }) {
       let inputStr = tc.input;
       let expectedStr = tc.expected_output;
       if (problem.judge_mode === 'FUNCTION') {
-        inputStr = typeof tc.input_json === 'string' ? tc.input_json : JSON.stringify(tc.input_json ?? {});
-        expectedStr = typeof tc.expected_json === 'string' ? tc.expected_json : JSON.stringify(tc.expected_json ?? null);
+        const sig = typeof problem.signature_metadata === 'string'
+          ? JSON.parse(problem.signature_metadata || '{}')
+          : (problem.signature_metadata || null);
+        if (tc.input_json != null) {
+          inputStr = typeof tc.input_json === 'string' ? tc.input_json : JSON.stringify(tc.input_json);
+        } else {
+          const parsed = parseAssignmentInput(tc.input, sig);
+          inputStr = parsed ? JSON.stringify(parsed) : tc.input;
+        }
+        if (tc.expected_json != null) {
+          expectedStr = typeof tc.expected_json === 'string' ? tc.expected_json : JSON.stringify(tc.expected_json);
+        } else {
+          expectedStr = tc.expected_output;
+        }
       }
       return {
         id: tc.id,
@@ -159,8 +172,17 @@ async function runCode({ code, language, stdin, problemId, judgeMode, signatureM
           let inputStr = tc.input;
           let expectedStr = tc.expected_output;
           if (effectiveJudgeMode === 'FUNCTION') {
-            inputStr = typeof tc.input_json === 'string' ? tc.input_json : (tc.input_json != null ? JSON.stringify(tc.input_json) : tc.input);
-            expectedStr = typeof tc.expected_json === 'string' ? tc.expected_json : (tc.expected_json != null ? JSON.stringify(tc.expected_json) : tc.expected_output);
+            if (tc.input_json != null) {
+              inputStr = typeof tc.input_json === 'string' ? tc.input_json : JSON.stringify(tc.input_json);
+            } else {
+              const parsed = parseAssignmentInput(tc.input, effectiveSignatureMetadata);
+              inputStr = parsed ? JSON.stringify(parsed) : tc.input;
+            }
+            if (tc.expected_json != null) {
+              expectedStr = typeof tc.expected_json === 'string' ? tc.expected_json : JSON.stringify(tc.expected_json);
+            } else {
+              expectedStr = tc.expected_output;
+            }
           }
           return {
             id: tc.id,

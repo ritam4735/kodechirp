@@ -119,40 +119,98 @@ function parseConstraintsBounds(constraintsJson, constraintsStr) {
   const bounds = {
     minVal: -100,
     maxVal: 100,
-    minLen: 0,
+    minLen: 1,
     maxLen: 100,
+    allowedValues: null,
   };
 
-  const text = (Array.isArray(constraintsJson) ? constraintsJson.join(' ') : '') + ' ' + (constraintsStr || '');
+  let text = (Array.isArray(constraintsJson) ? constraintsJson.join(' ') : '') + ' ' + (constraintsStr || '');
   if (!text.trim()) return bounds;
 
-  const rangeMatch = text.match(/(-?\d+(?:\^\d+)?)\s*(?:<=|<)\s*[^<=\n]+?\s*(?:<=|<)\s*(-?\d+(?:\^\d+)?)/i);
-  if (rangeMatch) {
-    const parseNum = (s) => {
-      if (s.includes('^')) {
-        const [b, e] = s.split('^').map(Number);
-        return Math.pow(b, e);
-      }
-      return parseInt(s, 10);
-    };
-    const low = parseNum(rangeMatch[1]);
-    const high = parseNum(rangeMatch[2]);
+  // Normalize LaTeX and unicode notation
+  text = text
+    .replace(/\\le\b/g, '<=')
+    .replace(/\\ge\b/g, '>=')
+    .replace(/\\leq\b/g, '<=')
+    .replace(/\\geq\b/g, '>=')
+    .replace(/≤/g, '<=')
+    .replace(/≥/g, '>=')
+    .replace(/\$/g, '')
+    .replace(/\{(\d+)\}/g, '$1');
+
+  const parseNum = (s) => {
+    if (!s) return NaN;
+    const str = s.trim().replace(/,/g, '');
+    if (str.includes('2^31-1') || str.includes('2^{31}-1')) return 2147483647;
+    if (str.includes('-2^31') || str.includes('-2^{31}')) return -2147483648;
+    if (str.includes('2^31') || str.includes('2^{31}')) return 2147483648;
+    if (str.includes('^')) {
+      const isNeg = str.startsWith('-');
+      const cleanStr = isNeg ? str.slice(1) : str;
+      const parts = cleanStr.split('^');
+      const b = Number(parts[0]);
+      const e = Number(parts[1]);
+      const val = Math.pow(b, e);
+      return isNeg ? -val : val;
+    }
+    return parseInt(str, 10);
+  };
+
+  // 1. Detect discrete value sets:
+  // e.g. x ∈ {0,1}, x in {0,1}, x belongs to {0,1}, x is either 0 or 1, values are 0 or 1, binary matrix, boolean matrix
+  const setMatch = text.match(/(?:in|belongs\s+to|\u2208)\s*\{\s*(-?\d+)\s*,\s*(-?\d+)\s*\}/i) ||
+                   text.match(/\{\s*(-?\d+)\s*,\s*(-?\d+)\s*\}/);
+  if (setMatch) {
+    const v1 = parseInt(setMatch[1], 10);
+    const v2 = parseInt(setMatch[2], 10);
+    if (!isNaN(v1) && !isNaN(v2)) {
+      bounds.allowedValues = [Math.min(v1, v2), Math.max(v1, v2)];
+      bounds.minVal = bounds.allowedValues[0];
+      bounds.maxVal = bounds.allowedValues[1];
+    }
+  } else if (
+    /(?:either\s+0\s+or\s+1|values\s+(?:are|in)\s+0\s+or\s+1|elements\s+(?:are|in)\s+0\s+or\s+1|binary\s+(?:matrix|grid|array|image|board)|boolean\s+(?:matrix|grid))/i.test(text)
+  ) {
+    bounds.allowedValues = [0, 1];
+    bounds.minVal = 0;
+    bounds.maxVal = 1;
+  }
+
+  // 2. Match Ranges: low <= var <= high
+  const rangeRegex = /(-?\d+(?:\^\d+)?)\s*(?:<=|<)\s*([a-zA-Z0-9_\[\]\.]+)\s*(?:<=|<)\s*(-?\d+(?:\^\d+)?)/gi;
+  let match;
+  while ((match = rangeRegex.exec(text)) !== null) {
+    const low = parseNum(match[1]);
+    const varName = match[2].toLowerCase();
+    const high = parseNum(match[3]);
+
     if (!isNaN(low) && !isNaN(high)) {
-      bounds.minVal = low;
-      bounds.maxVal = high;
+      if (
+        varName.includes('length') ||
+        varName.includes('len') ||
+        varName.includes('size') ||
+        varName === 'n' ||
+        varName === 'm' ||
+        varName === 'rows' ||
+        varName === 'cols' ||
+        varName === 'r' ||
+        varName === 'c'
+      ) {
+        if (low >= 0) bounds.minLen = low;
+        if (high > 0) bounds.maxLen = high;
+      } else {
+        if (!bounds.allowedValues) {
+          bounds.minVal = low;
+          bounds.maxVal = high;
+        }
+      }
     }
   }
 
-  const lenMatch = text.match(/(?:length|len|nodes|n|size|s)\s*(?:<=|<)\s*(\d+(?:\^\d+)?)/i);
-  if (lenMatch) {
-    const parseNum = (s) => {
-      if (s.includes('^')) {
-        const [b, e] = s.split('^').map(Number);
-        return Math.pow(b, e);
-      }
-      return parseInt(s, 10);
-    };
-    const maxL = parseNum(lenMatch[1]);
+  // 3. Fallback for single upper bound lengths: e.g. N <= 10 or length <= 100
+  const singleLenRegex = /(?:length|len|nodes|n|m|size|s)\s*(?:<=|<)\s*(\d+(?:\^\d+)?)/gi;
+  while ((match = singleLenRegex.exec(text)) !== null) {
+    const maxL = parseNum(match[1]);
     if (!isNaN(maxL) && maxL > 0) bounds.maxLen = maxL;
   }
 
@@ -281,37 +339,54 @@ function generateParamValue(type, category, idx, rng, bounds) {
   }
 
   if (normType === 'Matrix<Integer>' || normType === 'Matrix<Int>') {
-    if (category === 'min_edge') return [[]];
-    if (category === 'corner_case') return [[[1, 0], [0, 1]], [[0]]][idx % 2];
-    const rows = randInt(2, 6);
-    const cols = randInt(2, 6);
+    const genElem = () => {
+      if (bounds?.allowedValues && bounds.allowedValues.length > 0) {
+        return randChoice(bounds.allowedValues);
+      }
+      return randInt(bounds?.minVal ?? -10, bounds?.maxVal ?? 10);
+    };
+    const minDim = Math.max(1, bounds?.minLen ?? 1);
+    const maxDim = Math.min(Math.max(minDim, bounds?.maxLen ?? 6), 6);
+
+    if (category === 'min_edge') {
+      return Array.from({ length: minDim }, () => Array.from({ length: minDim }, genElem));
+    }
+    if (category === 'corner_case') {
+      const d = Math.max(minDim, 2);
+      return Array.from({ length: d }, () => Array.from({ length: d }, genElem));
+    }
+    const rows = randInt(minDim, maxDim);
+    const cols = randInt(minDim, maxDim);
     return Array.from({ length: rows }, () =>
-      Array.from({ length: cols }, () => randInt(-20, 20))
+      Array.from({ length: cols }, genElem)
     );
   }
 
   if (normType === 'Matrix<Float>') {
-    if (category === 'min_edge') return [[]];
-    const rows = randInt(2, 5);
-    const cols = randInt(2, 5);
+    const minDim = Math.max(1, bounds?.minLen ?? 1);
+    const maxDim = Math.min(Math.max(minDim, bounds?.maxLen ?? 5), 5);
+    const rows = category === 'min_edge' ? minDim : randInt(minDim, maxDim);
+    const cols = category === 'min_edge' ? minDim : randInt(minDim, maxDim);
     return Array.from({ length: rows }, () =>
       Array.from({ length: cols }, () => parseFloat((rng() * 10).toFixed(2)))
     );
   }
 
   if (normType === 'Matrix<String>') {
-    if (category === 'min_edge') return [[]];
-    const rows = randInt(2, 5);
-    const cols = randInt(2, 5);
+    const minDim = Math.max(1, bounds?.minLen ?? 1);
+    const maxDim = Math.min(Math.max(minDim, bounds?.maxLen ?? 5), 5);
+    const rows = category === 'min_edge' ? minDim : randInt(minDim, maxDim);
+    const cols = category === 'min_edge' ? minDim : randInt(minDim, maxDim);
     return Array.from({ length: rows }, () =>
       Array.from({ length: cols }, () => 'c' + randInt(1, 9))
     );
   }
 
   if (normType === 'Matrix<Boolean>') {
-    if (category === 'min_edge') return [[]];
-    const rows = randInt(2, 5);
-    const cols = randInt(2, 5);
+    const minDim = Math.max(1, bounds?.minLen ?? 1);
+    const maxDim = Math.min(Math.max(minDim, bounds?.maxLen ?? 5), 5);
+    const rows = category === 'min_edge' ? minDim : randInt(minDim, maxDim);
+    const cols = category === 'min_edge' ? minDim : randInt(minDim, maxDim);
     return Array.from({ length: rows }, () =>
       Array.from({ length: cols }, () => rng() > 0.5)
     );
@@ -338,10 +413,240 @@ function generateParamValue(type, category, idx, rng, bounds) {
   return randInt(0, 100);
 }
 
-function generateDeterministicInputs(problem, existingExamples = []) {
+// ── Generic Parameter Correlation ──────────────────────────────────────────
+
+function correlateFunctionParameters(inputObj, params, category, rng, bounds) {
+  const randInt = (min, max) => Math.floor(rng() * (max - min + 1)) + min;
+  const randChoice = (arr) => arr[Math.floor(rng() * arr.length)];
+
+  const matrixParam = params.find(p => p.type.startsWith('Matrix'));
+  const arrayParam = params.find(p => (p.type.startsWith('Array') || p.type === 'LinkedList') && !p.type.startsWith('Matrix'));
+  const intParams = params.filter(p => p.type === 'Integer' || p.type === 'Int' || p.type === 'Long');
+  const stringParam = params.find(p => p.type === 'String');
+
+  // A. Correlate Matrix<T> + Integer(s)
+  if (matrixParam && intParams.length > 0) {
+    const genMatrixElem = () => {
+      if (bounds?.allowedValues && bounds.allowedValues.length > 0) {
+        return randChoice(bounds.allowedValues);
+      }
+      return randInt(bounds?.minVal ?? -10, bounds?.maxVal ?? 10);
+    };
+
+    const minDim = Math.max(1, bounds?.minLen ?? 1);
+    const maxDim = Math.min(Math.max(minDim, bounds?.maxLen ?? 10), 10);
+
+    const dimKeywords = ['n', 'm', 'rows', 'row', 'r', 'cols', 'col', 'c', 'size', 'len', 'length', 'height', 'h', 'width', 'w', 'dim', 'dimension'];
+    const matchingIntParams = intParams.filter(p => dimKeywords.includes(p.name.toLowerCase()));
+
+    if (matchingIntParams.length === 1) {
+      // Single dimension param -> Square matrix N x N (e.g. maze,n / grid,n / matrix,n)
+      const nParam = matchingIntParams[0];
+      let n;
+      if (category === 'min_edge') n = minDim;
+      else if (category === 'max_edge') n = maxDim;
+      else if (category === 'random_small' || category === 'corner_case') n = randInt(minDim, Math.min(maxDim, minDim + 2));
+      else n = randInt(minDim, maxDim);
+
+      inputObj[nParam.name] = n;
+      inputObj[matrixParam.name] = Array.from({ length: n }, () =>
+        Array.from({ length: n }, genMatrixElem)
+      );
+    } else if (matchingIntParams.length >= 2) {
+      // Dual dimension params -> Rectangular matrix M x N (e.g. image,rows,cols / board,m,n)
+      const rowKeywords = ['rows', 'row', 'r', 'height', 'h', 'm'];
+      const colKeywords = ['cols', 'col', 'c', 'width', 'w', 'n'];
+
+      let rowParam = matchingIntParams.find(p => rowKeywords.includes(p.name.toLowerCase()));
+      let colParam = matchingIntParams.find(p => colKeywords.includes(p.name.toLowerCase()) && p !== rowParam);
+
+      if (!rowParam || !colParam) {
+        rowParam = matchingIntParams[0];
+        colParam = matchingIntParams[1];
+      }
+
+      let rCount, cCount;
+      if (category === 'min_edge') {
+        rCount = minDim;
+        cCount = minDim;
+      } else if (category === 'max_edge') {
+        rCount = maxDim;
+        cCount = maxDim;
+      } else {
+        rCount = randInt(minDim, maxDim);
+        cCount = randInt(minDim, maxDim);
+      }
+
+      inputObj[rowParam.name] = rCount;
+      inputObj[colParam.name] = cCount;
+      inputObj[matrixParam.name] = Array.from({ length: rCount }, () =>
+        Array.from({ length: cCount }, genMatrixElem)
+      );
+    } else {
+      // Matrix exists without explicit dimension param: ensure matrix is valid rectangular
+      const mat = inputObj[matrixParam.name];
+      if (Array.isArray(mat) && mat.length > 0) {
+        const colLen = Array.isArray(mat[0]) ? Math.max(1, mat[0].length) : minDim;
+        inputObj[matrixParam.name] = mat.map(row =>
+          Array.isArray(row) && row.length === colLen ? row : Array.from({ length: colLen }, genMatrixElem)
+        );
+      }
+    }
+  }
+
+  // B. Correlate Array<T> + Integer(s)
+  if (arrayParam && intParams.length > 0) {
+    const arrVal = inputObj[arrayParam.name];
+    for (const intP of intParams) {
+      const pNameLower = intP.name.toLowerCase();
+      if (['n', 'm', 'length', 'size', 'len'].includes(pNameLower)) {
+        inputObj[intP.name] = Array.isArray(arrVal) ? arrVal.length : 0;
+      } else if (['k', 'index', 'idx', 'pos'].includes(pNameLower)) {
+        if (Array.isArray(arrVal) && arrVal.length > 0) {
+          inputObj[intP.name] = randInt(0, arrVal.length - 1);
+        } else {
+          inputObj[intP.name] = 0;
+        }
+      } else if (['target', 'val', 'key', 'x'].includes(pNameLower)) {
+        if (Array.isArray(arrVal) && arrVal.length >= 2) {
+          if (category === 'adversarial') {
+            inputObj[intP.name] = 999999;
+          } else if (rng() > 0.3) {
+            const idx1 = randInt(0, arrVal.length - 1);
+            const idx2 = randInt(0, arrVal.length - 1);
+            if (idx1 !== idx2 && typeof arrVal[idx1] === 'number' && typeof arrVal[idx2] === 'number') {
+              inputObj[intP.name] = arrVal[idx1] + arrVal[idx2];
+            } else if (typeof arrVal[idx1] === 'number') {
+              inputObj[intP.name] = arrVal[idx1];
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // C. Correlate String + Integer
+  if (stringParam && intParams.length > 0) {
+    const sVal = inputObj[stringParam.name];
+    for (const intP of intParams) {
+      const pNameLower = intP.name.toLowerCase();
+      if (['k', 'count', 'len', 'n'].includes(pNameLower) && typeof sVal === 'string') {
+        inputObj[intP.name] = randInt(0, sVal.length);
+      }
+    }
+  }
+}
+
+// ── Pre-Execution Candidate Validator ──────────────────────────────────────
+
+function validateCandidateInput(candidate, problem, bounds) {
+  if (problem.judge_mode === 'STDIN_STDOUT') {
+    const raw = typeof candidate === 'string' ? candidate : candidate.input;
+    if (!raw || typeof raw !== 'string' || !raw.trim()) {
+      return { valid: false, reason: 'Empty STDIN candidate' };
+    }
+    return { valid: true };
+  }
+
+  // FUNCTION mode
+  const inputObj = candidate.input_json !== undefined ? candidate.input_json : candidate;
+  if (!inputObj || typeof inputObj !== 'object' || Array.isArray(inputObj)) {
+    return { valid: false, reason: 'input_json must be a non-null object' };
+  }
+
+  const sig = typeof problem.signature_metadata === 'string'
+    ? JSON.parse(problem.signature_metadata || '{}')
+    : (problem.signature_metadata || {});
+  const params = Array.isArray(sig.params) ? sig.params : [];
+
+  for (const p of params) {
+    if (!(p.name in inputObj)) {
+      return { valid: false, reason: `Missing parameter '${p.name}' in input_json` };
+    }
+    const val = inputObj[p.name];
+    const pType = p.type ? p.type.trim() : 'Integer';
+
+    if (pType.startsWith('Matrix<')) {
+      if (!Array.isArray(val) || val.length === 0) {
+        return { valid: false, reason: `Matrix parameter '${p.name}' must be a non-empty array of arrays` };
+      }
+      const numCols = val[0]?.length;
+      if (!Array.isArray(val[0]) || typeof numCols !== 'number' || numCols === 0) {
+        return { valid: false, reason: `Matrix '${p.name}' row 0 is not a non-empty array` };
+      }
+      for (let r = 0; r < val.length; r++) {
+        if (!Array.isArray(val[r]) || val[r].length !== numCols) {
+          return { valid: false, reason: `Matrix '${p.name}' is jagged (row ${r} length ${val[r]?.length} != ${numCols})` };
+        }
+      }
+      if (bounds?.allowedValues && bounds.allowedValues.length > 0) {
+        const allowedSet = new Set(bounds.allowedValues);
+        for (let r = 0; r < val.length; r++) {
+          for (let c = 0; c < numCols; c++) {
+            if (!allowedSet.has(val[r][c])) {
+              return { valid: false, reason: `Matrix cell [${r}][${c}] value ${val[r][c]} not in allowed set: [${bounds.allowedValues}]` };
+            }
+          }
+        }
+      }
+    } else if (pType.startsWith('Array<') || pType === 'LinkedList') {
+      if (!Array.isArray(val)) {
+        return { valid: false, reason: `Array parameter '${p.name}' must be an array, got ${typeof val}` };
+      }
+    } else if (pType === 'Integer' || pType === 'Int' || pType === 'Long') {
+      if (typeof val !== 'number' || !Number.isInteger(val)) {
+        return { valid: false, reason: `Integer parameter '${p.name}' must be an integer, got ${val}` };
+      }
+    } else if (pType === 'Boolean') {
+      if (typeof val !== 'boolean') {
+        return { valid: false, reason: `Boolean parameter '${p.name}' must be boolean, got ${typeof val}` };
+      }
+    } else if (pType === 'String') {
+      if (typeof val !== 'string') {
+        return { valid: false, reason: `String parameter '${p.name}' must be string, got ${typeof val}` };
+      }
+    }
+  }
+
+  // Cross-parameter correlation checks for Matrix
+  const matrixParam = params.find(p => p.type.startsWith('Matrix'));
+  if (matrixParam) {
+    const mat = inputObj[matrixParam.name];
+    const intParams = params.filter(p => p.type === 'Integer' || p.type === 'Int' || p.type === 'Long');
+    const dimKeywords = ['n', 'm', 'rows', 'row', 'r', 'cols', 'col', 'c', 'size', 'len', 'length', 'height', 'h', 'width', 'w', 'dim', 'dimension'];
+    const matchingIntParams = intParams.filter(p => dimKeywords.includes(p.name.toLowerCase()));
+
+    if (matchingIntParams.length === 1) {
+      const nVal = inputObj[matchingIntParams[0].name];
+      if (mat.length !== nVal || mat[0].length !== nVal) {
+        return {
+          valid: false,
+          reason: `Matrix dimension mismatch: expected ${nVal}x${nVal} for '${matchingIntParams[0].name}', got ${mat.length}x${mat[0].length}`,
+        };
+      }
+    } else if (matchingIntParams.length >= 2) {
+      const rowKeywords = ['rows', 'row', 'r', 'height', 'h', 'm'];
+      const colKeywords = ['cols', 'col', 'c', 'width', 'w', 'n'];
+      const rowP = matchingIntParams.find(p => rowKeywords.includes(p.name.toLowerCase())) || matchingIntParams[0];
+      const colP = matchingIntParams.find(p => colKeywords.includes(p.name.toLowerCase()) && p !== rowP) || matchingIntParams[1];
+      const rVal = inputObj[rowP.name];
+      const cVal = inputObj[colP.name];
+      if (mat.length !== rVal || mat[0].length !== cVal) {
+        return {
+          valid: false,
+          reason: `Matrix dimension mismatch: expected ${rVal}x${cVal}, got ${mat.length}x${mat[0].length}`,
+        };
+      }
+    }
+  }
+
+  return { valid: true };
+}
+
+function generateDeterministicInputs(problem, existingExamples = [], parsedBounds = null) {
   const seed = stringToSeed(problem.id || problem.title || 'kodechirp');
   const rng = createPRNG(seed);
-  const bounds = parseConstraintsBounds(problem.constraints_json, problem.constraints);
+  const bounds = parsedBounds || parseConstraintsBounds(problem.constraints_json, problem.constraints);
   const candidateTests = [];
 
   const categoriesPlan = [
@@ -374,68 +679,55 @@ function generateDeterministicInputs(problem, existingExamples = []) {
     const params = signature.params || [{ name: 'input', type: 'Integer' }];
 
     for (const exInput of parsedExamples) {
+      let parsed = null;
       if (typeof exInput === 'object' && exInput !== null) {
-        candidateTests.push({
-          input_json: exInput,
+        parsed = exInput;
+      } else if (typeof exInput === 'string') {
+        try {
+          parsed = JSON.parse(exInput);
+        } catch (e) {}
+      }
+      if (parsed) {
+        const candidate = {
+          input_json: parsed,
           category: 'corner_case',
           visibility: 'visible',
           description: 'Example case from problem specification',
-        });
-      } else if (typeof exInput === 'string') {
-        try {
-          const parsed = JSON.parse(exInput);
-          candidateTests.push({
-            input_json: parsed,
-            category: 'corner_case',
-            visibility: 'visible',
-            description: 'Example case from problem specification',
-          });
-        } catch (e) {}
+        };
+        const validation = validateCandidateInput(candidate, problem, bounds);
+        if (validation.valid) {
+          candidateTests.push(candidate);
+        }
       }
     }
 
     for (const plan of categoriesPlan) {
-      for (let i = 0; i < plan.count; i++) {
+      let generatedForPlan = 0;
+      let attempts = 0;
+      const maxAttempts = plan.count * 6;
+
+      while (generatedForPlan < plan.count && attempts < maxAttempts) {
+        attempts++;
         const inputObj = {};
 
         for (const param of params) {
-          inputObj[param.name] = generateParamValue(param.type, plan.category, i, rng, bounds);
+          inputObj[param.name] = generateParamValue(param.type, plan.category, attempts, rng, bounds);
         }
 
-        const arrayParam = params.find(p => p.type.startsWith('Array') || p.type === 'LinkedList');
-        const intParam = params.find(p => p.type === 'Integer' || p.type === 'Int');
+        correlateFunctionParameters(inputObj, params, plan.category, rng, bounds);
 
-        if (arrayParam && intParam) {
-          const arrVal = inputObj[arrayParam.name];
-          const paramNameLower = intParam.name.toLowerCase();
-
-          if (['n', 'm', 'length', 'size', 'len'].includes(paramNameLower)) {
-            inputObj[intParam.name] = Array.isArray(arrVal) ? arrVal.length : 0;
-          } else if (['target', 'val', 'k', 'key', 'x'].includes(paramNameLower)) {
-            if (Array.isArray(arrVal) && arrVal.length >= 2) {
-              if (plan.category === 'random_small' || plan.category === 'random_medium' || plan.category === 'corner_case') {
-                if (rng() > 0.3) {
-                  const idx1 = Math.floor(rng() * arrVal.length);
-                  let idx2 = Math.floor(rng() * arrVal.length);
-                  if (idx1 !== idx2 && typeof arrVal[idx1] === 'number' && typeof arrVal[idx2] === 'number') {
-                    inputObj[intParam.name] = arrVal[idx1] + arrVal[idx2];
-                  } else if (typeof arrVal[idx1] === 'number') {
-                    inputObj[intParam.name] = arrVal[idx1];
-                  }
-                }
-              } else if (plan.category === 'adversarial') {
-                inputObj[intParam.name] = 999999;
-              }
-            }
-          }
-        }
-
-        candidateTests.push({
+        const candidate = {
           input_json: inputObj,
           category: plan.category,
           visibility: plan.visibility,
-          description: `Deterministic ${plan.category} test case #${i + 1}`,
-        });
+          description: `Deterministic ${plan.category} test case #${generatedForPlan + 1}`,
+        };
+
+        const validation = validateCandidateInput(candidate, problem, bounds);
+        if (validation.valid) {
+          candidateTests.push(candidate);
+          generatedForPlan++;
+        }
       }
     }
   } else {
@@ -630,8 +922,11 @@ Generate ${totalCount} test cases with this distribution:
     }
   }
 
+  // Parse constraints bounds once for candidate generation and validation
+  const bounds = parseConstraintsBounds(problem.constraints_json, problem.constraints);
+
   // Generate deterministic candidates (either as primary generator or to supplement/fallback)
-  const deterministicCandidates = generateDeterministicInputs(problem, existingExamples.rows);
+  const deterministicCandidates = generateDeterministicInputs(problem, existingExamples.rows, bounds);
   logger.info({ problemId, generated: deterministicCandidates.length }, '[TestGen] Deterministic candidate inputs generated');
 
   if (candidateTests.length > 0) {
@@ -647,8 +942,17 @@ Generate ${totalCount} test cases with this distribution:
   const validTests = [];
 
   for (const tc of candidateTests) {
+    // Validate candidate before dispatching
+    const validation = validateCandidateInput(tc, problem, bounds);
+    if (!validation.valid) {
+      logger.warn({ reason: validation.reason }, '[TestGen] Dropping invalid candidate before execution');
+      continue;
+    }
+
     // Deduplicate based on whether it's STDIN or FUNCTION
-    const rawInput = problem.judge_mode === 'STDIN_STDOUT' ? tc.input : JSON.stringify(tc.input_json || tc.input);
+    const rawInput = problem.judge_mode === 'STDIN_STDOUT'
+      ? tc.input
+      : JSON.stringify(tc.input_json || tc.input);
     if (!rawInput || typeof rawInput !== 'string') continue;
 
     const normalizedInput = rawInput.trim();
@@ -658,7 +962,7 @@ Generate ${totalCount} test cases with this distribution:
     seenInputs.add(normalizedInput);
 
     validTests.push({
-      input: problem.judge_mode === 'STDIN_STDOUT' ? normalizedInput : null,
+      input: normalizedInput, // Dual storage non-null string
       input_json: problem.judge_mode !== 'STDIN_STDOUT' ? (tc.input_json || JSON.parse(normalizedInput)) : null,
       category: tc.category || 'random_small',
       visibility: tc.visibility || 'hidden',
@@ -692,10 +996,41 @@ Generate ${totalCount} test cases with this distribution:
         continue;
       }
 
+      const rawStdout = (result.stdout || '').trim();
+      let parsedJson = null;
+
+      if (problem.judge_mode !== 'STDIN_STDOUT') {
+        if (rawStdout) {
+          try {
+            parsedJson = JSON.parse(rawStdout);
+          } catch (_) {
+            const lines = rawStdout.split('\n');
+            for (let i = lines.length - 1; i >= 0; i--) {
+              try {
+                const candidate = JSON.parse(lines[i].trim());
+                if (candidate && typeof candidate === 'object' && 'result' in candidate) {
+                  parsedJson = candidate.result;
+                } else {
+                  parsedJson = candidate;
+                }
+                break;
+              } catch (_) {}
+            }
+          }
+        }
+        if (parsedJson === null && rawStdout !== '') {
+          parsedJson = rawStdout;
+        }
+      }
+
+      const outputStr = problem.judge_mode === 'STDIN_STDOUT'
+        ? rawStdout
+        : (parsedJson !== null && parsedJson !== undefined ? JSON.stringify(parsedJson) : rawStdout);
+
       processedTests.push({
         ...tc,
-        expectedOutput: problem.judge_mode === 'STDIN_STDOUT' ? result.stdout : null,
-        expectedJson: problem.judge_mode !== 'STDIN_STDOUT' ? (result.stdout ? JSON.parse(result.stdout) : null) : null,
+        expectedOutput: outputStr, // Dual storage non-null string
+        expectedJson: parsedJson,
         verified: true,
       });
     } catch (err) {
@@ -735,6 +1070,25 @@ Generate ${totalCount} test cases with this distribution:
   if (!dryRun && (visibleTests.length > 0 || hiddenTests.length > 0)) {
     const allTests = [...visibleTests, ...hiddenTests];
 
+    // Pre-DB insertion assertions to catch any serialization bug with explicit diagnostics
+    for (let i = 0; i < allTests.length; i++) {
+      const tc = allTests[i];
+      if (tc.input === null || tc.input === undefined) {
+        throw new Error(`[TestGen InternalError] test_case[${i}] 'input' is null/undefined (category: ${tc.category})`);
+      }
+      if (tc.expectedOutput === null || tc.expectedOutput === undefined) {
+        throw new Error(`[TestGen InternalError] test_case[${i}] 'expected_output' is null/undefined (category: ${tc.category})`);
+      }
+      if (problem.judge_mode !== 'STDIN_STDOUT') {
+        if (tc.input_json === null || tc.input_json === undefined) {
+          throw new Error(`[TestGen InternalError] test_case[${i}] 'input_json' is null/undefined (category: ${tc.category})`);
+        }
+        if (tc.expectedJson === null || tc.expectedJson === undefined) {
+          throw new Error(`[TestGen InternalError] test_case[${i}] 'expected_json' is null/undefined (category: ${tc.category})`);
+        }
+      }
+    }
+
     const maxOrderRes = await db.query(
       'SELECT COALESCE(MAX(order_index), -1) + 1 as next_idx FROM test_cases WHERE problem_id = $1',
       [problemId]
@@ -753,8 +1107,8 @@ Generate ${totalCount} test cases with this distribution:
         problemId,
         tc.input,
         tc.expectedOutput,
-        tc.input_json ? JSON.stringify(tc.input_json) : null,
-        tc.expectedJson ? JSON.stringify(tc.expectedJson) : null,
+        tc.input_json != null ? JSON.stringify(tc.input_json) : null,
+        tc.expectedJson != null ? JSON.stringify(tc.expectedJson) : null,
         tc.visibility === 'visible',
         orderIdx++,
         tc.category,
@@ -851,5 +1205,8 @@ function runQualityChecks(tests) {
 module.exports = {
   generateTests,
   isAIConfigured,
+  parseConstraintsBounds,
+  correlateFunctionParameters,
+  validateCandidateInput,
 };
 

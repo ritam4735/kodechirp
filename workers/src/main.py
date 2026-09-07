@@ -28,6 +28,7 @@ from src.api.monitoring import router as monitoring_router
 from src.models.submission import RunCodeRequest
 from src.utils.sanitizer import normalise_output
 from src.utils.batch_parser import parse_batch_outputs, parse_batch_segment, BATCH_DELIMITER
+from src.utils.assignment_parser import parse_assignment_input
 from src.utils.logger import logger
 
 
@@ -141,7 +142,10 @@ async def execute_code(request: RunCodeRequest):
             stdin_lines = []
             for tc in request.testCases:
                 raw_input = tc.get("input", "")
-                if isinstance(raw_input, dict):
+                parsed = parse_assignment_input(raw_input if isinstance(raw_input, str) else json.dumps(raw_input), request.signatureMetadata)
+                if parsed is not None:
+                    stdin_lines.append(json.dumps(parsed))
+                elif isinstance(raw_input, dict):
                     stdin_lines.append(json.dumps(raw_input))
                 else:
                     stdin_lines.append(str(raw_input).strip())
@@ -233,10 +237,16 @@ async def execute_code(request: RunCodeRequest):
                 detail=f"Wrapper generation failed: {str(e)}"
             )
 
+    single_stdin = request.stdin
+    if request.judgeMode == "FUNCTION" and request.stdin:
+        parsed_single = parse_assignment_input(str(request.stdin), request.signatureMetadata)
+        if parsed_single is not None:
+            single_stdin = json.dumps(parsed_single)
+
     result = await docker_service.execute_code(
         code=execution_code,
         language=request.language,
-        stdin=request.stdin,
+        stdin=single_stdin,
         timeout_ms=10000,
     )
 
