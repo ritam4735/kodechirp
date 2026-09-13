@@ -1,126 +1,164 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '../lib/api';
+import ParticleCanvas from '../components/landing/ParticleCanvas';
+import ParticleDebugPanel from '../components/landing/ParticleDebugPanel';
 
-function HeroSection() {
-  const router = useRouter();
+/**
+ * RevealText
+ * Splits text into words and characters with scroll-driven reveal.
+ * Characters smoothly transition from muted to sharp and fully visible.
+ */
+function RevealText({ text, scrollProgress }) {
+  const words = text.split(' ');
+  let charIndexCounter = 0;
+  const totalChars = text.replace(/\s/g, '').length;
+
   return (
-    <section className="hero" id="home">
-      <div className="bird-mascot" aria-hidden="true">
-        <svg viewBox="0 0 280 320" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <radialGradient id="bodyGrad" cx="40%" cy="40%" r="60%">
-              <stop offset="0%" stopColor="#a78bfa"/>
-              <stop offset="50%" stopColor="#6366f1"/>
-              <stop offset="100%" stopColor="#1e1b4b"/>
-            </radialGradient>
-            <radialGradient id="wingGrad" cx="30%" cy="30%" r="70%">
-              <stop offset="0%" stopColor="#7dd3fc"/>
-              <stop offset="40%" stopColor="#3b82f6"/>
-              <stop offset="100%" stopColor="#1e3a8a"/>
-            </radialGradient>
-            <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="rgba(99,102,241,0.6)"/>
-              <stop offset="100%" stopColor="rgba(99,102,241,0)"/>
-            </radialGradient>
-            <filter id="birdGlow">
-              <feGaussianBlur stdDeviation="6" result="blur"/>
-              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-            </filter>
-          </defs>
-          <ellipse cx="140" cy="160" rx="100" ry="80" fill="url(#glowGrad)" opacity="0.5"/>
-          <path d="M140,140 Q80,80 20,110 Q60,130 80,155 Q110,145 140,155 Z" fill="url(#wingGrad)" opacity="0.85"/>
-          <path d="M155,130 Q200,60 260,40 Q240,90 230,120 Q210,135 200,150 Q180,145 165,155 Z" fill="url(#wingGrad)" opacity="0.9"/>
-          <path d="M130,195 Q110,230 90,255 Q120,240 140,225 Q155,240 175,258 Q158,230 155,200 Z" fill="url(#wingGrad)" opacity="0.7"/>
-          <ellipse cx="148" cy="165" rx="38" ry="46" fill="url(#bodyGrad)" filter="url(#birdGlow)"/>
-          <ellipse cx="145" cy="178" rx="22" ry="26" fill="rgba(220,210,255,0.15)"/>
-          <circle cx="150" cy="120" r="30" fill="url(#bodyGrad)"/>
-          <circle cx="158" cy="116" r="7" fill="#1e1b4b"/>
-          <circle cx="158" cy="116" r="4" fill="#ffffff"/>
-          <circle cx="160" cy="114" r="2" fill="#1e1b4b"/>
-          <circle cx="162" cy="112" r="1" fill="rgba(255,255,255,0.8)"/>
-          <path d="M168,124 L185,130 L168,136 Z" fill="#fbbf24"/>
-          <path d="M168,124 L185,130 L176,130 Z" fill="#f59e0b"/>
-          <path d="M142,92 Q148,72 155,85 Q150,78 145,90 Z" fill="url(#wingGrad)" opacity="0.8"/>
-          <path d="M148,88 Q155,68 162,82 Q157,74 151,86 Z" fill="url(#wingGrad)" opacity="0.7"/>
-          <circle cx="148" cy="230" r="22" fill="none" stroke="rgba(147,197,253,0.4)" strokeWidth="1.5"/>
-          <circle cx="148" cy="230" r="18" fill="radial-gradient(circle, rgba(99,102,241,0.6), transparent)"/>
-          <circle cx="148" cy="230" r="16" fill="rgba(30,27,75,0.6)"/>
-          <circle cx="148" cy="230" r="10" fill="rgba(99,102,241,0.4)"/>
-          <circle cx="143" cy="225" r="4" fill="rgba(255,255,255,0.25)" style={{ rx: '50%' }}/>
-          <g opacity="0.8">
-            <circle cx="55" cy="95" r="2" fill="#a78bfa"/>
-            <circle cx="240" cy="75" r="2.5" fill="#7dd3fc"/>
-            <circle cx="250" cy="170" r="1.5" fill="#c4b5fd"/>
-            <circle cx="38" cy="155" r="1.5" fill="#93c5fd"/>
-            <path d="M70,70 L72,66 L74,70 L78,72 L74,74 L72,78 L70,74 L66,72 Z" fill="#e0e7ff" opacity="0.6"/>
-            <path d="M230,100 L232,96 L234,100 L238,102 L234,104 L232,108 L230,104 L226,102 Z" fill="#bfdbfe" opacity="0.5"/>
-          </g>
-        </svg>
+    <span className="kc-reveal-text">
+      {words.map((word, wIdx) => {
+        const chars = word.split('');
+        return (
+          <span key={wIdx} className="kc-reveal-word">
+            {chars.map((char, cIdx) => {
+              const myIdx = charIndexCounter++;
+              // As user scrolls from 0 to 0.15, characters progressively activate
+              // Even at 0 scroll, reveal progress activates initial characters
+              const charRatio = myIdx / Math.max(totalChars, 1);
+              const isRevealed = scrollProgress * 5 >= charRatio || scrollProgress < 0.01;
+
+              return (
+                <span
+                  key={cIdx}
+                  className={`kc-reveal-char ${isRevealed ? 'active' : 'muted'}`}
+                  style={{
+                    transitionDelay: `${(myIdx % 10) * 20}ms`,
+                  }}
+                >
+                  {char}
+                </span>
+              );
+            })}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+function HeroSection({ scrollProgress }) {
+  return (
+    <section className="kc-hero" id="home">
+      <div className="kc-kicker">
+        <span className="kc-kicker-dot" />
+        00 / SYSTEM CORE
       </div>
 
-      <div className="hero-badge">
-        <span className="hero-badge-icon">🌿</span>
-        Learn. Share. Grow.
-      </div>
-
-      <h1 className="hero-headline">
-        <span className="word-chirp">Chirp</span> your code.<br/>
-        <span className="word-inspire">Inspire</span> the world.
+      <h1 className="kc-headline">
+        <RevealText text="Turn problems into progress." scrollProgress={scrollProgress} />
       </h1>
 
-      <p className="hero-subtext">
-        KodeChirp is where developers learn together, share knowledge,
-        and grow through real conversations.
+      <p className="kc-subtext">
+        KodeChirp is an engineering-first platform designed for deep algorithmic understanding,
+        peer-driven reasoning, and building technical instinct.
       </p>
 
-      <div className="hero-cta-row">
-        <Link href="/questions" className="btn btn-primary">
-          🚀 Start Solving
+      <div className="kc-actions">
+        <Link href="/questions" className="kc-btn-primary">
+          Start Solving <span className="kc-btn-arrow">→</span>
         </Link>
-        <Link href="#about" className="btn btn-ghost">
-          About KodeChirp →
+        <Link href="#story" className="kc-btn-secondary">
+          Explore System
         </Link>
       </div>
 
-      <div className="hero-orb-container" id="heroOrb">
-        <div className="orb-glow-ring"></div>
-        <div className="orb-glow-ring"></div>
-        <div className="orb-glow-ring"></div>
-        <div className="hero-orb" onClick={() => router.push('/questions')}>
-          <span className="hero-orb-text">Explore<br/>Problems</span>
-          <span className="hero-orb-arrow">→</span>
-        </div>
+      <div className="kc-scroll-hint" aria-hidden="true">
+        <span className="kc-scroll-hint-bar" />
+        Scroll to observe computational progression
       </div>
-
-      <div className="hero-ground-glow"></div>
     </section>
   );
 }
 
-function StatsSection() {
+function StorySection() {
+  const [inViewSteps, setInViewSteps] = useState({ 0: true, 1: false, 2: false });
+  const containerRef = useRef(null);
+
+  const steps = [
+    {
+      num: '01',
+      tag: 'FORMATION: THINK',
+      title: 'Understand before you code.',
+      desc: 'Before writing syntax, explore the topology of the problem. Break down constraints, map invariants, and analyze branching decision paths.',
+      meta: 'TOPOLOGY: DECISION_TREE // COMPLEXITY: O(log N) // CONSTRAINTS: EVALUATED',
+    },
+    {
+      num: '02',
+      tag: 'FORMATION: CODE',
+      title: 'Turn intuition into structure.',
+      desc: 'Syntax is merely the formal expression of structured thought. Transform conceptual logic into clean, verifiable primitives.',
+      meta: 'TOPOLOGY: ABSTRACT_SYNTAX // INVARIANTS: VERIFIED // REDUCTION: COMPLETE',
+    },
+    {
+      num: '03',
+      tag: 'FORMATION: IMPROVE',
+      title: 'Every attempt sharpens your instinct.',
+      desc: 'Mastery is not binary. With each submission, you refine patterns, eliminate edge-case vulnerabilities, and internalize core algorithmic strategies.',
+      meta: 'TOPOLOGY: CONVERGENCE // FEEDBACK: IMMEDIATE // REINFORCEMENT: ACTIVE',
+    },
+  ];
+
+  useEffect(() => {
+    if (!containerRef.current || typeof IntersectionObserver === 'undefined') {
+      setInViewSteps({ 0: true, 1: true, 2: true });
+      return;
+    }
+
+    const stepElements = containerRef.current.querySelectorAll('.kc-story-step');
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const idx = entry.target.getAttribute('data-step-idx');
+            if (idx !== null) {
+              setInViewSteps((prev) => ({ ...prev, [idx]: true }));
+            }
+          }
+        });
+      },
+      { threshold: 0.25, rootMargin: '0px 0px -50px 0px' }
+    );
+
+    stepElements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section className="stats-section animate-in visible" id="statsSection">
-      <div className="stats-bar">
-        <div className="stat-item">
-          <span className="stat-number">1200+</span>
-          <div className="stat-label">Problems to Solve</div>
-        </div>
-        <div className="stat-item">
-          <span className="stat-number">48k</span>
-          <div className="stat-label">Developers Chirping</div>
-        </div>
-        <div className="stat-item">
-          <span className="stat-number">3600</span>
-          <div className="stat-label">Solutions Shared</div>
-        </div>
-        <div className="stat-item">
-          <span className="stat-number">92%</span>
-          <div className="stat-label">Satisfaction Rate</div>
-        </div>
+    <section className="kc-story-section" id="story" ref={containerRef}>
+      <div className="kc-container">
+        {steps.map((step, idx) => (
+          <div
+            key={step.num}
+            data-step-idx={idx}
+            className={`kc-story-step ${inViewSteps[idx] ? 'in-view' : ''}`}
+          >
+            <div className="kc-story-index-col">
+              <span className="kc-story-index">{step.num} / PROCESS</span>
+              <span className="kc-story-badge">{step.tag}</span>
+            </div>
+
+            <div className="kc-story-content">
+              <h2 className="kc-story-title">{step.title}</h2>
+              <p className="kc-story-desc">{step.desc}</p>
+              <div className="kc-story-meta">
+                <code>{step.meta}</code>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -128,58 +166,71 @@ function StatsSection() {
 
 function FeaturesSection() {
   const router = useRouter();
+
+  const features = [
+    {
+      num: '01',
+      title: 'Curated Challenges',
+      desc: 'Hand-crafted algorithmic challenges across data structures, graph theory, and dynamic programming.',
+      href: '/questions',
+    },
+    {
+      num: '02',
+      title: 'Peer Chirps',
+      desc: 'Post conceptual breakdowns, mental models, and alternative solutions for the developer flock.',
+      href: '/coming-soon/chirps',
+    },
+    {
+      num: '03',
+      title: 'Video Flights',
+      desc: 'High-density visual walkthroughs showing elite problem solvers thinking through complex algorithms.',
+      href: '/coming-soon/flights',
+    },
+    {
+      num: '04',
+      title: 'Focused Flocks',
+      desc: 'Small specialized cohorts that build, discuss, and tackle shared technical roadmaps.',
+      href: '/coming-soon/flocks',
+    },
+    {
+      num: '05',
+      title: 'The Nest',
+      desc: 'Bookmark core problem patterns and revisit your mental catalog for technical interviews.',
+      href: '/coming-soon/nest',
+    },
+  ];
+
   return (
-    <section className="features-section" id="features">
-      <div className="features-grid">
-        <div className="feature-card card-problems" style={{ '--card-delay': '0.05s' }} onClick={() => router.push('/questions')}>
-          <div className="feature-icon-wrap icon-problems">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <polyline points="16,18 22,12 16,6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-              <polyline points="8,6 2,12 8,18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <div className="feature-title">Solve Problems</div>
-          <div className="feature-desc">Sharpen your skills with curated challenges designed to level you up.</div>
+    <section className="kc-features-section" id="features">
+      <div className="kc-container">
+        <div className="kc-section-header">
+          <h2 className="kc-section-title">The Platform</h2>
+          <p className="kc-section-desc">
+            A minimalist workspace engineered for deliberate practice, deep comprehension, and peer collaboration.
+          </p>
         </div>
-        <div className="feature-card card-chirps" style={{ '--card-delay': '0.10s' }} onClick={() => router.push('/coming-soon/chirps')}>
-          <div className="feature-icon-wrap icon-chirps">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <div className="feature-title">Share Chirps</div>
-          <div className="feature-desc">Post your thoughts, solutions & ideas for the entire flock to see.</div>
-        </div>
-        <div className="feature-card card-flights" style={{ '--card-delay': '0.15s' }} onClick={() => router.push('/coming-soon/flights')}>
-          <div className="feature-icon-wrap icon-flights">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.2"/>
-              <polygon points="10,8 16,12 10,16 10,8" fill="currentColor"/>
-            </svg>
-          </div>
-          <div className="feature-title">Watch Flights</div>
-          <div className="feature-desc">Learn visually with short, powerful coding videos from top developers.</div>
-        </div>
-        <div className="feature-card card-flocks" style={{ '--card-delay': '0.20s' }} onClick={() => router.push('/coming-soon/flocks')}>
-          <div className="feature-icon-wrap icon-flocks">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
-              <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2.2"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <div className="feature-title">Join Flocks</div>
-          <div className="feature-desc">Be part of specialized communities that build and learn together.</div>
-        </div>
-        <div className="feature-card card-nest" style={{ '--card-delay': '0.25s' }} onClick={() => router.push('/coming-soon/nest')}>
-          <div className="feature-icon-wrap icon-nest">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <div className="feature-title">Save in Nest</div>
-          <div className="feature-desc">Bookmark your favorite content & revisit them later in your Nest.</div>
+
+        <div className="kc-features-list">
+          {features.map((feat) => (
+            <div
+              key={feat.num}
+              className="kc-feature-row"
+              onClick={() => router.push(feat.href)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  router.push(feat.href);
+                }
+              }}
+            >
+              <div className="kc-feature-num">{feat.num}</div>
+              <div className="kc-feature-title">{feat.title}</div>
+              <div className="kc-feature-desc">{feat.desc}</div>
+              <div className="kc-feature-arrow">→</div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -188,80 +239,143 @@ function FeaturesSection() {
 
 function ProblemsSection({ problems }) {
   const router = useRouter();
+  const [metricsInView, setMetricsInView] = useState(false);
+  const metricsCardRef = useRef(null);
+
+  useEffect(() => {
+    if (!metricsCardRef.current || typeof IntersectionObserver === 'undefined') {
+      setMetricsInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setMetricsInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.2 }
+    );
+
+    observer.observe(metricsCardRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   const renderDifficulty = (diff) => {
-    if (diff === 'Easy') return <span className="problem-difficulty diff-easy">Easy</span>;
-    if (diff === 'Hard') return <span className="problem-difficulty diff-hard">Hard</span>;
-    return <span className="problem-difficulty diff-medium">Medium</span>;
+    if (diff === 'Easy') return <span className="kc-diff-badge kc-diff-easy">Easy</span>;
+    if (diff === 'Hard') return <span className="kc-diff-badge kc-diff-hard">Hard</span>;
+    return <span className="kc-diff-badge kc-diff-medium">Medium</span>;
   };
 
   return (
-    <section className="problems-section" id="questions">
-      <div className="section-header animate-in visible">
-        <div className="section-badge">⚡ Challenge Yourself</div>
-        <h2 className="section-title">Curated <span style={{ background: 'linear-gradient(90deg,var(--neon-blue),var(--neon-cyan))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Problems</span></h2>
-        <p className="section-subtitle">Battle-tested challenges across algorithms, data structures, and system design.</p>
-      </div>
-
-      <div className="problems-container">
-        <div className="problems-list animate-in visible">
-          {problems.map((prob) => (
-            <div className="problem-row" key={prob.id} onClick={() => router.push(`/problems/${prob.slug}`)}>
-              <div className="problem-status"></div>
-              <div className="problem-title-col">
-                <div className="problem-name">{prob.title}</div>
-                <div className="problem-tags">
-                  <span className="problem-tag">Algorithm</span>
-                </div>
-              </div>
-              {renderDifficulty(prob.difficulty)}
-              <span className="problem-acceptance">{prob.acceptance_rate ? parseFloat(prob.acceptance_rate).toFixed(1) : 0}%</span>
-            </div>
-          ))}
-          {problems.length === 0 && <p className="text-center text-gray-500 py-8">Loading problems...</p>}
+    <section className="kc-problems-section" id="problems">
+      <div className="kc-container">
+        <div className="kc-section-header">
+          <h2 className="kc-section-title">Active Challenges</h2>
+          <p className="kc-section-desc">
+            Curated problem set from algorithmic fundamentals to advanced computational theory.
+          </p>
         </div>
 
-        {/* Sidebar */}
-        <div className="problems-sidebar animate-in visible" style={{ transitionDelay: '0.15s' }}>
-          <div className="sidebar-card">
-            <div className="sidebar-card-title">Your Progress</div>
-            <div className="progress-item">
-              <div className="progress-label">
-                <span style={{ color: '#4ade80' }}>Easy</span>
-                <span style={{ color: '#4ade80' }}>42 / 120</span>
+        <div className="kc-problems-grid">
+          <div className="kc-problems-table">
+            {problems.map((prob) => (
+              <div
+                className="kc-prob-row"
+                key={prob.id}
+                onClick={() => router.push(`/problems/${prob.slug}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    router.push(`/problems/${prob.slug}`);
+                  }
+                }}
+              >
+                <div className="kc-prob-dot" />
+                <div className="kc-prob-name">{prob.title}</div>
+                <div>{renderDifficulty(prob.difficulty)}</div>
+                <div className="kc-prob-rate">
+                  {prob.acceptance_rate ? parseFloat(prob.acceptance_rate).toFixed(1) : '0'}%
+                </div>
               </div>
-              <div className="progress-bar">
-                <div className="progress-fill pf-easy" style={{ width: '35%' }}></div>
+            ))}
+
+            {problems.length === 0 && (
+              <div style={{ padding: '32px', textAlign: 'center', color: 'var(--kc-text-muted)' }}>
+                Loading algorithmic challenges...
               </div>
-            </div>
-            <div className="progress-item">
-              <div className="progress-label">
-                <span style={{ color: 'var(--neon-gold)' }}>Medium</span>
-                <span style={{ color: 'var(--neon-gold)' }}>18 / 340</span>
-              </div>
-              <div className="progress-bar">
-                <div className="progress-fill pf-medium" style={{ width: '5.3%' }}></div>
-              </div>
-            </div>
-            <div className="progress-item">
-              <div className="progress-label">
-                <span style={{ color: '#f87171' }}>Hard</span>
-                <span style={{ color: '#f87171' }}>3 / 180</span>
-              </div>
-              <div className="progress-bar">
-                <div className="progress-fill pf-hard" style={{ width: '1.7%' }}></div>
-              </div>
-            </div>
+            )}
           </div>
 
-          <div className="sidebar-card daily-challenge-card">
-            <div className="sidebar-card-title">Daily Challenge</div>
-            <div style={{ fontSize: '14px', color: '#e2e8f0', marginBottom: '12px', lineHeight: '1.6', fontWeight: 500, textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
-              Minimum Window Substring — <span style={{ color: '#fca5a5', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>Hard</span>
+          <div className="kc-sidebar">
+            <div className="kc-card" ref={metricsCardRef}>
+              <div className="kc-card-title">Practice Metrics</div>
+
+              <div className="kc-metric-row">
+                <div className="kc-metric-label">
+                  <span style={{ color: '#10B981' }}>Easy</span>
+                  <span>42 / 120</span>
+                </div>
+                <div className="kc-bar-track">
+                  <div
+                    className="kc-bar-fill"
+                    style={{
+                      width: metricsInView ? '35%' : '0%',
+                      backgroundColor: '#10B981',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="kc-metric-row">
+                <div className="kc-metric-label">
+                  <span style={{ color: '#F59E0B' }}>Medium</span>
+                  <span>18 / 340</span>
+                </div>
+                <div className="kc-bar-track">
+                  <div
+                    className="kc-bar-fill"
+                    style={{
+                      width: metricsInView ? '5.3%' : '0%',
+                      backgroundColor: '#F59E0B',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="kc-metric-row">
+                <div className="kc-metric-label">
+                  <span style={{ color: '#EF4444' }}>Hard</span>
+                  <span>3 / 180</span>
+                </div>
+                <div className="kc-bar-track">
+                  <div
+                    className="kc-bar-fill"
+                    style={{
+                      width: metricsInView ? '1.7%' : '0%',
+                      backgroundColor: '#EF4444',
+                    }}
+                  />
+                </div>
+              </div>
             </div>
-            <Link href="/questions" className="btn btn-primary daily-challenge-btn" style={{ width: '100%', justifyContent: 'center', fontSize: '14px', padding: '12px', fontWeight: 700, boxShadow: '0 4px 15px rgba(120,60,240,0.6)' }}>
-              Attempt Today's Challenge 🎯
-            </Link>
+
+            <div className="kc-card">
+              <div className="kc-card-title">Daily Challenge</div>
+              <div style={{ fontSize: '13.5px', color: 'var(--kc-text-secondary)', marginBottom: '14px', lineHeight: 1.5 }}>
+                Minimum Window Substring — <strong style={{ color: '#EF4444' }}>Hard</strong>
+              </div>
+              <Link
+                href="/questions"
+                className="kc-btn-primary"
+                style={{ width: '100%', justifyContent: 'center', boxSizing: 'border-box' }}
+              >
+                Attempt Challenge <span className="kc-btn-arrow">🎯</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -271,49 +385,44 @@ function ProblemsSection({ problems }) {
 
 function FooterSection() {
   return (
-    <footer className="footer">
-      <div className="footer-inner">
-        <div>
-          <div className="footer-brand-title">KodeChirp</div>
-          <div className="footer-brand-desc">
-            A premium peer-to-peer coding platform. Learn, share, and grow with the developer flock.
+    <footer className="kc-footer">
+      <div className="kc-container">
+        <div className="kc-footer-inner">
+          <div>
+            <div className="kc-footer-brand">KodeChirp</div>
+            <p className="kc-footer-desc">
+              An engineering-focused platform for deep algorithmic practice and collaborative problem solving.
+            </p>
           </div>
-          <div className="footer-social">
-            <a href="#" className="social-btn">🐦</a>
-            <a href="#" className="social-btn">🐙</a>
-            <a href="#" className="social-btn">💼</a>
+
+          <div>
+            <div className="kc-footer-heading">Platform</div>
+            <Link href="/questions" className="kc-footer-link">Problems</Link>
+            <Link href="/coming-soon/chirps" className="kc-footer-link">Chirps</Link>
+            <Link href="/coming-soon/flights" className="kc-footer-link">Flights</Link>
+            <Link href="/coming-soon/flocks" className="kc-footer-link">Flocks</Link>
           </div>
-        </div>
-        <div>
-          <div className="footer-col-title">Platform</div>
-          <div className="footer-links">
-            <Link href="/questions" className="footer-link">Problems</Link>
-            <Link href="/coming-soon/chirps" className="footer-link">Chirps</Link>
-            <Link href="/coming-soon/flights" className="footer-link">Flights</Link>
-            <Link href="/coming-soon/flocks" className="footer-link">Flocks</Link>
+
+          <div>
+            <div className="kc-footer-heading">Resources</div>
+            <Link href="/about" className="kc-footer-link">Philosophy</Link>
+            <Link href="/blog" className="kc-footer-link">Engineering Blog</Link>
+            <Link href="/careers" className="kc-footer-link">Careers</Link>
           </div>
-        </div>
-        <div>
-          <div className="footer-col-title">Resources</div>
-          <div className="footer-links">
-            <Link href="/about" className="footer-link">About</Link>
-            <Link href="/blog" className="footer-link">Blog</Link>
-            <Link href="/careers" className="footer-link">Careers</Link>
-          </div>
-        </div>
-        <div>
-          <div className="footer-col-title">Legal</div>
-          <div className="footer-links">
-            <Link href="/privacy" className="footer-link">Privacy Policy</Link>
-            <Link href="/terms" className="footer-link">Terms of Service</Link>
+
+          <div>
+            <div className="kc-footer-heading">Legal</div>
+            <Link href="/privacy" className="kc-footer-link">Privacy Policy</Link>
+            <Link href="/terms" className="kc-footer-link">Terms of Service</Link>
           </div>
         </div>
-      </div>
-      <div className="footer-bottom">
-        <div className="footer-copy">© 2026 KodeChirp. All rights reserved.</div>
-        <div className="footer-bottom-links">
-          <Link href="#" className="footer-bottom-link">Status</Link>
-          <Link href="#" className="footer-bottom-link">Security</Link>
+
+        <div className="kc-footer-bottom">
+          <div>© 2026 KodeChirp. Designed for engineering precision.</div>
+          <div style={{ display: 'flex', gap: '18px' }}>
+            <Link href="/status" className="kc-footer-link" style={{ margin: 0 }}>System Status</Link>
+            <Link href="/security" className="kc-footer-link" style={{ margin: 0 }}>Security</Link>
+          </div>
         </div>
       </div>
     </footer>
@@ -322,28 +431,45 @@ function FooterSection() {
 
 export default function HomePage() {
   const [problems, setProblems] = useState([]);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const engineRef = useRef(null);
 
   useEffect(() => {
-    // Fetch top 8 problems
-    api.getProblems().then(data => {
-      if (data && data.problems) {
-        setProblems(data.problems.slice(0, 8));
-      }
-    }).catch(console.error);
+    // Fetch problems
+    api.getProblems()
+      .then((data) => {
+        if (data && data.problems) {
+          setProblems(data.problems.slice(0, 8));
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch problems:', err);
+      });
+
+    // Track scroll progress for typography and narrative
+    const handleScroll = () => {
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = scrollHeight > 0 ? window.scrollY / scrollHeight : 0;
+      setScrollProgress(progress);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <div className="landing-page-wrapper">
-      <div className="scroll-progress" id="scrollProgress"></div>
-      <div className="cursor-glow" id="cursorGlow"></div>
+    <div className="kc-landing">
+      {/* ── Fixed Particle Canvas ── */}
+      <ParticleCanvas engineRef={engineRef} />
 
-      <div className="bg-universe" style={{ backgroundImage: "url('/background.jpeg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
-      </div>
+      {/* ── Interactive Debug / Formation Tester ── */}
+      <ParticleDebugPanel engineRef={engineRef} />
 
-      <div className="bubbles-container" id="bubblesContainer"></div>
-
-      <HeroSection />
-      <StatsSection />
+      {/* ── Editorial Homepage Sections ── */}
+      <HeroSection scrollProgress={scrollProgress} />
+      <StorySection />
       <FeaturesSection />
       <ProblemsSection problems={problems} />
       <FooterSection />

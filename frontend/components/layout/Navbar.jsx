@@ -4,14 +4,15 @@ import Link from 'next/link';
 import { useAuth } from '../../hooks/useAuth';
 import { usePathname } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
+import ThemeSwitcher from './ThemeSwitcher';
 
 const NAV_ITEMS = [
-  { label: 'Home',      href: '/' },
+  { label: 'Home', href: '/' },
   { label: 'Questions', href: '/questions' },
-  { label: 'Chirps',    href: '/coming-soon/chirps' },
-  { label: 'Flights',   href: '/coming-soon/flights' },
-  { label: 'Flocks',    href: '/coming-soon/flocks' },
-  { label: 'Nest',      href: '/coming-soon/nest' },
+  { label: 'Chirps', href: '/coming-soon/chirps' },
+  { label: 'Flights', href: '/coming-soon/flights' },
+  { label: 'Flocks', href: '/coming-soon/flocks' },
+  { label: 'Nest', href: '/coming-soon/nest' },
 ];
 
 export const Navbar = () => {
@@ -21,7 +22,7 @@ export const Navbar = () => {
   const menuRef = useRef(null);
 
   const [mounted, setMounted] = useState(false);
-  
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -64,7 +65,6 @@ export const Navbar = () => {
       <Link href="/" className="nav-logo">
         <div className="nav-logo-icon">&lt;/&gt;</div>
         <span className="nav-logo-text">Kode<span>Chirp</span></span>
-        <span className="nav-logo-leaf">🌿</span>
       </Link>
 
       <div className="nav-links">
@@ -82,7 +82,10 @@ export const Navbar = () => {
 
       <div className="nav-spacer"></div>
 
-      {mounted ? (
+      <div className="nav-actions-group" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <ThemeSwitcher />
+
+        {mounted ? (
         isAuthenticated ? (
           <div className="nav-user-container" ref={menuRef} style={{ position: 'relative' }}>
             <div
@@ -150,6 +153,7 @@ export const Navbar = () => {
       ) : (
         <div style={{ width: '90px', height: '36px' }}></div>
       )}
+      </div>
     </nav>
   );
 };

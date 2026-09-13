@@ -14,7 +14,7 @@ module.exports = {
       colors: {
         // KodeChirp custom palette
         chirp: {
-          50:  '#f0fdf4',
+          50: '#f0fdf4',
           100: '#dcfce7',
           200: '#bbf7d0',
           300: '#86efac',
@@ -26,7 +26,7 @@ module.exports = {
           900: '#14532d',
         },
         ink: {
-          50:  '#f8fafc',
+          50: '#f8fafc',
           100: '#f1f5f9',
           200: '#e2e8f0',
           300: '#cbd5e1',
@@ -40,26 +40,26 @@ module.exports = {
         },
       },
       animation: {
-        'fade-in':     'fadeIn 0.3s ease-out',
-        'slide-up':    'slideUp 0.3s ease-out',
-        'pulse-soft':  'pulseSoft 5s ease-in-out infinite',
-        'shimmer':     'shimmer 5s linear infinite',
+        'fade-in': 'fadeIn 0.3s ease-out',
+        'slide-up': 'slideUp 0.3s ease-out',
+        'pulse-soft': 'pulseSoft 5s ease-in-out infinite',
+        'shimmer': 'shimmer 5s linear infinite',
       },
       keyframes: {
         fadeIn: {
-          '0%':   { opacity: '0' },
+          '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
         slideUp: {
-          '0%':   { opacity: '0', transform: 'translateY(8px)' },
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         pulseSoft: {
           '0%, 100%': { opacity: '1' },
-          '50%':      { opacity: '0.45' },
+          '50%': { opacity: '0.45' },
         },
         shimmer: {
-          '0%':   { backgroundPosition: '200% center' },
+          '0%': { backgroundPosition: '200% center' },
           '100%': { backgroundPosition: '-200% center' },
         },
       },

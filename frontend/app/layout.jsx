@@ -7,6 +7,7 @@ import '../styles/admin.css';
 import { Navbar } from '../components/layout/Navbar';
 import { useAuth } from '../hooks/useAuth';
 import { useEffect } from 'react';
+import { initTheme } from '../lib/theme';
 
 const syne = Syne({ subsets: ['latin'], variable: '--font-display' });
 const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-body' });
@@ -17,14 +18,32 @@ export default function RootLayout({ children }) {
 
   useEffect(() => {
     initAuth();
+    initTheme();
   }, []);
 
   return (
     <html lang="en" suppressHydrationWarning className="dark">
       <head>
-        <title>KodeChirp — Learn Through Peers</title>
-        <meta name="description" content="Solve coding problems and learn through peer explanations." />
+        <title>KodeChirp — Turn Problems into Progress</title>
+        <meta name="description" content="KodeChirp is a developer platform designed for deep algorithmic understanding and peer learning." />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function() {
+              try {
+                var pref = localStorage.getItem('kc_theme') || 'system';
+                var isDark = pref === 'dark' || (pref === 'system' && window.matchMedia && !window.matchMedia('(prefers-color-scheme: light)').matches);
+                var active = isDark ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', active);
+                if (isDark) {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              } catch (e) {}
+            })();`,
+          }}
+        />
       </head>
       <body className={`${dmSans.variable} ${syne.variable} ${jetbrainsMono.variable} antialiased`}>
         <div className="min-h-screen flex flex-col">
