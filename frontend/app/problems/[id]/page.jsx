@@ -20,7 +20,7 @@ import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'reac
 export default function ProblemPage() {
   const { id } = useParams();
   const { currentProblem, isLoading, fetchProblemDetails } = useProblem();
-  const { output, verdict, resetConsole } = useEditor();
+  const { resetConsole } = useEditor();
 
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
@@ -53,8 +53,6 @@ export default function ProblemPage() {
     );
   }
 
-  const showConsole = !!(output || verdict);
-
   return (
     <div className="flex-1 flex flex-col p-4 pt-[84px] bg-transparent min-h-screen">
       
@@ -74,7 +72,7 @@ export default function ProblemPage() {
             <div className="flex-1 min-h-0">
               {activeTab === 'description' && <LeftPanelContent currentProblem={currentProblem} />}
               {activeTab === 'editor' && <EditorContent problemId={currentProblem.id} />}
-              {activeTab === 'tests' && <BottomContent testCases={currentProblem.testCases} showConsole={showConsole} problem={currentProblem} />}
+              {activeTab === 'tests' && <BottomContent testCases={currentProblem.testCases} problem={currentProblem} />}
             </div>
           </div>
         ) : (
@@ -94,7 +92,7 @@ export default function ProblemPage() {
                 <ResizeHandle direction="vertical" />
 
                 <Panel defaultSize={25} minSize={15} className="flex flex-col min-h-0">
-                  <BottomContent testCases={currentProblem.testCases} showConsole={showConsole} problem={currentProblem} />
+                  <BottomContent testCases={currentProblem.testCases} problem={currentProblem} />
                 </Panel>
               </PanelGroup>
             </Panel>
@@ -185,48 +183,44 @@ const EditorContent = ({ problemId }) => {
 };
 
 // Bottom Content (Tests & Console)
-const BottomContent = ({ testCases, showConsole, problem }) => {
-  const [tab, setTab] = useState('tests');
-
-  useEffect(() => {
-    if (showConsole) {
-      setTab('console');
-    }
-  }, [showConsole]);
+const BottomContent = ({ testCases, problem }) => {
+  const { activePanel, setActivePanel, output, verdict, execution } = useEditor();
+  const isConsole = activePanel === 'console';
+  const hasConsoleContent = Boolean(output || verdict || execution?.error);
 
   return (
     <div className="flex flex-col h-full bg-[#0d1117]/80 border border-white/10 rounded-2xl backdrop-blur-xl shadow-lg overflow-hidden min-h-0">
       <div className="flex items-center gap-2 px-4 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
         <button
-          onClick={() => setTab('tests')}
+          onClick={() => setActivePanel('testcases')}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-            tab === 'tests'
+            !isConsole
               ? 'bg-[#22c55e]/15 text-[#22c55e] border border-[#22c55e]/30'
               : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-white/5 border border-transparent'
           }`}
         >
-          <FileCheck size={14} className={tab === 'tests' ? 'text-[#22c55e]' : 'text-[#8b949e]'} />
+          <FileCheck size={14} className={!isConsole ? 'text-[#22c55e]' : 'text-[#8b949e]'} />
           <span>Test Cases</span>
         </button>
 
         <button
-          onClick={() => setTab('console')}
+          onClick={() => setActivePanel('console')}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors relative cursor-pointer ${
-            tab === 'console'
+            isConsole
               ? 'bg-[#58a6ff]/15 text-[#58a6ff] border border-[#58a6ff]/30'
               : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-white/5 border border-transparent'
           }`}
         >
-          <Terminal size={14} className={tab === 'console' ? 'text-[#58a6ff]' : 'text-[#8b949e]'} />
+          <Terminal size={14} className={isConsole ? 'text-[#58a6ff]' : 'text-[#8b949e]'} />
           <span>Console</span>
-          {showConsole && tab !== 'console' && (
+          {hasConsoleContent && !isConsole && (
             <span className="w-1.5 h-1.5 rounded-full bg-[#58a6ff] animate-pulse" />
           )}
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-5">
-        {tab === 'tests' ? (
+        {!isConsole ? (
           <TestCases testCases={testCases} problem={problem} />
         ) : (
           <ConsolePanel />

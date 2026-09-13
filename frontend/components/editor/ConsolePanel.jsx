@@ -4,12 +4,13 @@ import { formatInput, formatOutput } from '../../lib/testCaseFormatter';
 import { Terminal, CheckCircle2, XCircle } from 'lucide-react';
 
 export const ConsolePanel = () => {
-  const { output, verdict } = useEditor();
+  const { output, verdict, execution } = useEditor();
   const { currentProblem } = useProblemStore();
   const signature = currentProblem?.signature_metadata;
   const returnType = signature?.returnType;
 
-  if (!output && !verdict) return null;
+  const isRunning = execution?.status === 'running';
+  const errorMessage = output || execution?.error;
 
   const isAccepted = verdict?.verdict === 'Accepted';
   const hasFailedDetails = Boolean(
@@ -19,7 +20,15 @@ export const ConsolePanel = () => {
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-transparent relative">
       <div className="flex-1 p-2 overflow-y-auto font-mono text-sm custom-scrollbar">
-        {verdict && (
+        {isRunning && (
+          <div className="flex flex-col items-center justify-center py-12 text-center text-[#8b949e]">
+            <div className="w-6 h-6 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin mb-3" />
+            <p className="text-sm font-medium text-[#c9d1d9]">Executing code...</p>
+            <p className="text-xs mt-1 text-[#8b949e]">Running against test suite in sandbox</p>
+          </div>
+        )}
+
+        {!isRunning && verdict && (
           <div
             className={`mb-4 bg-white/[0.02] p-5 rounded-xl border shadow-lg backdrop-blur-sm ${
               isAccepted ? 'border-emerald-500/20' : 'border-rose-500/20'
@@ -106,10 +115,27 @@ export const ConsolePanel = () => {
             )}
           </div>
         )}
-        {output && !verdict && (
-          <pre className="text-[#e6edf3] whitespace-pre-wrap font-mono leading-relaxed bg-black/40 p-4 rounded-xl border border-white/5">
-            {output}
-          </pre>
+
+        {!isRunning && !verdict && errorMessage && (
+          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2.5 text-xs font-semibold text-rose-400">
+              <XCircle size={15} className="text-rose-400 shrink-0" />
+              <span>Execution / Compiler Error</span>
+            </div>
+            <pre className="text-rose-300 text-xs font-mono leading-relaxed bg-black/50 p-3.5 rounded-lg border border-rose-500/10 whitespace-pre-wrap overflow-x-auto">
+              {errorMessage}
+            </pre>
+          </div>
+        )}
+
+        {!isRunning && !verdict && !errorMessage && (
+          <div className="flex flex-col items-center justify-center py-12 text-center text-[#8b949e]">
+            <Terminal size={32} className="mb-2 text-[#58a6ff]/40" />
+            <p className="text-sm font-medium text-[#c9d1d9]">No console output</p>
+            <p className="text-xs mt-1 text-[#8b949e] max-w-sm">
+              Run your code to execute test cases or submit a solution to view diagnostics and verdicts.
+            </p>
+          </div>
         )}
       </div>
     </div>

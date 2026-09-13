@@ -36,35 +36,53 @@ export const useEditor = () => {
   const code = store.codes[cacheKey] ?? defaultCode;
 
   const handleRunCode = async () => {
-    store.setIsExecuting(true);
-    store.resetConsole();
+    const reqId = store.startExecution();
     try {
       const result = await api.runCode(code, language, '', currentProblem?.id, judgeMode, signature);
-      if (result.testCaseResults && result.testCaseResults.length > 0) {
-        store.setTestCaseResults(result.testCaseResults);
-        if (result.compileError || result.stderr) {
-          store.setOutput(result.compileError || result.stderr);
-        }
+      
+      // Discard stale responses if a newer execution started
+      if (reqId !== useEditorStore.getState().requestId) {
+        return;
+      }
+
+      const hasCompileError = Boolean(result.compileError);
+      const isExitError = result.exitCode !== undefined && result.exitCode !== 0;
+      const isExplicitError = Boolean(result.error && (!result.testCaseResults || result.testCaseResults.length === 0));
+
+      if (hasCompileError || isExitError || isExplicitError) {
+        const errorMsg = result.compileError || result.stderr || result.output || (result.error ? 'Error: execution failed' : 'Execution failed');
+        store.setExecutionError(reqId, errorMsg);
+      } else if (result.testCaseResults && result.testCaseResults.length > 0) {
+        store.setExecutionSuccess(reqId, result.testCaseResults);
       } else {
-        store.setOutput(result.stdout || result.output || result.stderr || (result.error ? 'Error: execution failed' : 'No output'));
+        if (result.stderr && !result.stdout) {
+          store.setExecutionError(reqId, result.stderr);
+        } else {
+          store.setExecutionSuccess(reqId, []);
+          store.setOutput(result.stdout || result.output || 'Execution completed with no output');
+          store.setActivePanel('console');
+        }
       }
     } catch (error) {
-      store.setOutput(`Failed to execute code: ${error.message}`);
-    } finally {
-      store.setIsExecuting(false);
+      if (reqId === useEditorStore.getState().requestId) {
+        store.setExecutionError(reqId, `Failed to execute code: ${error.message}`);
+      }
     }
   };
 
   const handleSubmitCode = async (probId) => {
-    store.setIsExecuting(true);
-    store.resetConsole();
+    const reqId = store.startExecution();
+    store.setActivePanel('console');
     try {
       const result = await api.submitCode(probId, code, language);
-      store.setVerdict(result);
+      if (reqId === useEditorStore.getState().requestId) {
+        store.setVerdict(result);
+        store.setIsExecuting(false);
+      }
     } catch (error) {
-      store.setOutput(`Failed to submit code: ${error.message}`);
-    } finally {
-      store.setIsExecuting(false);
+      if (reqId === useEditorStore.getState().requestId) {
+        store.setExecutionError(reqId, `Failed to submit code: ${error.message}`);
+      }
     }
   };
 

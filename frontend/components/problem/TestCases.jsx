@@ -5,7 +5,7 @@ import { formatInput, formatOutput } from '../../lib/testCaseFormatter';
 import { Check, Copy, CheckCircle2, XCircle, LayoutGrid, Layers } from 'lucide-react';
 
 export const TestCases = ({ testCases: propTestCases, problem: propProblem }) => {
-  const { testCaseResults } = useEditorStore();
+  const { testCaseResults, execution } = useEditorStore();
   const { currentProblem } = useProblemStore();
   const problem = propProblem || currentProblem;
   const signature = problem?.signature_metadata;
@@ -15,8 +15,10 @@ export const TestCases = ({ testCases: propTestCases, problem: propProblem }) =>
   const [viewAll, setViewAll] = useState(false);
   const [copiedKey, setCopiedKey] = useState(null);
 
-  const isResultMode = Boolean(testCaseResults && testCaseResults.length > 0);
-  const rawList = isResultMode ? testCaseResults : (propTestCases || problem?.testCases || []);
+  const isRunning = execution?.status === 'running';
+  const effectiveResults = testCaseResults || execution?.results;
+  const isResultMode = Boolean(effectiveResults && effectiveResults.length > 0);
+  const rawList = isResultMode ? effectiveResults : (propTestCases || problem?.testCases || []);
 
   // Ensure active tab is within bounds
   useEffect(() => {
@@ -85,7 +87,12 @@ export const TestCases = ({ testCases: propTestCases, problem: propProblem }) =>
 
         {/* Right side controls: View Mode toggle & Overall Verdict Summary */}
         <div className="flex items-center gap-3 ml-auto">
-          {isResultMode && (
+          {isRunning ? (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/30 animate-pulse">
+              <div className="w-2.5 h-2.5 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin" />
+              <span>Running...</span>
+            </div>
+          ) : isResultMode ? (
             <div
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
                 allPassed
@@ -98,7 +105,7 @@ export const TestCases = ({ testCases: propTestCases, problem: propProblem }) =>
                 {passedCount} / {totalCases} Passed
               </span>
             </div>
-          )}
+          ) : null}
 
           {rawList.length > 1 && (
             <button
@@ -118,32 +125,34 @@ export const TestCases = ({ testCases: propTestCases, problem: propProblem }) =>
       </div>
 
       {/* Content Rendering: View All or Single Active Case */}
-      {viewAll ? (
-        <div className="space-y-4">
-          {rawList.map((tc, idx) => (
-            <TestCaseCard
-              key={idx}
-              tc={tc}
-              idx={idx}
-              signature={signature}
-              returnType={returnType}
-              isResultMode={isResultMode}
-              copiedKey={copiedKey}
-              onCopy={handleCopy}
-            />
-          ))}
-        </div>
-      ) : (
-        <TestCaseCard
-          tc={rawList[activeTab] || rawList[0]}
-          idx={activeTab}
-          signature={signature}
-          returnType={returnType}
-          isResultMode={isResultMode}
-          copiedKey={copiedKey}
-          onCopy={handleCopy}
-        />
-      )}
+      <div className={isRunning ? 'opacity-70 transition-opacity pointer-events-none' : 'opacity-100 transition-opacity'}>
+        {viewAll ? (
+          <div className="space-y-4">
+            {rawList.map((tc, idx) => (
+              <TestCaseCard
+                key={idx}
+                tc={tc}
+                idx={idx}
+                signature={signature}
+                returnType={returnType}
+                isResultMode={isResultMode}
+                copiedKey={copiedKey}
+                onCopy={handleCopy}
+              />
+            ))}
+          </div>
+        ) : (
+          <TestCaseCard
+            tc={rawList[activeTab] || rawList[0]}
+            idx={activeTab}
+            signature={signature}
+            returnType={returnType}
+            isResultMode={isResultMode}
+            copiedKey={copiedKey}
+            onCopy={handleCopy}
+          />
+        )}
+      </div>
     </div>
   );
 };
