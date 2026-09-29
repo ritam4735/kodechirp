@@ -60,6 +60,7 @@ router.get('/reports/test-cases', adminController.getTestCaseReport);
 router.get('/users', adminController.getUsers);
 router.put('/users/:id/role', adminController.updateUserRole);
 router.put('/users/:id/status', adminController.updateUserStatus);
+router.delete('/users/:id', adminController.deleteUser);
 
 // Submission monitoring
 router.get('/submissions', adminController.getSubmissions);

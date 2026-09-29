@@ -84,6 +84,8 @@ export const adminApi = {
     requestAdmin(`/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role }) }),
   updateUserStatus: (id, isActive) =>
     requestAdmin(`/users/${id}/status`, { method: 'PUT', body: JSON.stringify({ is_active: isActive }) }),
+  deleteUser: (id) =>
+    requestAdmin(`/users/${id}`, { method: 'DELETE' }),
 
   // ── Submissions ───────────────────────────────────────────────────────────
   getSubmissions: (params = {}) => {

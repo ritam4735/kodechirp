@@ -977,6 +977,34 @@ exports.updateUserStatus = async (req, res, next) => {
   }
 };
 
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent self-deletion
+    if (id === req.user.id) {
+      return res.status(400).json({ success: false, error: 'Cannot delete your own account' });
+    }
+
+    const result = await db.query(
+      'DELETE FROM users WHERE id = $1 RETURNING id, username, email',
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `User ${result.rows[0].username} deleted successfully`,
+      data: result.rows[0],
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ── Submission Monitoring ───────────────────────────────────────────────────
 
 exports.getSubmissions = async (req, res, next) => {
