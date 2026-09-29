@@ -35,11 +35,12 @@ export default function ThemeSwitcher() {
         type="button"
         role="radio"
         aria-checked={pref === 'light'}
+        aria-label="Light theme"
         className={`kc-theme-btn ${pref === 'light' ? 'active' : ''}`}
         onClick={() => handleChange('light')}
         title="Light theme"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="5" />
           <line x1="12" y1="1" x2="12" y2="3" />
           <line x1="12" y1="21" x2="12" y2="23" />
@@ -56,11 +57,12 @@ export default function ThemeSwitcher() {
         type="button"
         role="radio"
         aria-checked={pref === 'dark'}
+        aria-label="Dark theme"
         className={`kc-theme-btn ${pref === 'dark' ? 'active' : ''}`}
         onClick={() => handleChange('dark')}
         title="Dark theme"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         </svg>
       </button>
@@ -69,11 +71,12 @@ export default function ThemeSwitcher() {
         type="button"
         role="radio"
         aria-checked={pref === 'system'}
+        aria-label="System theme"
         className={`kc-theme-btn ${pref === 'system' ? 'active' : ''}`}
         onClick={() => handleChange('system')}
         title="System preference"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
           <line x1="8" y1="21" x2="16" y2="21" />
           <line x1="12" y1="17" x2="12" y2="21" />

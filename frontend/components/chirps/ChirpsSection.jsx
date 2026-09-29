@@ -7,20 +7,23 @@ import { MessageCircle } from 'lucide-react';
 export const ChirpsSection = ({ problemId }) => {
   const [chirps, setChirps] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchChirps = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await api.getChirps(problemId);
+      setChirps(data);
+    } catch (err) {
+      console.error('Failed to fetch chirps', err);
+      setError('Unable to load chirps.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchChirps = async () => {
-      setIsLoading(true);
-      try {
-        const data = await api.getChirps(problemId);
-        setChirps(data);
-      } catch (error) {
-        console.error('Failed to fetch chirps', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (problemId) {
       fetchChirps();
     }
@@ -43,7 +46,21 @@ export const ChirpsSection = ({ problemId }) => {
       <ChirpInput problemId={problemId} onChirpPosted={handleChirpPosted} />
 
       {isLoading ? (
-        <div className="text-sm text-[#8b949e] text-center py-4">Loading chirps...</div>
+        <div className="text-sm text-[#8b949e] text-center py-6 flex items-center justify-center gap-2">
+          <div className="w-4 h-4 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin" />
+          <span>Loading chirps...</span>
+        </div>
+      ) : error ? (
+        <div className="text-sm text-[#f87171] text-center py-6 border border-rose-500/20 rounded-xl bg-rose-500/5 mt-4">
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={fetchChirps}
+            className="mt-2 text-xs text-[#58a6ff] hover:underline"
+          >
+            Try again
+          </button>
+        </div>
       ) : chirps.length === 0 ? (
         <div className="text-sm text-[#8b949e] text-center py-8 border border-dashed border-white/10 rounded-xl bg-white/5 backdrop-blur-sm mt-4">
           No chirps yet. Be the first to share your approach!

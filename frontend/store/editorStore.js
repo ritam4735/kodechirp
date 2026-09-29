@@ -20,22 +20,52 @@ export const useEditorStore = create((set) => ({
   setCode: (key, code) => set((state) => ({ 
     codes: { ...state.codes, [key]: code } 
   })),
-  setLanguage: (language) => set({ language }),
+
+  setLanguage: (language) => set({ 
+    language,
+    output: '',
+    verdict: null,
+    testCaseResults: null,
+    isExecuting: false,
+    execution: { ...initialExecution },
+    activePanel: 'testcases',
+  }),
+
   setActivePanel: (activePanel) => set({ 
     activePanel: activePanel === 'console' ? 'console' : 'testcases' 
   }),
+
   setOutput: (output) => set((state) => ({ 
     output,
     execution: { ...state.execution, error: output || null }
   })),
-  setIsExecuting: (isExecuting) => set({ isExecuting }),
-  setVerdict: (verdict) => set({ verdict }),
+
+  setIsExecuting: (isExecuting) => set((state) => ({ 
+    isExecuting,
+    execution: {
+      ...state.execution,
+      status: isExecuting ? 'running' : (state.execution.status === 'running' ? 'idle' : state.execution.status),
+    }
+  })),
+
+  setVerdict: (verdict) => set((state) => ({ 
+    verdict,
+    isExecuting: false,
+    execution: {
+      ...state.execution,
+      status: verdict ? 'success' : 'idle',
+      error: null,
+    },
+    output: '',
+    activePanel: 'console',
+  })),
+
   setTestCaseResults: (testCaseResults) => set((state) => ({ 
     testCaseResults,
     execution: { ...state.execution, results: testCaseResults }
   })),
 
-  startExecution: () => {
+  startExecution: (preferredPanel = 'testcases') => {
     let nextRequestId = 0;
     set((state) => {
       nextRequestId = state.requestId + 1;
@@ -44,11 +74,13 @@ export const useEditorStore = create((set) => ({
         isExecuting: true,
         execution: {
           status: 'running',
-          results: state.execution.results, // Preserve previous results while running
-          error: null, // Clear stale compiler/runtime error state
+          results: null, // Clear stale results on new execution
+          error: null,   // Clear stale error state
         },
+        testCaseResults: null, // Clear stale test results
         output: '',
         verdict: null,
+        activePanel: preferredPanel,
       };
     });
     return nextRequestId;
@@ -69,6 +101,7 @@ export const useEditorStore = create((set) => ({
         },
         testCaseResults: results,
         output: '',
+        verdict: null,
         activePanel: 'testcases',
       };
     });
@@ -84,9 +117,49 @@ export const useEditorStore = create((set) => ({
         isExecuting: false,
         execution: {
           status: 'error',
-          results: state.execution.results,
+          results: null, // Clear results on error
           error: error,
         },
+        testCaseResults: null, // Clear test results on error
+        output: error,
+        verdict: null,
+        activePanel: 'console',
+      };
+    });
+  },
+
+  setSubmissionSuccess: (requestId, verdict) => {
+    set((state) => {
+      if (requestId !== undefined && requestId !== state.requestId) {
+        return state;
+      }
+      return {
+        isExecuting: false,
+        execution: {
+          status: 'success',
+          results: null,
+          error: null,
+        },
+        verdict,
+        output: '',
+        activePanel: 'console',
+      };
+    });
+  },
+
+  setSubmissionError: (requestId, error) => {
+    set((state) => {
+      if (requestId !== undefined && requestId !== state.requestId) {
+        return state;
+      }
+      return {
+        isExecuting: false,
+        execution: {
+          status: 'error',
+          results: null,
+          error: error,
+        },
+        verdict: null,
         output: error,
         activePanel: 'console',
       };
@@ -97,6 +170,7 @@ export const useEditorStore = create((set) => ({
     output: '', 
     verdict: null, 
     testCaseResults: null,
+    isExecuting: false,
     execution: { ...initialExecution },
     activePanel: 'testcases',
   }),

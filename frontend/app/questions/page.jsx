@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Search, ChevronRight, ChevronLeft, Code2, Layers, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Search, ChevronRight, ChevronLeft, Code2, Layers, ChevronsLeft, ChevronsRight, AlertTriangle } from 'lucide-react';
 import { useProblem } from '../../hooks/useProblem';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
 
@@ -47,6 +47,7 @@ function ProblemRow({ problem, index, globalIndex }) {
         <DifficultyBadge difficulty={problem.difficulty} />
         <ChevronRight
           size={14}
+          aria-hidden="true"
           className="text-[#484f58] group-hover:text-[#58a6ff] group-hover:translate-x-0.5 transition-all duration-200 shrink-0 ml-1"
         />
       </Link>
@@ -55,7 +56,7 @@ function ProblemRow({ problem, index, globalIndex }) {
 }
 
 export default function QuestionsPage() {
-  const { problems, isLoading, pagination, fetchProblems } = useProblem();
+  const { problems, isLoading, error, pagination, fetchProblems } = useProblem();
   const [search, setSearch] = useState('');
   const [difficulty, setDifficulty] = useState('');
   const [page, setPage] = useState(1);
@@ -132,36 +133,44 @@ export default function QuestionsPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.15 }}
-          className="grid grid-cols-4 gap-3 mb-6"
+          className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-6"
+          role="group"
+          aria-label="Filter problems by difficulty"
         >
-          <div
-            className="rounded-xl p-3 text-center border cursor-pointer transition-all duration-200 hover:scale-[1.02]"
+          <button
+            type="button"
+            aria-pressed={difficulty === ''}
+            aria-label="Filter all problems"
+            className="rounded-xl p-3 text-center border cursor-pointer transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#58a6ff]/40"
             style={{
               background: difficulty === '' ? 'rgba(88,166,255,0.12)' : 'rgba(88,166,255,0.04)',
               borderColor: difficulty === '' ? 'rgba(88,166,255,0.3)' : 'rgba(88,166,255,0.1)',
             }}
             onClick={() => setDifficulty('')}
           >
-            <div className="text-xl font-display font-bold text-[#58a6ff]">{total}</div>
-            <div className="text-[11px] font-medium text-[#8b949e] mt-0.5">All</div>
-          </div>
+            <span className="block text-xl font-display font-bold text-[#58a6ff]">{total}</span>
+            <span className="block text-[11px] font-medium text-[#8b949e] mt-0.5">All</span>
+          </button>
           {[
             { label: 'Easy',   color: '#22c55e', rgb: '34,197,94',  count: easy },
             { label: 'Medium', color: '#eab308', rgb: '234,179,8',  count: medium },
             { label: 'Hard',   color: '#ef4444', rgb: '239,68,68',  count: hard },
           ].map(({ label, color, rgb, count }) => (
-            <div
+            <button
               key={label}
-              className="rounded-xl p-3 text-center border cursor-pointer transition-all duration-200 hover:scale-[1.02]"
+              type="button"
+              aria-pressed={difficulty === label}
+              aria-label={`Filter ${label} problems`}
+              className="rounded-xl p-3 text-center border cursor-pointer transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#58a6ff]/40"
               style={{
                 background: difficulty === label ? `rgba(${rgb},0.15)` : `rgba(${rgb},0.06)`,
                 borderColor: difficulty === label ? `rgba(${rgb},0.4)` : `rgba(${rgb},0.15)`,
               }}
               onClick={() => setDifficulty(difficulty === label ? '' : label)}
             >
-              <div className="text-xl font-display font-bold" style={{ color }}>{count}</div>
-              <div className="text-[11px] font-medium text-[#8b949e] mt-0.5">{label}</div>
-            </div>
+              <span className="block text-xl font-display font-bold" style={{ color }}>{count}</span>
+              <span className="block text-[11px] font-medium text-[#8b949e] mt-0.5">{label}</span>
+            </button>
           ))}
         </motion.div>
 
@@ -172,10 +181,11 @@ export default function QuestionsPage() {
           transition={{ duration: 0.5, delay: 0.25 }}
           className="relative mb-5"
         >
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#484f58] pointer-events-none" />
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#484f58] pointer-events-none" aria-hidden="true" />
           <input
             type="text"
             placeholder="Search problems…"
+            aria-label="Search problems by title or topic"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="
@@ -188,6 +198,8 @@ export default function QuestionsPage() {
           />
           {search && (
             <button
+              type="button"
+              aria-label="Clear search input"
               onClick={() => setSearch('')}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#484f58] hover:text-[#8b949e] text-xs transition-colors"
             >
@@ -231,12 +243,25 @@ export default function QuestionsPage() {
               <div className="w-6 h-6 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin" />
               <span className="text-sm text-[#484f58]">Loading questions…</span>
             </div>
+          ) : error ? (
+            <div className="py-16 flex flex-col items-center gap-3 text-center px-4">
+              <AlertTriangle size={32} className="text-[#f87171]" />
+              <p className="text-sm font-semibold text-[#f87171]">{error}</p>
+              <p className="text-xs text-[#8b949e]">Unable to fetch problems.</p>
+              <button
+                type="button"
+                onClick={doFetch}
+                className="mt-2 px-4 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/10 transition-colors"
+              >
+                Try again
+              </button>
+            </div>
           ) : problems.length === 0 ? (
             <div className="py-20 flex flex-col items-center gap-3 text-center px-4">
               <Search size={28} className="text-[#484f58]" />
               <p className="text-sm text-[#8b949e]">
                 {search
-                  ? <>No problems match <strong className="text-[#c9d1d9]">"{search}"</strong></>
+                  ? <>No problems match <strong className="text-[#c9d1d9]">&ldquo;{search}&rdquo;</strong></>
                   : 'No problems found'
                 }
               </p>
@@ -254,55 +279,68 @@ export default function QuestionsPage() {
 
           {/* Pagination */}
           {!isLoading && totalPages > 1 && (
-            <div className="flex items-center justify-between px-5 py-3 border-t border-white/[0.05] bg-white/[0.02]">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-5 py-3 border-t border-white/[0.05] bg-white/[0.02]">
               <span className="text-[11px] text-[#484f58]">
                 Page {page} of {totalPages}
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1" role="navigation" aria-label="Pagination">
                 <button
+                  type="button"
+                  aria-label="First page"
                   onClick={() => setPage(1)}
                   disabled={page === 1}
                   className="p-1.5 rounded-lg text-[#484f58] hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <ChevronsLeft size={14} />
+                  <ChevronsLeft size={14} aria-hidden="true" />
                 </button>
                 <button
+                  type="button"
+                  aria-label="Previous page"
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="p-1.5 rounded-lg text-[#484f58] hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <ChevronLeft size={14} />
+                  <ChevronLeft size={14} aria-hidden="true" />
                 </button>
-                {getPageNumbers().map((p, i) =>
-                  p === '...' ? (
-                    <span key={`dots-${i}`} className="px-1.5 text-[#484f58] text-xs">…</span>
-                  ) : (
-                    <button
-                      key={p}
-                      onClick={() => setPage(p)}
-                      className={`min-w-[28px] h-7 rounded-lg text-[12px] font-medium transition-all ${
-                        page === p
-                          ? 'bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30'
-                          : 'text-[#8b949e] hover:text-white hover:bg-white/[0.06]'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  )
-                )}
+                <div className="hidden sm:flex items-center gap-1">
+                  {getPageNumbers().map((p, i) =>
+                    p === '...' ? (
+                      <span key={`dots-${i}`} className="px-1.5 text-[#484f58] text-xs" aria-hidden="true">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        type="button"
+                        aria-label={`Page ${p}`}
+                        aria-current={page === p ? 'page' : undefined}
+                        onClick={() => setPage(p)}
+                        className={`min-w-[28px] h-7 rounded-lg text-[12px] font-medium transition-all ${
+                          page === p
+                            ? 'bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30'
+                            : 'text-[#8b949e] hover:text-white hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                </div>
                 <button
+                  type="button"
+                  aria-label="Next page"
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
                   className="p-1.5 rounded-lg text-[#484f58] hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <ChevronRight size={14} />
+                  <ChevronRight size={14} aria-hidden="true" />
                 </button>
                 <button
+                  type="button"
+                  aria-label="Last page"
                   onClick={() => setPage(totalPages)}
                   disabled={page >= totalPages}
                   className="p-1.5 rounded-lg text-[#484f58] hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <ChevronsRight size={14} />
+                  <ChevronsRight size={14} aria-hidden="true" />
                 </button>
               </div>
             </div>

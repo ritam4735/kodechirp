@@ -36,7 +36,7 @@ export const useEditor = () => {
   const code = store.codes[cacheKey] ?? defaultCode;
 
   const handleRunCode = async () => {
-    const reqId = store.startExecution();
+    const reqId = store.startExecution('testcases');
     try {
       const result = await api.runCode(code, language, '', currentProblem?.id, judgeMode, signature);
       
@@ -49,11 +49,11 @@ export const useEditor = () => {
       const isExitError = result.exitCode !== undefined && result.exitCode !== 0;
       const isExplicitError = Boolean(result.error && (!result.testCaseResults || result.testCaseResults.length === 0));
 
-      if (hasCompileError || isExitError || isExplicitError) {
+      if (result.testCaseResults && result.testCaseResults.length > 0) {
+        store.setExecutionSuccess(reqId, result.testCaseResults);
+      } else if (hasCompileError || isExitError || isExplicitError) {
         const errorMsg = result.compileError || result.stderr || result.output || (result.error ? 'Error: execution failed' : 'Execution failed');
         store.setExecutionError(reqId, errorMsg);
-      } else if (result.testCaseResults && result.testCaseResults.length > 0) {
-        store.setExecutionSuccess(reqId, result.testCaseResults);
       } else {
         if (result.stderr && !result.stdout) {
           store.setExecutionError(reqId, result.stderr);
@@ -71,17 +71,15 @@ export const useEditor = () => {
   };
 
   const handleSubmitCode = async (probId) => {
-    const reqId = store.startExecution();
-    store.setActivePanel('console');
+    const reqId = store.startExecution('console');
     try {
       const result = await api.submitCode(probId, code, language);
       if (reqId === useEditorStore.getState().requestId) {
-        store.setVerdict(result);
-        store.setIsExecuting(false);
+        store.setSubmissionSuccess(reqId, result);
       }
     } catch (error) {
       if (reqId === useEditorStore.getState().requestId) {
-        store.setExecutionError(reqId, `Failed to submit code: ${error.message}`);
+        store.setSubmissionError(reqId, `Failed to submit code: ${error.message}`);
       }
     }
   };

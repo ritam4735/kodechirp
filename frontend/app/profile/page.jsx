@@ -3,6 +3,7 @@
 import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
 
 // Suppress the SSR/client hydration mismatch: this page is 100% auth-gated
 // so the server never has meaningful content to render. We return a stable
@@ -194,26 +195,34 @@ export default function ProfilePage() {
                 <div className="relative group mt-4">
                   <div className="w-32 h-32 rounded-full mb-4 border-4 border-[#161b22] bg-[#0d1117] flex items-center justify-center overflow-hidden z-10 relative">
                     {user?.avatar_url ? (
-                      <img 
+                      <Image 
                         src={user.avatar_url} 
-                        alt="Avatar" 
+                        alt={user?.display_name ? `${user.display_name}'s profile avatar` : user?.username ? `${user.username}'s profile avatar` : 'Profile avatar'} 
+                        width={128}
+                        height={128}
+                        priority
+                        unoptimized={user.avatar_url.startsWith('data:')}
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <User size={64} className="text-[#8b949e]" />
+                      <User size={64} className="text-[#8b949e]" aria-hidden="true" />
                     )}
                   </div>
                   {activeTab === 'edit' && (
                     <button 
+                      type="button"
                       onClick={() => fileInputRef.current?.click()}
                       className="absolute bottom-4 right-0 bg-[#58a6ff] hover:bg-[#3182ce] text-white p-2 rounded-full transition-colors z-20 shadow-md"
                       title="Upload Avatar"
+                      aria-label="Upload new profile avatar"
                     >
-                      <Camera size={16} />
+                      <Camera size={16} aria-hidden="true" />
                     </button>
                   )}
                   <input 
                     type="file" 
+                    id="avatar-upload-input"
+                    aria-label="Upload profile avatar image"
                     ref={fileInputRef} 
                     onChange={handleImageUpload} 
                     accept="image/png, image/jpeg, image/webp, image/gif" 
@@ -234,7 +243,7 @@ export default function ProfilePage() {
                 )}
                 
                 {user?.bio && (
-                  <p className="text-[#c9d1d9] text-sm italic mb-6 leading-relaxed max-w-xs px-2">"{user.bio}"</p>
+                  <p className="text-[#c9d1d9] text-sm italic mb-6 leading-relaxed max-w-xs px-2">&ldquo;{user.bio}&rdquo;</p>
                 )}
 
                 <div className="flex gap-4 mb-6">
@@ -306,23 +315,26 @@ export default function ProfilePage() {
               className="w-full lg:w-2/3 flex flex-col gap-6"
             >
               {/* Navigation Tabs */}
-              <div className="bg-[#161b22]/80 backdrop-blur-md border border-[#30363d] rounded-2xl p-2 flex gap-2 shadow-sm">
+              <div className="bg-[#161b22]/80 backdrop-blur-md border border-[#30363d] rounded-2xl p-1.5 sm:p-2 flex gap-1.5 sm:gap-2 shadow-sm">
                 {[
-                  { id: 'profile', label: 'Overview', icon: User },
-                  { id: 'edit', label: 'Edit Profile', icon: Camera },
-                  { id: 'settings', label: 'Account Settings', icon: SettingsIcon },
+                  { id: 'profile', label: 'Overview', fullLabel: 'Overview', icon: User },
+                  { id: 'edit', label: 'Edit', fullLabel: 'Edit Profile', icon: Camera },
+                  { id: 'settings', label: 'Settings', fullLabel: 'Account Settings', icon: SettingsIcon },
                 ].map((tab) => (
                   <button 
                     key={tab.id}
-                    className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-medium text-sm transition-all duration-200 ${
+                    className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 font-medium text-xs sm:text-sm transition-all duration-200 ${
                       activeTab === tab.id 
                         ? 'bg-[#21262d] text-white shadow-sm border border-[#30363d]' 
                         : 'text-[#8b949e] hover:text-[#c9d1d9] hover:bg-[#21262d]/50'
                     }`}
                     onClick={() => { setActiveTab(tab.id); setError(''); setSuccess(''); }}
                   >
-                    <tab.icon size={16} className={activeTab === tab.id ? 'text-[#58a6ff]' : ''} />
-                    {tab.label}
+                    <tab.icon size={15} className={activeTab === tab.id ? 'text-[#58a6ff]' : ''} />
+                    <span>
+                      <span className="sm:hidden">{tab.label}</span>
+                      <span className="hidden sm:inline">{tab.fullLabel}</span>
+                    </span>
                   </button>
                 ))}
               </div>
@@ -354,7 +366,7 @@ export default function ProfilePage() {
               </AnimatePresence>
 
               {/* Tab Contents */}
-              <div className="bg-[#161b22]/80 backdrop-blur-md border border-[#30363d] rounded-2xl p-6 md:p-8 shadow-lg min-h-[400px]">
+              <div className="bg-[#161b22]/80 backdrop-blur-md border border-[#30363d] rounded-2xl p-4 sm:p-6 md:p-8 shadow-lg min-h-[400px]">
                 
                 {activeTab === 'profile' && (
                   <motion.div 

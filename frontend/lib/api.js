@@ -210,9 +210,15 @@ export const api = {
     
     let currentStatus = result.status;
     let submission = result;
+    const maxAttempts = 30; // 30 seconds max polling
+    let attempts = 0;
     
     // Poll until status is not queued or running
     while (currentStatus === 'queued' || currentStatus === 'running' || currentStatus === 'processing') {
+      attempts++;
+      if (attempts > maxAttempts) {
+        throw new Error('Submission evaluation timed out. Please check your submissions tab.');
+      }
       await new Promise(resolve => setTimeout(resolve, 1000));
       const pollData = await request(`/api/submissions/${result.submissionId}`);
       submission = pollData.data;
@@ -239,6 +245,11 @@ export const api = {
         failedActual: submission.failed_test_actual,
       }),
     };
+  },
+
+  getUserSubmissions: async () => {
+    const data = await request('/api/submissions/user');
+    return data.data || [];
   },
 
   // ── Chirps ──────────────────────────────────────────────────────────────────

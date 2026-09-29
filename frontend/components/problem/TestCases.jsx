@@ -222,7 +222,7 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
               )}
             </button>
           </div>
-          <pre className="text-[13px] text-[#e6edf3] font-mono bg-black/40 p-3 rounded-lg border border-white/5 whitespace-pre-wrap overflow-x-auto leading-relaxed">
+          <pre className="text-[13px] text-[#e6edf3] font-mono bg-black/40 p-3 rounded-lg border border-white/5 whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
             {formattedInput}
           </pre>
         </div>
@@ -251,7 +251,7 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
               )}
             </button>
           </div>
-          <pre className="text-[13px] text-[#58a6ff] font-mono bg-black/40 p-3 rounded-lg border border-white/5 whitespace-pre-wrap overflow-x-auto leading-relaxed">
+          <pre className="text-[13px] text-[#58a6ff] font-mono bg-black/40 p-3 rounded-lg border border-white/5 whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
             {formattedExpected}
           </pre>
         </div>
@@ -282,7 +282,7 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
               </button>
             </div>
             <pre
-              className={`text-[13px] font-mono bg-black/40 p-3 rounded-lg border whitespace-pre-wrap overflow-x-auto leading-relaxed ${
+              className={`text-[13px] font-mono bg-black/40 p-3 rounded-lg border whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed ${
                 isPassed
                   ? 'text-emerald-400 border-emerald-500/20'
                   : 'text-rose-400 border-rose-500/20'
@@ -299,7 +299,7 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
             <span className="text-xs text-[#8b949e] font-semibold block mb-1.5 uppercase tracking-wider">
               Console Output
             </span>
-            <pre className="text-[12px] text-[#e6edf3] font-mono bg-black/60 p-3 rounded-lg border border-white/5 whitespace-pre-wrap overflow-x-auto leading-relaxed">
+            <pre className="text-[12px] text-[#e6edf3] font-mono bg-black/60 p-3 rounded-lg border border-white/5 whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
               {tc.consoleOutput}
             </pre>
           </div>

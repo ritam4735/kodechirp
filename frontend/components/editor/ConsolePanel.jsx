@@ -35,7 +35,7 @@ export const ConsolePanel = () => {
             }`}
           >
             {/* Verdict Header */}
-            <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 mb-4">
               <div className="flex items-center gap-2.5">
                 {isAccepted ? (
                   <CheckCircle2 size={22} className="text-[#4ade80]" />
@@ -59,7 +59,7 @@ export const ConsolePanel = () => {
 
             {/* Metrics */}
             {verdict.runtime && (
-              <div className="flex gap-4 text-[#8b949e] text-xs font-medium bg-black/40 px-3 py-2 rounded-lg border border-white/5 inline-flex mb-4">
+              <div className="flex flex-wrap gap-3 sm:gap-4 text-[#8b949e] text-xs font-medium bg-black/40 px-3 py-2 rounded-lg border border-white/5 inline-flex mb-4">
                 <span>
                   <strong className="text-[#e6edf3]">Runtime:</strong> {verdict.runtime}
                 </span>
@@ -80,7 +80,7 @@ export const ConsolePanel = () => {
                     <span className="text-[#8b949e] font-semibold block mb-1 uppercase tracking-wider text-[11px]">
                       Input
                     </span>
-                    <pre className="text-[13px] text-[#e6edf3] bg-black/40 p-2.5 rounded-lg border border-white/5 whitespace-pre-wrap overflow-x-auto">
+                    <pre className="text-[13px] text-[#e6edf3] bg-black/40 p-2.5 rounded-lg border border-white/5 whitespace-pre-wrap break-words max-w-full overflow-x-auto">
                       {formatInput(verdict.failedInput, signature)}
                     </pre>
                   </div>
@@ -90,7 +90,7 @@ export const ConsolePanel = () => {
                     <span className="text-[#8b949e] font-semibold block mb-1 uppercase tracking-wider text-[11px]">
                       Expected Output
                     </span>
-                    <pre className="text-[13px] text-[#58a6ff] bg-black/40 p-2.5 rounded-lg border border-white/5 whitespace-pre-wrap overflow-x-auto">
+                    <pre className="text-[13px] text-[#58a6ff] bg-black/40 p-2.5 rounded-lg border border-white/5 whitespace-pre-wrap break-words max-w-full overflow-x-auto">
                       {formatOutput(verdict.failedExpected, returnType)}
                     </pre>
                   </div>
@@ -100,7 +100,7 @@ export const ConsolePanel = () => {
                     <span className="text-[#8b949e] font-semibold block mb-1 uppercase tracking-wider text-[11px]">
                       Your Output
                     </span>
-                    <pre className="text-[13px] text-rose-400 bg-black/40 p-2.5 rounded-lg border border-rose-500/20 whitespace-pre-wrap overflow-x-auto">
+                    <pre className="text-[13px] text-rose-400 bg-black/40 p-2.5 rounded-lg border border-rose-500/20 whitespace-pre-wrap break-words max-w-full overflow-x-auto">
                       {formatOutput(verdict.failedActual, returnType)}
                     </pre>
                   </div>

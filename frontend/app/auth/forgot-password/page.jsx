@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
             Reset your password
           </h2>
           <p className="mt-2 text-center text-sm text-[#8b949e]">
-            Enter your email address and we'll send you a link to reset your password.
+            Enter your email address and we&apos;ll send you a link to reset your password.
           </p>
         </div>
 
@@ -54,7 +54,7 @@ export default function ForgotPasswordPage() {
             <div>
               <p className="text-white font-medium text-lg">Check your email</p>
               <p className="text-[#8b949e] text-sm mt-2">
-                We've sent password reset instructions to <strong>{email}</strong>
+                We&apos;ve sent password reset instructions to <strong>{email}</strong>
               </p>
               <p className="text-[#8b949e] text-xs mt-4 italic">
                 If an account exists with this email, you will receive a reset link shortly.
@@ -76,8 +76,8 @@ export default function ForgotPasswordPage() {
             <div>
               <label htmlFor="email" className="sr-only">Email address</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-[#8b949e]" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" aria-hidden="true">
+                  <Mail className="h-5 w-5 text-[#8b949e]" aria-hidden="true" />
                 </div>
                 <input
                   id="email"
@@ -97,10 +97,11 @@ export default function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={loading}
+                aria-label={loading ? "Sending reset link..." : "Send reset link"}
                 className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#3fb950] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2ea043] focus:ring-offset-[#0d1117] transition-all disabled:opacity-50 shadow-lg"
               >
                 {loading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true"></div>
                 ) : (
                   'Send reset link'
                 )}
@@ -109,7 +110,7 @@ export default function ForgotPasswordPage() {
             
             <div className="text-center">
               <Link href="/auth" className="flex items-center justify-center gap-2 text-[#8b949e] hover:text-[#58a6ff] transition-colors text-sm font-medium">
-                <ArrowLeft size={16} /> Back to Sign In
+                <ArrowLeft size={16} aria-hidden="true" /> Back to Sign In
               </Link>
             </div>
           </form>

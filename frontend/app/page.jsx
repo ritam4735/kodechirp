@@ -68,7 +68,7 @@ function HeroSection({ scrollProgress }) {
 
       <div className="kc-actions">
         <Link href="/questions" className="kc-btn-primary">
-          Start Solving <span className="kc-btn-arrow">→</span>
+          Start Solving <span className="kc-btn-arrow" aria-hidden="true">→</span>
         </Link>
         <Link href="#story" className="kc-btn-secondary">
           Explore System
@@ -218,6 +218,7 @@ function FeaturesSection() {
               onClick={() => router.push(feat.href)}
               role="button"
               tabIndex={0}
+              aria-label={`Explore feature: ${feat.title}`}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
@@ -225,10 +226,10 @@ function FeaturesSection() {
                 }
               }}
             >
-              <div className="kc-feature-num">{feat.num}</div>
+              <div className="kc-feature-num" aria-hidden="true">{feat.num}</div>
               <div className="kc-feature-title">{feat.title}</div>
               <div className="kc-feature-desc">{feat.desc}</div>
-              <div className="kc-feature-arrow">→</div>
+              <div className="kc-feature-arrow" aria-hidden="true">→</div>
             </div>
           ))}
         </div>
@@ -287,6 +288,7 @@ function ProblemsSection({ problems }) {
                 onClick={() => router.push(`/problems/${prob.slug}`)}
                 role="button"
                 tabIndex={0}
+                aria-label={`View problem challenge: ${prob.title}`}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -294,7 +296,7 @@ function ProblemsSection({ problems }) {
                   }
                 }}
               >
-                <div className="kc-prob-dot" />
+                <div className="kc-prob-dot" aria-hidden="true" />
                 <div className="kc-prob-name">{prob.title}</div>
                 <div>{renderDifficulty(prob.difficulty)}</div>
                 <div className="kc-prob-rate">
@@ -404,10 +406,10 @@ function FooterSection() {
           </div>
 
           <div>
-            <div className="kc-footer-heading">Resources</div>
-            <Link href="/about" className="kc-footer-link">Philosophy</Link>
-            <Link href="/blog" className="kc-footer-link">Engineering Blog</Link>
-            <Link href="/careers" className="kc-footer-link">Careers</Link>
+            <div className="kc-footer-heading">Support</div>
+            <Link href="/contact" className="kc-footer-link">Contact & Help</Link>
+            <a href="https://github.com/ritam4735/kodechirp/issues" target="_blank" rel="noopener noreferrer" className="kc-footer-link">Issue Tracker</a>
+            <a href="https://github.com/ritam4735/kodechirp" target="_blank" rel="noopener noreferrer" className="kc-footer-link">GitHub Repository</a>
           </div>
 
           <div>
@@ -418,10 +420,12 @@ function FooterSection() {
         </div>
 
         <div className="kc-footer-bottom">
-          <div>© 2026 KodeChirp. Designed for engineering precision.</div>
+          <div>© 2026 KodeChirp. Open-source and designed for engineering precision.</div>
           <div style={{ display: 'flex', gap: '18px' }}>
-            <Link href="/status" className="kc-footer-link" style={{ margin: 0 }}>System Status</Link>
-            <Link href="/security" className="kc-footer-link" style={{ margin: 0 }}>Security</Link>
+            <Link href="/privacy" className="kc-footer-link" style={{ margin: 0 }}>Privacy</Link>
+            <Link href="/terms" className="kc-footer-link" style={{ margin: 0 }}>Terms</Link>
+            <Link href="/contact" className="kc-footer-link" style={{ margin: 0 }}>Contact</Link>
+            <a href="https://github.com/ritam4735/kodechirp" target="_blank" rel="noopener noreferrer" className="kc-footer-link" style={{ margin: 0 }}>GitHub</a>
           </div>
         </div>
       </div>
@@ -473,6 +477,24 @@ export default function HomePage() {
       <FeaturesSection />
       <ProblemsSection problems={problems} />
       <FooterSection />
+
+      {/* ── Sticky Mobile CTA: visible on mobile when scrolled past hero ── */}
+      {scrollProgress > 0.08 && (
+        <div className="fixed bottom-4 left-4 right-4 z-40 md:hidden pointer-events-auto transition-all duration-300">
+          <div className="flex items-center justify-between p-2.5 pl-4 bg-[#0d1117]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-white tracking-tight">Ready to code?</span>
+              <span className="text-[10px] text-[#8b949e]">Explore the challenges</span>
+            </div>
+            <Link
+              href="/questions"
+              className="px-4 py-2 bg-gradient-to-r from-[#2563eb] to-[#3b82f6] hover:from-[#1d4ed8] hover:to-[#2563eb] text-white text-xs font-semibold rounded-lg shadow-[0_0_15px_rgba(59,130,246,0.4)] flex items-center gap-1.5 transition-all"
+            >
+              Start Solving <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

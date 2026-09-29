@@ -6,15 +6,16 @@ import { adminApi } from '../../../lib/adminApi';
 export default function AdminAnalytics() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     adminApi.getAnalytics()
       .then(res => { setData(res.data); setLoading(false); })
-      .catch(err => { alert('Failed: ' + err.message); setLoading(false); });
+      .catch(err => { setError(err.message); setLoading(false); });
   }, []);
 
   if (loading) return <div className="admin-loading"><div className="admin-spinner"></div>Loading analytics...</div>;
-  if (!data) return <div style={{ color: '#f85149', padding: '40px' }}>Failed to load analytics</div>;
+  if (error || !data) return <div style={{ color: '#f85149', padding: '40px' }}>Failed to load analytics: {error || 'No data available'}</div>;
 
   const diffMap = {};
   (data.problemsByDifficulty || []).forEach(d => { diffMap[d.difficulty] = d.count; });
@@ -101,11 +102,11 @@ export default function AdminAnalytics() {
       <div className="admin-grid-2" style={{ marginBottom: '24px' }}>
         <div className="admin-section-card">
           <div className="admin-section-title">📈 Daily Submissions (30 days)</div>
-          {data.dailySubmissions.length === 0 ? (
+          {(data.dailySubmissions || []).length === 0 ? (
             <div className="admin-empty"><div className="admin-empty-text">No submission data</div></div>
           ) : (
             <div className="admin-bar-chart">
-              {data.dailySubmissions.map((d, i) => (
+              {(data.dailySubmissions || []).map((d, i) => (
                 <div key={i} className="admin-bar" style={{ height: `${(d.count / maxDaily) * 100}%` }} title={`${d.date}: ${d.count} submissions`}>
                   {i % 5 === 0 && <span className="admin-bar-label">{new Date(d.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>}
                 </div>
@@ -116,11 +117,11 @@ export default function AdminAnalytics() {
 
         <div className="admin-section-card">
           <div className="admin-section-title">📊 Weekly Submissions (12 weeks)</div>
-          {data.weeklySubmissions.length === 0 ? (
+          {(data.weeklySubmissions || []).length === 0 ? (
             <div className="admin-empty"><div className="admin-empty-text">No submission data</div></div>
           ) : (
             <div className="admin-bar-chart">
-              {data.weeklySubmissions.map((d, i) => (
+              {(data.weeklySubmissions || []).map((d, i) => (
                 <div key={i} className="admin-bar" style={{ height: `${(d.count / maxWeekly) * 100}%`, background: 'linear-gradient(to top, rgba(0,212,255,0.5), rgba(168,85,247,0.4))' }}
                   title={`Week of ${d.week}: ${d.count} submissions`}>
                   <span className="admin-bar-label">{new Date(d.week).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>

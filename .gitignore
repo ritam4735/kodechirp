@@ -55,3 +55,9 @@ data/
 /.agents/*
 /.agent/*
 
+#-------------Archify-----------------
+.archify/*
+skills-lock.json
+skills.json
+#-------------docs-----------------
+

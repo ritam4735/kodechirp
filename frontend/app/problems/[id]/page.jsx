@@ -13,13 +13,13 @@ import { SubmitButton } from '../../../components/editor/SubmitButton';
 import { ConsolePanel } from '../../../components/editor/ConsolePanel';
 import { useEditor } from '../../../hooks/useEditor';
 import { useAuth } from '../../../hooks/useAuth';
-import { Code2, BookOpen, MessageCircle, Activity, FileCheck, Target, ChevronRight, Terminal, Lock } from 'lucide-react';
+import { Code2, BookOpen, MessageCircle, Activity, FileCheck, Target, ChevronRight, Terminal, Lock, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 
 export default function ProblemPage() {
   const { id } = useParams();
-  const { currentProblem, isLoading, fetchProblemDetails } = useProblem();
+  const { currentProblem, isLoading, error, fetchProblemDetails } = useProblem();
   const { resetConsole } = useEditor();
 
   const [isMobile, setIsMobile] = useState(false);
@@ -45,16 +45,36 @@ export default function ProblemPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-4 pt-[68px]">
+        <AlertTriangle size={32} className="text-[#f87171]" />
+        <p className="text-base font-semibold text-[#f87171]">{error}</p>
+        <p className="text-xs text-[#8b949e]">Unable to load this problem.</p>
+        <button
+          type="button"
+          onClick={() => fetchProblemDetails(id)}
+          className="mt-2 px-4 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/10 transition-colors"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
   if (!currentProblem) {
     return (
-      <div className="flex-1 flex items-center justify-center text-[#8b949e] pt-[68px]">
-        Problem not found.
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-[#8b949e] pt-[68px]">
+        <p>Problem not found.</p>
+        <Link href="/questions" className="text-xs text-[#58a6ff] hover:underline">
+          Return to questions →
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col p-4 pt-[84px] bg-transparent min-h-screen">
+    <div className="flex-1 flex flex-col p-2 sm:p-4 pt-[76px] sm:pt-[84px] bg-transparent min-h-screen">
       
       <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden bg-[#050812]">
         <div className="absolute top-[-10%] left-[10%] w-[500px] h-[500px] bg-[#58a6ff]/5 rounded-full blur-[120px] mix-blend-screen" />
@@ -63,22 +83,37 @@ export default function ProblemPage() {
 
       <div className="w-full h-[calc(100vh-100px)] min-h-[600px] mb-8">
         {isMobile ? (
-          <div className="flex flex-col h-full overflow-hidden gap-4">
-            <div className="flex gap-2 bg-white/[0.02] p-1.5 rounded-xl border border-white/10 shrink-0">
-              <button onClick={() => setActiveTab('description')} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'description' ? 'bg-[#58a6ff]/20 text-white' : 'text-[#8b949e] hover:bg-white/5'}`}>Problem</button>
-              <button onClick={() => setActiveTab('editor')} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'editor' ? 'bg-[#58a6ff]/20 text-white' : 'text-[#8b949e] hover:bg-white/5'}`}>Code</button>
-              <button onClick={() => setActiveTab('tests')} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'tests' ? 'bg-[#58a6ff]/20 text-white' : 'text-[#8b949e] hover:bg-white/5'}`}>Tests</button>
+          <div className="flex flex-col h-full overflow-hidden gap-3 sm:gap-4 relative">
+            <div className="flex gap-1.5 sm:gap-2 bg-white/[0.02] p-1.5 rounded-xl border border-white/10 shrink-0" role="tablist" aria-label="Problem views">
+              <button type="button" role="tab" aria-selected={activeTab === 'description'} onClick={() => setActiveTab('description')} className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors ${activeTab === 'description' ? 'bg-[#58a6ff]/20 text-white shadow-sm' : 'text-[#8b949e] hover:bg-white/5'}`}>Problem</button>
+              <button type="button" role="tab" aria-selected={activeTab === 'editor'} onClick={() => setActiveTab('editor')} className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors ${activeTab === 'editor' ? 'bg-[#58a6ff]/20 text-white shadow-sm' : 'text-[#8b949e] hover:bg-white/5'}`}>Code</button>
+              <button type="button" role="tab" aria-selected={activeTab === 'tests'} onClick={() => setActiveTab('tests')} className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors ${activeTab === 'tests' ? 'bg-[#58a6ff]/20 text-white shadow-sm' : 'text-[#8b949e] hover:bg-white/5'}`}>Tests</button>
             </div>
             <div className="flex-1 min-h-0">
-              {activeTab === 'description' && <LeftPanelContent currentProblem={currentProblem} />}
+              {activeTab === 'description' && <LeftPanelContent currentProblem={currentProblem} isMobile={isMobile} />}
               {activeTab === 'editor' && <EditorContent problemId={currentProblem.id} />}
               {activeTab === 'tests' && <BottomContent testCases={currentProblem.testCases} problem={currentProblem} />}
             </div>
+
+            {/* Sticky Mobile CTA: Switch from Description to Editor */}
+            {activeTab === 'description' && (
+              <div className="fixed bottom-3 left-3 right-3 z-30 md:hidden pointer-events-auto">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('editor')}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-[#2563eb] to-[#3b82f6] hover:from-[#1d4ed8] hover:to-[#2563eb] text-white font-semibold rounded-xl shadow-[0_4px_20px_rgba(59,130,246,0.5)] flex items-center justify-center gap-2 text-sm transition-all"
+                >
+                  <Code2 size={16} aria-hidden="true" />
+                  <span>Solve Challenge</span>
+                  <ChevronRight size={16} aria-hidden="true" />
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <PanelGroup id="kodechirp-ide-layout-main" orientation="horizontal" className="h-full w-full">
             <Panel defaultSize={40} minSize={25} className="flex flex-col min-h-0">
-              <LeftPanelContent currentProblem={currentProblem} />
+              <LeftPanelContent currentProblem={currentProblem} isMobile={false} />
             </Panel>
 
             <ResizeHandle direction="horizontal" />
@@ -105,19 +140,19 @@ export default function ProblemPage() {
 }
 
 // Left Panel Content (Problem Description)
-const LeftPanelContent = ({ currentProblem }) => (
+const LeftPanelContent = ({ currentProblem, isMobile }) => (
     <div className="flex flex-col h-full overflow-hidden min-h-0 bg-transparent gap-4">
       {/* Header Card */}
-      <div className="shrink-0 bg-white/[0.02] border border-white/10 rounded-2xl p-5 backdrop-blur-xl shadow-lg flex flex-col gap-3">
+      <div className="shrink-0 bg-white/[0.02] border border-white/10 rounded-2xl p-4 sm:p-5 backdrop-blur-xl shadow-lg flex flex-col gap-3">
         <div className="flex items-center gap-2 text-xs font-semibold text-[#8b949e] mb-1">
           <Link href="/questions" className="hover:text-white transition-colors">Problems</Link>
           <ChevronRight size={12} />
-          <span className="text-white">{currentProblem.title}</span>
+          <span className="text-white truncate max-w-[200px]">{currentProblem.title}</span>
         </div>
         
-        <div className="flex items-start justify-between gap-4">
-          <h1 className="text-2xl font-bold font-display text-white">{currentProblem.title}</h1>
-          <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border ${
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-xl sm:text-2xl font-bold font-display text-white">{currentProblem.title}</h1>
+          <span className={`shrink-0 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold uppercase tracking-wider border ${
             currentProblem.difficulty === 'Easy' ? 'bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20' :
             currentProblem.difficulty === 'Medium' ? 'bg-[#eab308]/10 text-[#eab308] border-[#eab308]/20' :
             'bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/20'
@@ -126,7 +161,7 @@ const LeftPanelContent = ({ currentProblem }) => (
           </span>
         </div>
         
-        <div className="flex items-center flex-wrap gap-4 text-xs font-medium text-[#8b949e] mt-2">
+        <div className="flex items-center flex-wrap gap-2.5 sm:gap-4 text-xs font-medium text-[#8b949e] mt-1 sm:mt-2">
           <div className="flex items-center gap-1.5"><Target size={14} className="text-[#a855f7]"/> 12.4K Solves</div>
           <div className="flex items-center gap-1.5"><MessageCircle size={14} className="text-[#58a6ff]"/> Community</div>
           <div className="flex items-center gap-1.5"><Activity size={14} className="text-[#22c55e]"/> {currentProblem.acceptance_rate || 0}% Acceptance</div>
@@ -135,11 +170,11 @@ const LeftPanelContent = ({ currentProblem }) => (
 
       {/* Description Container */}
       <div className="flex-1 bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-xl shadow-lg flex flex-col overflow-hidden min-h-0">
-        <div className="flex items-center gap-2 px-5 py-3 border-b border-white/10 bg-white/[0.01] shrink-0">
+        <div className="flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-white/10 bg-white/[0.01] shrink-0">
           <BookOpen size={16} className="text-[#a855f7]" />
           <h2 className="text-sm font-semibold text-[#e6edf3]">Description</h2>
         </div>
-        <div className="p-5 flex-1 overflow-y-auto custom-scrollbar">
+        <div className={`p-4 sm:p-5 flex-1 overflow-y-auto custom-scrollbar ${isMobile ? 'pb-20' : ''}`}>
           <ProblemDescription problem={currentProblem} />
           
           <div className="mt-8 border-t border-white/10 pt-8">
@@ -155,12 +190,9 @@ const EditorContent = ({ problemId }) => {
   const { isAuthenticated } = useAuth();
   return (
     <div className="flex flex-col h-full bg-[#0d1117]/80 border border-white/10 rounded-2xl backdrop-blur-xl shadow-lg overflow-hidden min-h-0 relative">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
-        <div className="flex items-center gap-2">
-          <Code2 size={16} className="text-[#58a6ff]" />
-          <LanguageSelector />
-        </div>
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
+        <LanguageSelector />
+        <div className="flex items-center gap-2 sm:gap-3">
           <RunButton disabled={!isAuthenticated} />
           <SubmitButton problemId={problemId} disabled={!isAuthenticated} />
         </div>
@@ -190,8 +222,12 @@ const BottomContent = ({ testCases, problem }) => {
 
   return (
     <div className="flex flex-col h-full bg-[#0d1117]/80 border border-white/10 rounded-2xl backdrop-blur-xl shadow-lg overflow-hidden min-h-0">
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-white/10 bg-white/[0.02] shrink-0" role="tablist" aria-label="Editor panels">
         <button
+          type="button"
+          role="tab"
+          aria-selected={!isConsole}
+          aria-label="Test Cases panel"
           onClick={() => setActivePanel('testcases')}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
             !isConsole
@@ -199,11 +235,15 @@ const BottomContent = ({ testCases, problem }) => {
               : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-white/5 border border-transparent'
           }`}
         >
-          <FileCheck size={14} className={!isConsole ? 'text-[#22c55e]' : 'text-[#8b949e]'} />
+          <FileCheck size={14} aria-hidden="true" className={!isConsole ? 'text-[#22c55e]' : 'text-[#8b949e]'} />
           <span>Test Cases</span>
         </button>
 
         <button
+          type="button"
+          role="tab"
+          aria-selected={isConsole}
+          aria-label="Execution Console panel"
           onClick={() => setActivePanel('console')}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors relative cursor-pointer ${
             isConsole
@@ -211,10 +251,10 @@ const BottomContent = ({ testCases, problem }) => {
               : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-white/5 border border-transparent'
           }`}
         >
-          <Terminal size={14} className={isConsole ? 'text-[#58a6ff]' : 'text-[#8b949e]'} />
+          <Terminal size={14} aria-hidden="true" className={isConsole ? 'text-[#58a6ff]' : 'text-[#8b949e]'} />
           <span>Console</span>
           {hasConsoleContent && !isConsole && (
-            <span className="w-1.5 h-1.5 rounded-full bg-[#58a6ff] animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#58a6ff] animate-pulse" aria-hidden="true" />
           )}
         </button>
       </div>

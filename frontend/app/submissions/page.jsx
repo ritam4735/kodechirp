@@ -20,29 +20,27 @@ export default function SubmissionsPage() {
   const { user, isAuthenticated } = useAuth();
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
+  const loadSubmissions = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.getUserSubmissions();
+      setSubmissions(data || []);
+    } catch (err) {
+      setError(err.message || 'Failed to load submissions.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (mounted && isAuthenticated) {
-      api.request?.('/api/submissions/user')
-        .then(res => setSubmissions(res.data || []))
-        .catch(() => {})
-        .finally(() => setLoading(false));
-
-      // Fallback: use fetch directly
-      const token = localStorage.getItem('kc_token');
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-      fetch(`${API_BASE}/api/submissions/user`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(r => r.json())
-        .then(data => {
-          if (data.success) setSubmissions(data.data || []);
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false));
+      loadSubmissions();
     } else if (mounted) {
       setLoading(false);
     }
@@ -98,6 +96,19 @@ export default function SubmissionsPage() {
               <div className="w-6 h-6 border-2 border-[#a371f7] border-t-transparent rounded-full animate-spin" />
               <span className="text-sm text-[#484f58]">Loading submissions…</span>
             </div>
+          ) : error ? (
+            <div className="py-16 flex flex-col items-center gap-3 text-center px-4">
+              <AlertTriangle size={32} className="text-[#f87171]" />
+              <p className="text-sm font-semibold text-[#f87171]">{error}</p>
+              <p className="text-xs text-[#8b949e]">Unable to fetch your submission history.</p>
+              <button
+                type="button"
+                onClick={loadSubmissions}
+                className="mt-2 px-4 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/10 transition-colors"
+              >
+                Try again
+              </button>
+            </div>
           ) : submissions.length === 0 ? (
             <div className="py-20 flex flex-col items-center gap-3 text-center px-4">
               <FileCode2 size={28} className="text-[#484f58]" />
@@ -116,18 +127,18 @@ export default function SubmissionsPage() {
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.03 }}
-                  className="flex items-center gap-4 px-5 py-3.5 border-b border-white/[0.04] hover:bg-white/[0.03] transition-all duration-200"
+                  className="flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-3.5 border-b border-white/[0.04] hover:bg-white/[0.03] transition-all duration-200"
                 >
                   <Icon size={16} style={{ color: cfg.color, flexShrink: 0 }} />
                   <div className="flex-1 min-w-0">
-                    <Link href={`/problems/${sub.problem_slug}`} className="text-[14px] font-semibold text-[#c9d1d9] hover:text-white transition-colors truncate block">
+                    <Link href={`/problems/${sub.problem_slug}`} className="text-[13px] sm:text-[14px] font-semibold text-[#c9d1d9] hover:text-white transition-colors truncate block">
                       {sub.problem_title}
                     </Link>
-                    <div className="text-[11px] text-[#484f58] mt-0.5">
+                    <div className="text-[11px] text-[#484f58] mt-0.5 truncate">
                       {sub.language} · {sub.runtime_ms ? `${sub.runtime_ms}ms` : '–'} · {new Date(sub.created_at).toLocaleDateString()}
                     </div>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-md text-[11px] font-semibold" style={{ background: cfg.bg, color: cfg.color }}>
+                  <span className="px-2 sm:px-2.5 py-0.5 rounded-md text-[10px] sm:text-[11px] font-semibold shrink-0" style={{ background: cfg.bg, color: cfg.color }}>
                     {sub.status}
                   </span>
                 </motion.div>

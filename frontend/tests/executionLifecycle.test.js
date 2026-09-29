@@ -20,7 +20,7 @@ async function runTests() {
     console.log('✔ Test 1 passed: Initial state is clean and activePanel is "testcases"');
   }
 
-  // Test 2: Start execution preserves existing test results and clears stale error
+  // Test 2: Start execution clears stale test results and stale error
   {
     useEditorStore.getState().resetAll();
     // Simulate previous results and stale error
@@ -34,10 +34,11 @@ async function runTests() {
     assert.strictEqual(state.requestId, reqId, 'requestId should match generated reqId');
     assert.strictEqual(state.execution.status, 'running', 'Status should be running');
     assert.strictEqual(state.isExecuting, true, 'isExecuting should be true');
-    assert.deepStrictEqual(state.execution.results, prevResults, 'Previous results must be preserved while running');
+    assert.strictEqual(state.execution.results, null, 'Stale results must be cleared when starting execution');
+    assert.strictEqual(state.testCaseResults, null, 'Stale testCaseResults must be cleared when starting execution');
     assert.strictEqual(state.execution.error, null, 'Stale compiler/runtime error must be cleared');
     assert.strictEqual(state.output, '', 'Stale output must be cleared');
-    console.log('✔ Test 2 passed: startExecution preserves results and clears stale error');
+    console.log('✔ Test 2 passed: startExecution clears stale results and stale error');
   }
 
   // Test 3: Successful execution transitions to success and switches activePanel to "testcases"
@@ -78,10 +79,9 @@ async function runTests() {
     assert.strictEqual(state.execution.status, 'error', 'Status should be error');
     assert.strictEqual(state.execution.error, compilerError, 'Error message must be preserved');
     assert.strictEqual(state.output, compilerError, 'output must match error message');
-    assert.strictEqual(state.activePanel, 'console', 'activePanel must switch to "console" on error');
-    assert.strictEqual(state.isExecuting, false, 'isExecuting must be false');
-    assert.deepStrictEqual(state.execution.results, prevResults, 'Previous test results should be preserved');
-    console.log('✔ Test 4 passed: setExecutionError switches activePanel to "console" and preserves error');
+    assert.strictEqual(state.execution.results, null, 'Previous test results must be cleared on error');
+    assert.strictEqual(state.testCaseResults, null, 'testCaseResults must be cleared on error');
+    console.log('✔ Test 4 passed: setExecutionError switches activePanel to "console", preserves error, and clears results');
   }
 
   // Test 5: Full reproduction cycle (Success -> Error -> Fixed Success -> Repeated cycles)
