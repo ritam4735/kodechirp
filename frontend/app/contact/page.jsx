@@ -18,25 +18,42 @@ export default function ContactPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
+
+  const clearFieldError = (f) => {
+    if (fieldErrors[f]) {
+      setFieldErrors(prev => {
+        const next = { ...prev };
+        delete next[f];
+        return next;
+      });
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
+
+    const newFieldErrors = {};
 
     // Pre-flight client validation
     if (!form.name.trim()) {
-      setError('Please provide your name.');
-      return;
+      newFieldErrors.name = 'Please provide your name.';
     }
 
-    if (!form.email.trim() || !form.email.includes('@')) {
-      setError('Please provide a valid email address.');
-      return;
+    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      newFieldErrors.email = 'Please provide a valid email address (e.g. name@domain.com).';
     }
 
     if (!form.message.trim() || form.message.trim().length < 10) {
-      setError('Please enter a message with at least 10 characters.');
+      newFieldErrors.message = 'Please enter a message with at least 10 characters.';
+    }
+
+    if (Object.keys(newFieldErrors).length > 0) {
+      setFieldErrors(newFieldErrors);
+      setError('Please resolve the highlighted field errors below.');
       return;
     }
 
@@ -103,6 +120,24 @@ export default function ContactPage() {
 
               <div className="space-y-3.5 text-xs text-[#8b949e]">
                 <a
+                  href="mailto:support@kodechirp.com"
+                  className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-all group"
+                >
+                  <Mail size={18} className="text-[#58a6ff] shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-white group-hover:text-[#58a6ff] transition-colors block text-xs">
+                      Official Support Email
+                    </strong>
+                    <span className="text-[#c9d1d9] font-mono text-[11px] mt-0.5 block">
+                      support@kodechirp.com
+                    </span>
+                    <span className="text-[#8b949e] text-[10px] mt-0.5 block">
+                      Response window: Mon–Fri within 24–48h
+                    </span>
+                  </div>
+                </a>
+
+                <a
                   href="https://github.com/ritam4735/kodechirp/issues"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -111,7 +146,7 @@ export default function ContactPage() {
                   <Github size={18} className="text-white shrink-0 mt-0.5" />
                   <div>
                     <strong className="text-white group-hover:text-[#58a6ff] transition-colors block text-xs">
-                      GitHub Issues & Bug Reports
+                      GitHub Issues & Bug Tracker
                     </strong>
                     <span className="text-[#8b949e] text-[11px] mt-0.5 block">
                       Track open bugs, test-case anomalies, and judge worker fixes.
@@ -135,9 +170,7 @@ export default function ContactPage() {
                 </Link>
 
                 <a
-                  href="https://github.com/ritam4735"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="mailto:security@kodechirp.com"
                   className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-all group"
                 >
                   <ShieldAlert size={18} className="text-[#22c55e] shrink-0 mt-0.5" />
@@ -145,12 +178,32 @@ export default function ContactPage() {
                     <strong className="text-white group-hover:text-[#22c55e] transition-colors block text-xs">
                       Security & Responsible Disclosure
                     </strong>
-                    <span className="text-[#8b949e] text-[11px] mt-0.5 block">
-                      Report sandbox vulnerabilities or worker privilege escalation issues.
+                    <span className="text-[#c9d1d9] font-mono text-[11px] mt-0.5 block">
+                      security@kodechirp.com
+                    </span>
+                    <span className="text-[#8b949e] text-[10px] mt-0.5 block">
+                      Report sandbox vulnerabilities or worker escalation issues.
                     </span>
                   </div>
                 </a>
               </div>
+            </div>
+
+            {/* Maintainer Info Card */}
+            <div
+              className="rounded-2xl border border-white/[0.08] p-5 text-xs text-[#8b949e] space-y-2"
+              style={{
+                background: 'rgba(255,255,255,0.02)',
+                backdropFilter: 'blur(16px)',
+              }}
+            >
+              <div className="font-semibold text-white">Project Maintainer</div>
+              <p className="leading-relaxed text-[#c9d1d9]">
+                Created and maintained by <strong>Ritam Chatterjee</strong> (<a href="https://github.com/ritam4735" target="_blank" rel="noopener noreferrer" className="text-[#58a6ff] hover:underline">@ritam4735</a>).
+              </p>
+              <p className="text-[11px] text-[#8b949e]">
+                Location: Kolkata, India · UTC+05:30
+              </p>
             </div>
 
             {/* Quick Policies Card */}
@@ -200,7 +253,7 @@ export default function ContactPage() {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                 <div>
                   <label htmlFor="contact-name" className="block text-xs font-semibold text-[#8b949e] mb-1.5 uppercase tracking-wider">
                     Your Name
@@ -212,9 +265,23 @@ export default function ContactPage() {
                     disabled={submitting}
                     placeholder="e.g. Alex Chen"
                     value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full bg-[#0d1117] border border-[#30363d] text-sm text-[#e6edf3] placeholder-[#484f58] rounded-xl px-3.5 py-2.5 focus:border-[#58a6ff] focus:outline-none transition-colors disabled:opacity-50"
+                    aria-invalid={!!fieldErrors.name}
+                    aria-describedby={fieldErrors.name ? 'contact-name-error' : undefined}
+                    onChange={(e) => {
+                      setForm({ ...form, name: e.target.value });
+                      clearFieldError('name');
+                    }}
+                    className={`w-full bg-[#0d1117] text-sm text-[#e6edf3] placeholder-[#484f58] rounded-xl px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
+                      fieldErrors.name
+                        ? 'border-2 border-[#f85149] focus:ring-2 focus:ring-[#f85149]/30'
+                        : 'border border-[#30363d] focus:border-[#58a6ff]'
+                    }`}
                   />
+                  {fieldErrors.name && (
+                    <p id="contact-name-error" role="alert" className="text-xs text-[#ff7b72] mt-1.5 flex items-center gap-1">
+                      <span>{fieldErrors.name}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -228,9 +295,23 @@ export default function ContactPage() {
                     disabled={submitting}
                     placeholder="you@domain.com"
                     value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full bg-[#0d1117] border border-[#30363d] text-sm text-[#e6edf3] placeholder-[#484f58] rounded-xl px-3.5 py-2.5 focus:border-[#58a6ff] focus:outline-none transition-colors disabled:opacity-50"
+                    aria-invalid={!!fieldErrors.email}
+                    aria-describedby={fieldErrors.email ? 'contact-email-error' : undefined}
+                    onChange={(e) => {
+                      setForm({ ...form, email: e.target.value });
+                      clearFieldError('email');
+                    }}
+                    className={`w-full bg-[#0d1117] text-sm text-[#e6edf3] placeholder-[#484f58] rounded-xl px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
+                      fieldErrors.email
+                        ? 'border-2 border-[#f85149] focus:ring-2 focus:ring-[#f85149]/30'
+                        : 'border border-[#30363d] focus:border-[#58a6ff]'
+                    }`}
                   />
+                  {fieldErrors.email && (
+                    <p id="contact-email-error" role="alert" className="text-xs text-[#ff7b72] mt-1.5 flex items-center gap-1">
+                      <span>{fieldErrors.email}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -263,9 +344,23 @@ export default function ContactPage() {
                     rows={4}
                     placeholder="Describe your inquiry or feedback in detail..."
                     value={form.message}
-                    onChange={(e) => setForm({ ...form, message: e.target.value })}
-                    className="w-full bg-[#0d1117] border border-[#30363d] text-sm text-[#e6edf3] placeholder-[#484f58] rounded-xl p-3.5 focus:border-[#58a6ff] focus:outline-none transition-colors resize-none disabled:opacity-50"
+                    aria-invalid={!!fieldErrors.message}
+                    aria-describedby={fieldErrors.message ? 'contact-message-error' : undefined}
+                    onChange={(e) => {
+                      setForm({ ...form, message: e.target.value });
+                      clearFieldError('message');
+                    }}
+                    className={`w-full bg-[#0d1117] text-sm text-[#e6edf3] placeholder-[#484f58] rounded-xl p-3.5 focus:outline-none transition-colors resize-none disabled:opacity-50 ${
+                      fieldErrors.message
+                        ? 'border-2 border-[#f85149] focus:ring-2 focus:ring-[#f85149]/30'
+                        : 'border border-[#30363d] focus:border-[#58a6ff]'
+                    }`}
                   />
+                  {fieldErrors.message && (
+                    <p id="contact-message-error" role="alert" className="text-xs text-[#ff7b72] mt-1.5 flex items-center gap-1">
+                      <span>{fieldErrors.message}</span>
+                    </p>
+                  )}
                 </div>
 
                 <button

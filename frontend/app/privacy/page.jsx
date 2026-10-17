@@ -72,14 +72,14 @@ export default function PrivacyPage() {
     },
     {
       icon: Lock,
-      title: '4. Authentication & Local Storage',
+      title: '4. Authentication, Cookies & Telemetry Preferences',
       content: (
         <div className="space-y-3 text-sm text-[#8b949e] leading-relaxed">
           <p>
-            KodeChirp uses JSON Web Tokens (JWT) for secure authentication. These tokens, along with your interface preferences (such as light/dark theme), are stored locally in your browser&apos;s <code className="text-[#58a6ff] bg-black/40 px-1.5 py-0.5 rounded text-xs">localStorage</code>.
+            KodeChirp uses JSON Web Tokens (JWT) for secure authentication. These tokens, along with your interface preferences (such as light/dark theme and cookie choices), are stored locally in your browser&apos;s <code className="text-[#58a6ff] bg-black/40 px-1.5 py-0.5 rounded text-xs">localStorage</code>.
           </p>
           <p>
-            We do not use tracking cookies, third-party analytics pixels, or advertising trackers.
+            We respect your privacy choices through our Cookie &amp; Privacy Consent banner. With your consent, we collect minimal, anonymized telemetry (page navigation and code execution benchmarks) to improve judge speed and stability. We never deploy invasive third-party ad pixels or sell your data to data brokers. You can adjust your consent choices at any time via the Cookie Preferences link in the footer.
           </p>
         </div>
       ),

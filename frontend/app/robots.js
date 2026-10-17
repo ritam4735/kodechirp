@@ -11,6 +11,8 @@ export default function robots() {
           '/admin/',
           '/settings',
           '/settings/',
+          '/thank-you',
+          '/thank-you/',
           '/api/',
         ],
       },

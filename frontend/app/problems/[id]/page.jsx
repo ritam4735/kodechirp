@@ -6,8 +6,21 @@ import { useProblem } from '../../../hooks/useProblem';
 import { ProblemDescription } from '../../../components/problem/ProblemDescription';
 import { TestCases } from '../../../components/problem/TestCases';
 import { ChirpsSection } from '../../../components/chirps/ChirpsSection';
-import { CodeEditor } from '../../../components/editor/CodeEditor';
+import dynamic from 'next/dynamic';
 import { LanguageSelector } from '../../../components/editor/LanguageSelector';
+
+const CodeEditor = dynamic(
+  () => import('../../../components/editor/CodeEditor').then((mod) => mod.CodeEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center h-full w-full bg-[#0d1117] gap-3">
+        <div className="w-8 h-8 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin" />
+        <span className="text-[#8b949e] font-medium text-sm animate-pulse">Warming up the nest...</span>
+      </div>
+    ),
+  }
+);
 import { RunButton } from '../../../components/editor/RunButton';
 import { SubmitButton } from '../../../components/editor/SubmitButton';
 import { ConsolePanel } from '../../../components/editor/ConsolePanel';

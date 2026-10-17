@@ -1,5 +1,17 @@
-import Editor from '@monaco-editor/react';
+'use client';
+
+import Editor, { loader } from '@monaco-editor/react';
 import { useEditor } from '../../hooks/useEditor';
+
+// Configure Monaco loader to use local assets from /public/monaco/vs
+// to ensure offline reliability and prevent failures from blocked external CDNs
+if (typeof window !== 'undefined') {
+  loader.config({
+    paths: {
+      vs: '/monaco/vs',
+    },
+  });
+}
 
 export const CodeEditor = () => {
   const { code, language, setCode, editorPath } = useEditor();

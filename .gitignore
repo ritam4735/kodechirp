@@ -13,9 +13,13 @@ venv/
 
 # ─── Build Output ────────────────────────────────────────────────────────────
 .next/
+.next.old/
+frontend/.next.old/
 dist/
 build/
 *.egg-info/
+frontend/public/monaco/
+public/monaco/
 
 # ─── IDE ─────────────────────────────────────────────────────────────────────
 .idea/
@@ -61,3 +65,5 @@ skills-lock.json
 skills.json
 #-------------docs-----------------
 
+decisions.md
+flow.md 

@@ -1,331 +1,326 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '../lib/api';
-import ParticleCanvas from '../components/landing/ParticleCanvas';
-import ParticleDebugPanel from '../components/landing/ParticleDebugPanel';
+import AlgorithmicHeroVisual from '../components/landing/AlgorithmicHeroVisual';
+import WorkflowSection from '../components/landing/WorkflowSection';
+import InteractiveFeatures from '../components/landing/InteractiveFeatures';
 
-/**
- * RevealText
- * Splits text into words and characters with scroll-driven reveal.
- * Characters smoothly transition from muted to sharp and fully visible.
- */
-function RevealText({ text, scrollProgress }) {
-  const words = text.split(' ');
-  let charIndexCounter = 0;
-  const totalChars = text.replace(/\s/g, '').length;
+/* ──────────────────────────────────────────────
+   HERO SECTION
+   Split layout: Editorial high-signal copy on left,
+   tactile algorithmic execution visual on right.
+   ────────────────────────────────────────────── */
 
-  return (
-    <span className="kc-reveal-text">
-      {words.map((word, wIdx) => {
-        const chars = word.split('');
-        return (
-          <span key={wIdx} className="kc-reveal-word">
-            {chars.map((char, cIdx) => {
-              const myIdx = charIndexCounter++;
-              // As user scrolls from 0 to 0.15, characters progressively activate
-              // Even at 0 scroll, reveal progress activates initial characters
-              const charRatio = myIdx / Math.max(totalChars, 1);
-              const isRevealed = scrollProgress * 5 >= charRatio || scrollProgress < 0.01;
-
-              return (
-                <span
-                  key={cIdx}
-                  className={`kc-reveal-char ${isRevealed ? 'active' : 'muted'}`}
-                  style={{
-                    transitionDelay: `${(myIdx % 10) * 20}ms`,
-                  }}
-                >
-                  {char}
-                </span>
-              );
-            })}
-          </span>
-        );
-      })}
-    </span>
-  );
-}
-
-function HeroSection({ scrollProgress }) {
+function HeroSection() {
   return (
     <section className="kc-hero" id="home">
-      <div className="kc-kicker">
-        <span className="kc-kicker-dot" />
-        00 / SYSTEM CORE
-      </div>
+      <div className="kc-container kc-hero-container">
+        {/* Left Column: Mission & Core Value */}
+        <div className="kc-hero-content">
+          <div className="kc-kicker">
+            <span className="kc-kicker-dot" />
+            <span>Open-Source Developer Platform</span>
+            <span className="kc-kicker-sep">/</span>
+            <span className="kc-kicker-ver">Kernel v2.4</span>
+          </div>
 
-      <h1 className="kc-headline">
-        <RevealText text="Turn problems into progress." scrollProgress={scrollProgress} />
-      </h1>
+          <h1 className="kc-headline">
+            Deep algorithmic <br className="kc-headline-br" />
+            <span className="kc-headline-gradient">understanding.</span><br />
+            Built for engineers.
+          </h1>
 
-      <p className="kc-subtext">
-        KodeChirp is an engineering-first platform designed for deep algorithmic understanding,
-        peer-driven reasoning, and building technical instinct.
-      </p>
+          <p className="kc-subtext">
+            Transform raw intuition into verified technical instinct. Zero-overhead sandboxed
+            execution across 5 runtimes, real-time telemetry, and peer-driven problem deconstruction.
+          </p>
 
-      <div className="kc-actions">
-        <Link href="/questions" className="kc-btn-primary">
-          Start Solving <span className="kc-btn-arrow" aria-hidden="true">→</span>
-        </Link>
-        <Link href="#story" className="kc-btn-secondary">
-          Explore System
-        </Link>
-      </div>
+          <div className="kc-actions">
+            <Link href="/questions" className="kc-btn-primary">
+              <span>Start Solving</span>
+              <span className="kc-btn-arrow" aria-hidden="true">→</span>
+            </Link>
+            <Link href="#how-it-works" className="kc-btn-secondary">
+              <span>System Workflow</span>
+              <span className="kc-btn-down" aria-hidden="true">↓</span>
+            </Link>
+          </div>
 
-      <div className="kc-scroll-hint" aria-hidden="true">
-        <span className="kc-scroll-hint-bar" />
-        Scroll to observe computational progression
-      </div>
-    </section>
-  );
-}
-
-function StorySection() {
-  const [inViewSteps, setInViewSteps] = useState({ 0: true, 1: false, 2: false });
-  const containerRef = useRef(null);
-
-  const steps = [
-    {
-      num: '01',
-      tag: 'FORMATION: THINK',
-      title: 'Understand before you code.',
-      desc: 'Before writing syntax, explore the topology of the problem. Break down constraints, map invariants, and analyze branching decision paths.',
-      meta: 'TOPOLOGY: DECISION_TREE // COMPLEXITY: O(log N) // CONSTRAINTS: EVALUATED',
-    },
-    {
-      num: '02',
-      tag: 'FORMATION: CODE',
-      title: 'Turn intuition into structure.',
-      desc: 'Syntax is merely the formal expression of structured thought. Transform conceptual logic into clean, verifiable primitives.',
-      meta: 'TOPOLOGY: ABSTRACT_SYNTAX // INVARIANTS: VERIFIED // REDUCTION: COMPLETE',
-    },
-    {
-      num: '03',
-      tag: 'FORMATION: IMPROVE',
-      title: 'Every attempt sharpens your instinct.',
-      desc: 'Mastery is not binary. With each submission, you refine patterns, eliminate edge-case vulnerabilities, and internalize core algorithmic strategies.',
-      meta: 'TOPOLOGY: CONVERGENCE // FEEDBACK: IMMEDIATE // REINFORCEMENT: ACTIVE',
-    },
-  ];
-
-  useEffect(() => {
-    if (!containerRef.current || typeof IntersectionObserver === 'undefined') {
-      setInViewSteps({ 0: true, 1: true, 2: true });
-      return;
-    }
-
-    const stepElements = containerRef.current.querySelectorAll('.kc-story-step');
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const idx = entry.target.getAttribute('data-step-idx');
-            if (idx !== null) {
-              setInViewSteps((prev) => ({ ...prev, [idx]: true }));
-            }
-          }
-        });
-      },
-      { threshold: 0.25, rootMargin: '0px 0px -50px 0px' }
-    );
-
-    stepElements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <section className="kc-story-section" id="story" ref={containerRef}>
-      <div className="kc-container">
-        {steps.map((step, idx) => (
-          <div
-            key={step.num}
-            data-step-idx={idx}
-            className={`kc-story-step ${inViewSteps[idx] ? 'in-view' : ''}`}
-          >
-            <div className="kc-story-index-col">
-              <span className="kc-story-index">{step.num} / PROCESS</span>
-              <span className="kc-story-badge">{step.tag}</span>
+          {/* Engineering Specs Row */}
+          <div className="kc-hero-specs">
+            <div className="kc-spec-item">
+              <span className="kc-spec-label">RUNTIMES</span>
+              <span className="kc-spec-val">Python • C++ • JS • Java • C</span>
             </div>
-
-            <div className="kc-story-content">
-              <h2 className="kc-story-title">{step.title}</h2>
-              <p className="kc-story-desc">{step.desc}</p>
-              <div className="kc-story-meta">
-                <code>{step.meta}</code>
-              </div>
+            <div className="kc-spec-item">
+              <span className="kc-spec-label">ISOLATION</span>
+              <span className="kc-spec-val">Seccomp + PID Throttling</span>
+            </div>
+            <div className="kc-spec-item">
+              <span className="kc-spec-label">LATENCY</span>
+              <span className="kc-spec-val">&lt; 85ms Hot Sandboxes</span>
             </div>
           </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function FeaturesSection() {
-  const router = useRouter();
-
-  const features = [
-    {
-      num: '01',
-      title: 'Curated Challenges',
-      desc: 'Hand-crafted algorithmic challenges across data structures, graph theory, and dynamic programming.',
-      href: '/questions',
-    },
-    {
-      num: '02',
-      title: 'Peer Chirps',
-      desc: 'Post conceptual breakdowns, mental models, and alternative solutions for the developer flock.',
-      href: '/coming-soon/chirps',
-    },
-    {
-      num: '03',
-      title: 'Video Flights',
-      desc: 'High-density visual walkthroughs showing elite problem solvers thinking through complex algorithms.',
-      href: '/coming-soon/flights',
-    },
-    {
-      num: '04',
-      title: 'Focused Flocks',
-      desc: 'Small specialized cohorts that build, discuss, and tackle shared technical roadmaps.',
-      href: '/coming-soon/flocks',
-    },
-    {
-      num: '05',
-      title: 'The Nest',
-      desc: 'Bookmark core problem patterns and revisit your mental catalog for technical interviews.',
-      href: '/coming-soon/nest',
-    },
-  ];
-
-  return (
-    <section className="kc-features-section" id="features">
-      <div className="kc-container">
-        <div className="kc-section-header">
-          <h2 className="kc-section-title">The Platform</h2>
-          <p className="kc-section-desc">
-            A minimalist workspace engineered for deliberate practice, deep comprehension, and peer collaboration.
-          </p>
         </div>
 
-        <div className="kc-features-list">
-          {features.map((feat) => (
-            <div
-              key={feat.num}
-              className="kc-feature-row"
-              onClick={() => router.push(feat.href)}
-              role="button"
-              tabIndex={0}
-              aria-label={`Explore feature: ${feat.title}`}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  router.push(feat.href);
-                }
-              }}
-            >
-              <div className="kc-feature-num" aria-hidden="true">{feat.num}</div>
-              <div className="kc-feature-title">{feat.title}</div>
-              <div className="kc-feature-desc">{feat.desc}</div>
-              <div className="kc-feature-arrow" aria-hidden="true">→</div>
-            </div>
-          ))}
+        {/* Right Column: Distinctive Algorithmic Hero Visual */}
+        <div className="kc-hero-visual-col">
+          <AlgorithmicHeroVisual />
         </div>
       </div>
     </section>
   );
 }
+
+/* ──────────────────────────────────────────────
+   ACTIVE CHALLENGES SECTION
+   Enhanced problem table with search, difficulty filters,
+   acceptance formatting, and a featured daily spotlight sidebar.
+   ────────────────────────────────────────────── */
 
 function ProblemsSection({ problems }) {
   const router = useRouter();
-  const [metricsInView, setMetricsInView] = useState(false);
-  const metricsCardRef = useRef(null);
+  const [filterDifficulty, setFilterDifficulty] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    if (!metricsCardRef.current || typeof IntersectionObserver === 'undefined') {
-      setMetricsInView(true);
-      return;
-    }
+  // Format acceptance rate correctly: handle both decimal (0.72) and percent (72.0)
+  const formatAcceptanceRate = (rate) => {
+    if (rate === null || rate === undefined || rate === '') return '0.0%';
+    const num = parseFloat(rate);
+    if (isNaN(num)) return '0.0%';
+    const percent = num <= 1.0 ? num * 100 : num;
+    return `${percent.toFixed(1)}%`;
+  };
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setMetricsInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.2 }
-    );
-
-    observer.observe(metricsCardRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  const renderDifficulty = (diff) => {
+  const renderDifficultyBadge = (diff) => {
     if (diff === 'Easy') return <span className="kc-diff-badge kc-diff-easy">Easy</span>;
     if (diff === 'Hard') return <span className="kc-diff-badge kc-diff-hard">Hard</span>;
     return <span className="kc-diff-badge kc-diff-medium">Medium</span>;
   };
 
+  // Filter problems by difficulty and search query
+  const filteredProblems = useMemo(() => {
+    return problems.filter((prob) => {
+      const matchesDiff = filterDifficulty === 'ALL' || prob.difficulty?.toUpperCase() === filterDifficulty;
+      const matchesSearch = searchQuery.trim() === '' || prob.title?.toLowerCase().includes(searchQuery.toLowerCase().trim());
+      return matchesDiff && matchesSearch;
+    });
+  }, [problems, filterDifficulty, searchQuery]);
+
+  // Derive counts for difficulty stats
+  const difficultyCounts = useMemo(() => {
+    const counts = { Easy: 0, Medium: 0, Hard: 0 };
+    problems.forEach((p) => {
+      if (counts[p.difficulty] !== undefined) {
+        counts[p.difficulty]++;
+      }
+    });
+    return counts;
+  }, [problems]);
+
+  // Spotlight Problem: Select first Hard or Medium challenge, or first problem
+  const spotlightProblem = useMemo(() => {
+    if (!problems.length) return null;
+    return problems.find((p) => p.difficulty === 'Hard') || problems.find((p) => p.difficulty === 'Medium') || problems[0];
+  }, [problems]);
+
   return (
     <section className="kc-problems-section" id="problems">
       <div className="kc-container">
+        {/* Section Header */}
         <div className="kc-section-header">
+          <div className="kc-section-kicker">
+            <span className="kc-kicker-dot" />
+            BENCHMARK PROBLEMS
+          </div>
           <h2 className="kc-section-title">Active Challenges</h2>
           <p className="kc-section-desc">
-            Curated problem set from algorithmic fundamentals to advanced computational theory.
+            Direct access to production-grade algorithmic problems. 5 language runtimes,
+            sandboxed execution, instant test suite verification.
           </p>
         </div>
 
-        <div className="kc-problems-grid">
-          <div className="kc-problems-table">
-            {problems.map((prob) => (
-              <div
-                className="kc-prob-row"
-                key={prob.id}
-                onClick={() => router.push(`/problems/${prob.slug}`)}
-                role="button"
-                tabIndex={0}
-                aria-label={`View problem challenge: ${prob.title}`}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    router.push(`/problems/${prob.slug}`);
-                  }
-                }}
-              >
-                <div className="kc-prob-dot" aria-hidden="true" />
-                <div className="kc-prob-name">{prob.title}</div>
-                <div>{renderDifficulty(prob.difficulty)}</div>
-                <div className="kc-prob-rate">
-                  {prob.acceptance_rate ? parseFloat(prob.acceptance_rate).toFixed(1) : '0'}%
-                </div>
+        {/* Dual-Column Layout: Table + Spotlight Sidebar */}
+        <div className="kc-problems-layout">
+          {/* Main Table Column */}
+          <div className="kc-table-wrapper">
+            {/* Filter and Search Bar */}
+            <div className="kc-table-toolbar">
+              <div className="kc-diff-filters" role="tablist" aria-label="Filter problems by difficulty">
+                {['ALL', 'EASY', 'MEDIUM', 'HARD'].map((diff) => (
+                  <button
+                    key={diff}
+                    type="button"
+                    role="tab"
+                    aria-selected={filterDifficulty === diff}
+                    className={`kc-diff-tab ${filterDifficulty === diff ? 'active' : ''}`}
+                    onClick={() => setFilterDifficulty(diff)}
+                  >
+                    {diff === 'ALL' ? `All (${problems.length})` : diff}
+                  </button>
+                ))}
               </div>
-            ))}
 
-            {problems.length === 0 && (
-              <div style={{ padding: '32px', textAlign: 'center', color: 'var(--kc-text-muted)' }}>
-                Loading algorithmic challenges...
+              <div className="kc-search-box">
+                <span className="kc-search-icon" aria-hidden="true">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Filter challenges..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="kc-search-input"
+                  aria-label="Filter challenges by title"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="kc-search-clear"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* Problem Table */}
+            <div className="kc-problems-table" role="table" aria-label="Active Challenges List">
+              <div className="kc-table-head" role="row">
+                <span role="columnheader">STATUS</span>
+                <span role="columnheader">CHALLENGE TITLE</span>
+                <span role="columnheader">DIFFICULTY</span>
+                <span role="columnheader">ACCEPTANCE</span>
+                <span role="columnheader" className="kc-head-action">ACTION</span>
+              </div>
+
+              {filteredProblems.map((prob, idx) => (
+                <div
+                  className="kc-prob-row"
+                  key={prob.id || prob.slug}
+                  onClick={() => router.push(`/problems/${prob.slug}`)}
+                  role="row"
+                  tabIndex={0}
+                  aria-label={`Solve challenge: ${prob.title}, difficulty ${prob.difficulty}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      router.push(`/problems/${prob.slug}`);
+                    }
+                  }}
+                >
+                  <div className="kc-prob-cell-status">
+                    <span className="kc-prob-index">#{String(idx + 1).padStart(2, '0')}</span>
+                  </div>
+
+                  <div className="kc-prob-cell-title">
+                    <div className="kc-prob-name">{prob.title}</div>
+                    <div className="kc-prob-slug">slug: {prob.slug}</div>
+                  </div>
+
+                  <div className="kc-prob-cell-diff">
+                    {renderDifficultyBadge(prob.difficulty)}
+                  </div>
+
+                  <div className="kc-prob-cell-rate">
+                    <span className="kc-rate-val">{formatAcceptanceRate(prob.acceptance_rate)}</span>
+                  </div>
+
+                  <div className="kc-prob-cell-action">
+                    <span className="kc-btn-solve">
+                      <span>Solve</span>
+                      <span aria-hidden="true">→</span>
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              {filteredProblems.length === 0 && (
+                <div className="kc-empty-table">
+                  {problems.length === 0 ? (
+                    <div className="kc-loading-pulse">
+                      <span className="kc-spinner" aria-hidden="true" />
+                      <span>Loading active challenges from cluster...</span>
+                    </div>
+                  ) : (
+                    <div>No challenges matched your filter criteria.</div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="kc-table-bottom">
+              <Link href="/questions" className="kc-btn-primary">
+                View All 50+ Challenges <span aria-hidden="true">→</span>
+              </Link>
+              <span className="kc-table-meta-text">
+                Showing {filteredProblems.length} of {problems.length} loaded challenges
+              </span>
+            </div>
           </div>
 
-          <div className="kc-sidebar">
-            <div className="kc-card" ref={metricsCardRef}>
-              <div className="kc-card-title">Practice Metrics</div>
+          {/* Right Sidebar: Spotlight Challenge & Distribution Stats */}
+          <div className="kc-problems-sidebar">
+            {/* Daily Spotlight Challenge Card */}
+            {spotlightProblem && (
+              <div className="kc-sidebar-card kc-spotlight-card">
+                <div className="kc-spotlight-top">
+                  <span className="kc-spotlight-kicker">🎯 DAILY SPOTLIGHT</span>
+                  {renderDifficultyBadge(spotlightProblem.difficulty)}
+                </div>
+
+                <h3 className="kc-spotlight-title">{spotlightProblem.title}</h3>
+
+                <p className="kc-spotlight-desc">
+                  {spotlightProblem.description
+                    ? spotlightProblem.description.replace(/```[\s\S]*?```/g, '').replace(/#+\s/g, '').slice(0, 140) + '...'
+                    : 'A core algorithmic challenge testing optimal invariant formulation and edge-case resilience.'}
+                </p>
+
+                <div className="kc-spotlight-specs">
+                  <div className="kc-spec-pill">
+                    <span className="kc-pill-label">Acceptance</span>
+                    <span className="kc-pill-val">{formatAcceptanceRate(spotlightProblem.acceptance_rate)}</span>
+                  </div>
+                  <div className="kc-spec-pill">
+                    <span className="kc-pill-label">Time Limit</span>
+                    <span className="kc-pill-val">2.0s</span>
+                  </div>
+                  <div className="kc-spec-pill">
+                    <span className="kc-pill-label">Memory</span>
+                    <span className="kc-pill-val">256MB</span>
+                  </div>
+                </div>
+
+                <Link
+                  href={`/problems/${spotlightProblem.slug}`}
+                  className="kc-btn-spotlight"
+                >
+                  <span>Launch Sandbox</span>
+                  <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            )}
+
+            {/* Platform Difficulty Breakdown Card */}
+            <div className="kc-sidebar-card kc-stats-card">
+              <h4 className="kc-sidebar-title">Difficulty Spectrum</h4>
+              <p className="kc-sidebar-subtext">Balanced for deliberate skill progression.</p>
 
               <div className="kc-metric-row">
                 <div className="kc-metric-label">
-                  <span style={{ color: '#10B981' }}>Easy</span>
-                  <span>42 / 120</span>
+                  <span className="kc-metric-name">Easy (Foundational)</span>
+                  <span className="kc-metric-count">{difficultyCounts.Easy} problems</span>
                 </div>
                 <div className="kc-bar-track">
                   <div
                     className="kc-bar-fill"
                     style={{
-                      width: metricsInView ? '35%' : '0%',
+                      width: problems.length ? `${(difficultyCounts.Easy / problems.length) * 100}%` : '33%',
                       backgroundColor: '#10B981',
                     }}
                   />
@@ -334,14 +329,14 @@ function ProblemsSection({ problems }) {
 
               <div className="kc-metric-row">
                 <div className="kc-metric-label">
-                  <span style={{ color: '#F59E0B' }}>Medium</span>
-                  <span>18 / 340</span>
+                  <span className="kc-metric-name">Medium (Core Patterns)</span>
+                  <span className="kc-metric-count">{difficultyCounts.Medium} problems</span>
                 </div>
                 <div className="kc-bar-track">
                   <div
                     className="kc-bar-fill"
                     style={{
-                      width: metricsInView ? '5.3%' : '0%',
+                      width: problems.length ? `${(difficultyCounts.Medium / problems.length) * 100}%` : '45%',
                       backgroundColor: '#F59E0B',
                     }}
                   />
@@ -350,33 +345,19 @@ function ProblemsSection({ problems }) {
 
               <div className="kc-metric-row">
                 <div className="kc-metric-label">
-                  <span style={{ color: '#EF4444' }}>Hard</span>
-                  <span>3 / 180</span>
+                  <span className="kc-metric-name">Hard (Advanced Complexity)</span>
+                  <span className="kc-metric-count">{difficultyCounts.Hard} problems</span>
                 </div>
                 <div className="kc-bar-track">
                   <div
                     className="kc-bar-fill"
                     style={{
-                      width: metricsInView ? '1.7%' : '0%',
+                      width: problems.length ? `${(difficultyCounts.Hard / problems.length) * 100}%` : '22%',
                       backgroundColor: '#EF4444',
                     }}
                   />
                 </div>
               </div>
-            </div>
-
-            <div className="kc-card">
-              <div className="kc-card-title">Daily Challenge</div>
-              <div style={{ fontSize: '13.5px', color: 'var(--kc-text-secondary)', marginBottom: '14px', lineHeight: 1.5 }}>
-                Minimum Window Substring — <strong style={{ color: '#EF4444' }}>Hard</strong>
-              </div>
-              <Link
-                href="/questions"
-                className="kc-btn-primary"
-                style={{ width: '100%', justifyContent: 'center', boxSizing: 'border-box' }}
-              >
-                Attempt Challenge <span className="kc-btn-arrow">🎯</span>
-              </Link>
             </div>
           </div>
         </div>
@@ -385,31 +366,195 @@ function ProblemsSection({ problems }) {
   );
 }
 
+/* ──────────────────────────────────────────────
+   PLANNED & UPCOMING — Attractive roadmap cards
+   with unambiguous unavailability indicators.
+   ────────────────────────────────────────────── */
+
+function PlannedSection() {
+  const planned = [
+    {
+      title: 'Video Flights',
+      tag: 'IN DESIGN',
+      tagType: 'design',
+      badge: 'Roadmap Preview • Not Yet Available',
+      desc: 'Short-form visual breakdowns by elite problem solvers thinking through complex dynamic programming, trees, and graph invariants.',
+      previewMockup: 'video',
+      href: '/coming-soon/flights',
+    },
+    {
+      title: 'Focused Flocks',
+      tag: 'PLANNED',
+      tagType: 'planned',
+      badge: 'Architecture Phase • Not Yet Available',
+      desc: 'Small, curated cohorts of software engineers tackling shared technical interview roadmaps and running mock whiteboard sessions together.',
+      previewMockup: 'flocks',
+      href: '/coming-soon/flocks',
+    },
+    {
+      title: 'The Nest',
+      tag: 'PLANNED',
+      tagType: 'planned',
+      badge: 'Personal Catalog • In Development',
+      desc: 'Your persistent knowledge vault. Bookmark problem invariants, annotate subtle edge cases, and export personalized revision cheat sheets.',
+      previewMockup: 'nest',
+      href: '/coming-soon/nest',
+    },
+    {
+      title: 'Progress Dashboard',
+      tag: 'BETA TESTING',
+      tagType: 'progress',
+      badge: 'Beta Roadmap • Expanded Telemetry Soon',
+      desc: 'Deep velocity metrics, difficulty breakdown, topic mastery heatmaps, streak tracking, and automated recommendations for weak patterns.',
+      previewMockup: 'dashboard',
+      href: '/progress',
+    },
+  ];
+
+  return (
+    <section className="kc-planned-section" id="roadmap">
+      <div className="kc-container">
+        {/* Section Header */}
+        <div className="kc-section-header">
+          <div className="kc-section-kicker">
+            <span className="kc-kicker-dot" />
+            PLATFORM ROADMAP
+          </div>
+          <h2 className="kc-section-title">Planned &amp; Upcoming</h2>
+          <p className="kc-section-desc">
+            What the core engineering team is architecting next. The features below are currently
+            in design or development and are not yet released for general practice.
+          </p>
+        </div>
+
+        {/* 2x2 Attractive Grid */}
+        <div className="kc-planned-grid">
+          {planned.map((item) => (
+            <div key={item.title} className="kc-planned-card">
+              {/* Header Status & Locked Indicator */}
+              <div className="kc-planned-card-header">
+                <div className="kc-planned-status-pill">
+                  <span className={`kc-planned-status-tag ${item.tagType}`}>{item.tag}</span>
+                  <span className="kc-unavail-badge">
+                    <span className="kc-lock-icon" aria-hidden="true">🔒</span>
+                    {item.badge}
+                  </span>
+                </div>
+              </div>
+
+              <h3 className="kc-planned-title">{item.title}</h3>
+              <p className="kc-planned-desc">{item.desc}</p>
+
+              {/* Attractive Technical Mockup */}
+              <div className="kc-planned-mockup">
+                {item.previewMockup === 'video' && (
+                  <div className="kc-mockup-video">
+                    <div className="kc-video-play-btn" aria-hidden="true">▶</div>
+                    <div className="kc-waveform">
+                      <span style={{ height: '40%' }} />
+                      <span style={{ height: '70%' }} />
+                      <span style={{ height: '100%' }} />
+                      <span style={{ height: '55%' }} />
+                      <span style={{ height: '85%' }} />
+                      <span style={{ height: '35%' }} />
+                      <span style={{ height: '60%' }} />
+                    </div>
+                    <span className="kc-video-time">04:18 • State Tree Analysis</span>
+                  </div>
+                )}
+
+                {item.previewMockup === 'flocks' && (
+                  <div className="kc-mockup-cohort">
+                    <div className="kc-cohort-avatars">
+                      <span className="kc-cohort-dot">AL</span>
+                      <span className="kc-cohort-dot">TK</span>
+                      <span className="kc-cohort-dot">JR</span>
+                      <span className="kc-cohort-more">+5</span>
+                    </div>
+                    <span className="kc-cohort-track">Graph &amp; Tree Cohort • Sprint 02</span>
+                  </div>
+                )}
+
+                {item.previewMockup === 'nest' && (
+                  <div className="kc-mockup-nest">
+                    <span className="kc-nest-tag">#MonotonicStack</span>
+                    <span className="kc-nest-tag">#TwoPointers</span>
+                    <span className="kc-nest-tag">#Invariants</span>
+                    <span className="kc-nest-count">24 Bookmarks</span>
+                  </div>
+                )}
+
+                {item.previewMockup === 'dashboard' && (
+                  <div className="kc-mockup-stats">
+                    <div className="kc-stats-mini-bar">
+                      <span style={{ width: '65%' }} />
+                    </div>
+                    <span className="kc-stats-streak">🔥 14-Day Streak • 42 Solved</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Clear CTA to the designated roadmap or beta page */}
+              <div className="kc-planned-footer">
+                <Link href={item.href} className="kc-planned-link">
+                  <span>Explore Feature Specification</span>
+                  <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   FOOTER — Utilitarian, clean, engineering-first
+   ────────────────────────────────────────────── */
+
 function FooterSection() {
   return (
     <footer className="kc-footer">
       <div className="kc-container">
         <div className="kc-footer-inner">
           <div>
-            <div className="kc-footer-brand">KodeChirp</div>
+            <div className="kc-footer-brand">
+              <span className="kc-footer-brand-icon" aria-hidden="true">&lt;/&gt;</span>
+              <span>KodeChirp</span>
+            </div>
             <p className="kc-footer-desc">
-              An engineering-focused platform for deep algorithmic practice and collaborative problem solving.
+              An engineering-first developer platform designed for deep algorithmic practice,
+              sandboxed verification, and peer-driven problem reasoning.
             </p>
           </div>
 
           <div>
             <div className="kc-footer-heading">Platform</div>
             <Link href="/questions" className="kc-footer-link">Problems</Link>
-            <Link href="/coming-soon/chirps" className="kc-footer-link">Chirps</Link>
-            <Link href="/coming-soon/flights" className="kc-footer-link">Flights</Link>
-            <Link href="/coming-soon/flocks" className="kc-footer-link">Flocks</Link>
+            <Link href="/submissions" className="kc-footer-link">Submissions</Link>
+            <Link href="/progress" className="kc-footer-link">Progress</Link>
           </div>
 
           <div>
-            <div className="kc-footer-heading">Support</div>
-            <Link href="/contact" className="kc-footer-link">Contact & Help</Link>
-            <a href="https://github.com/ritam4735/kodechirp/issues" target="_blank" rel="noopener noreferrer" className="kc-footer-link">Issue Tracker</a>
-            <a href="https://github.com/ritam4735/kodechirp" target="_blank" rel="noopener noreferrer" className="kc-footer-link">GitHub Repository</a>
+            <div className="kc-footer-heading">Support &amp; Community</div>
+            <Link href="/contact" className="kc-footer-link">Contact &amp; Help</Link>
+            <a
+              href="https://github.com/ritam4735/kodechirp/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="kc-footer-link"
+            >
+              Issue Tracker
+            </a>
+            <a
+              href="https://github.com/ritam4735/kodechirp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="kc-footer-link"
+            >
+              GitHub Repository
+            </a>
           </div>
 
           <div>
@@ -420,12 +565,20 @@ function FooterSection() {
         </div>
 
         <div className="kc-footer-bottom">
-          <div>© 2026 KodeChirp. Open-source and designed for engineering precision.</div>
-          <div style={{ display: 'flex', gap: '18px' }}>
+          <div>© 2026 KodeChirp. Open-source and built for engineers.</div>
+          <div className="kc-footer-bottom-links">
             <Link href="/privacy" className="kc-footer-link" style={{ margin: 0 }}>Privacy</Link>
             <Link href="/terms" className="kc-footer-link" style={{ margin: 0 }}>Terms</Link>
             <Link href="/contact" className="kc-footer-link" style={{ margin: 0 }}>Contact</Link>
-            <a href="https://github.com/ritam4735/kodechirp" target="_blank" rel="noopener noreferrer" className="kc-footer-link" style={{ margin: 0 }}>GitHub</a>
+            <a
+              href="https://github.com/ritam4735/kodechirp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="kc-footer-link"
+              style={{ margin: 0 }}
+            >
+              GitHub
+            </a>
           </div>
         </div>
       </div>
@@ -433,13 +586,14 @@ function FooterSection() {
   );
 }
 
+/* ──────────────────────────────────────────────
+   HOME PAGE — Root Composition
+   ────────────────────────────────────────────── */
+
 export default function HomePage() {
   const [problems, setProblems] = useState([]);
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const engineRef = useRef(null);
 
   useEffect(() => {
-    // Fetch problems
     api.getProblems()
       .then((data) => {
         if (data && data.problems) {
@@ -449,52 +603,16 @@ export default function HomePage() {
       .catch((err) => {
         console.error('Failed to fetch problems:', err);
       });
-
-    // Track scroll progress for typography and narrative
-    const handleScroll = () => {
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = scrollHeight > 0 ? window.scrollY / scrollHeight : 0;
-      setScrollProgress(progress);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-
-    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
     <div className="kc-landing">
-      {/* ── Fixed Particle Canvas ── */}
-      <ParticleCanvas engineRef={engineRef} />
-
-      {/* ── Interactive Debug / Formation Tester ── */}
-      <ParticleDebugPanel engineRef={engineRef} />
-
-      {/* ── Editorial Homepage Sections ── */}
-      <HeroSection scrollProgress={scrollProgress} />
-      <StorySection />
-      <FeaturesSection />
+      <HeroSection />
+      <WorkflowSection />
+      <InteractiveFeatures />
       <ProblemsSection problems={problems} />
+      <PlannedSection />
       <FooterSection />
-
-      {/* ── Sticky Mobile CTA: visible on mobile when scrolled past hero ── */}
-      {scrollProgress > 0.08 && (
-        <div className="fixed bottom-4 left-4 right-4 z-40 md:hidden pointer-events-auto transition-all duration-300">
-          <div className="flex items-center justify-between p-2.5 pl-4 bg-[#0d1117]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-white tracking-tight">Ready to code?</span>
-              <span className="text-[10px] text-[#8b949e]">Explore the challenges</span>
-            </div>
-            <Link
-              href="/questions"
-              className="px-4 py-2 bg-gradient-to-r from-[#2563eb] to-[#3b82f6] hover:from-[#1d4ed8] hover:to-[#2563eb] text-white text-xs font-semibold rounded-lg shadow-[0_0_15px_rgba(59,130,246,0.4)] flex items-center gap-1.5 transition-all"
-            >
-              Start Solving <span aria-hidden="true">→</span>
-            </Link>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

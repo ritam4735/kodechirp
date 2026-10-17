@@ -36,15 +36,39 @@ export default function LandingFooter() {
             <Link href="/privacy" className="footer-link">Privacy Policy</Link>
             <Link href="/terms" className="footer-link">Terms of Service</Link>
             <Link href="/contact" className="footer-link">Support & Issues</Link>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('kc-reopen-cookie-banner'));
+                }
+              }}
+              className="footer-link text-left"
+              style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}
+            >
+              Cookie Preferences
+            </button>
           </div>
         </div>
       </div>
       <div className="footer-bottom">
-        <span className="footer-copy">© 2026 KodeChirp. Open-source and designed for developers.</span>
+        <span className="footer-copy">© 2026 KodeChirp · support@kodechirp.com · Open-source for developers.</span>
         <div className="footer-bottom-links">
           <Link href="/privacy" className="footer-bottom-link">Privacy</Link>
           <Link href="/terms" className="footer-bottom-link">Terms</Link>
           <Link href="/contact" className="footer-bottom-link">Contact</Link>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('kc-reopen-cookie-banner'));
+              }
+            }}
+            className="footer-bottom-link"
+            style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}
+          >
+            Cookies
+          </button>
         </div>
       </div>
     </footer>

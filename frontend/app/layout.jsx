@@ -4,6 +4,8 @@ import '../styles/landing.css';
 import '../styles/admin.css';
 import { Navbar } from '../components/layout/Navbar';
 import { AppInitializer } from '../components/layout/AppInitializer';
+import { CookieBanner } from '../components/ui/CookieBanner';
+import { AnalyticsTracker } from '../components/analytics/AnalyticsTracker';
 
 const syne = Syne({ subsets: ['latin'], variable: '--font-display' });
 const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-body' });
@@ -97,12 +99,14 @@ export default function RootLayout({ children }) {
       </head>
       <body className={`${dmSans.variable} ${syne.variable} ${jetbrainsMono.variable} antialiased`}>
         <AppInitializer />
+        <AnalyticsTracker />
         <div className="min-h-screen flex flex-col">
           <Navbar />
           <main className="flex-1 flex flex-col min-w-0">
             {children}
           </main>
         </div>
+        <CookieBanner />
       </body>
     </html>
   );

@@ -34,7 +34,6 @@ export default function NotFound() {
 
   const quickLinks = [
     { label: 'Browse Questions', href: '/questions', icon: Layers, desc: 'Practice algorithmic challenges' },
-    { label: 'Upcoming Chirps', href: '/coming-soon/chirps', icon: Sparkles, desc: 'Developer idea exchanges' },
     { label: 'My Submissions', href: '/submissions', icon: BookOpen, desc: 'Review your submission history' },
   ];
 
@@ -173,7 +172,7 @@ export default function NotFound() {
           <p className="text-[11px] font-mono uppercase tracking-wider text-[#484f58] mb-3">
             Suggested Safe Coordinates
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {quickLinks.map((item) => {
               const Icon = item.icon;
               return (

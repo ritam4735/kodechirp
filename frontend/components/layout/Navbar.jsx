@@ -10,10 +10,6 @@ import ThemeSwitcher from './ThemeSwitcher';
 const NAV_ITEMS = [
   { label: 'Home', href: '/' },
   { label: 'Questions', href: '/questions' },
-  { label: 'Chirps', href: '/coming-soon/chirps' },
-  { label: 'Flights', href: '/coming-soon/flights' },
-  { label: 'Flocks', href: '/coming-soon/flocks' },
-  { label: 'Nest', href: '/coming-soon/nest' },
 ];
 
 export const Navbar = () => {
@@ -175,7 +171,7 @@ export const Navbar = () => {
             </div>
           ) : (
             <Link href="/auth" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '13px' }}>
-              Join Flock
+              Sign In
             </Link>
           )
         ) : (
@@ -229,14 +225,14 @@ export const Navbar = () => {
           </div>
 
           {!isAuthenticated && mounted && (
-            <div style={{ paddingTop: '12px', borderTop: '1px solid var(--border-glass)', marginTop: '8px' }}>
+            <div style={{ paddingTop: '12px', borderTop: '1px solid var(--kc-border)', marginTop: '8px' }}>
               <Link
                 href="/auth"
                 onClick={() => setMobileNavOpen(false)}
                 className="btn btn-primary"
                 style={{ display: 'block', textAlign: 'center', width: '100%', padding: '10px' }}
               >
-                Join Flock
+                Sign In
               </Link>
             </div>
           )}
