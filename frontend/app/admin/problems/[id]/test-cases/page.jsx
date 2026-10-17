@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { adminApi } from '../../../../../lib/adminApi';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft, Plus, PlusCircle, Package, FileCode2, AlertTriangle, Check, X } from 'lucide-react';
 
 export default function TestCaseManager() {
   const { id: problemId } = useParams();
@@ -113,9 +114,13 @@ export default function TestCaseManager() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <Link href={`/admin/problems/${problemId}/edit`} className="admin-btn admin-btn-ghost">← Back to Problem</Link>
+          <Link href={`/admin/problems/${problemId}/edit`} className="admin-btn admin-btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <ArrowLeft size={13} /> Back to Problem
+          </Link>
           <button className="admin-btn admin-btn-ghost" onClick={() => setShowBulk(!showBulk)}>Bulk Import</button>
-          <button className="admin-btn admin-btn-primary" onClick={() => setShowAdd(!showAdd)}>+ Add Test Case</button>
+          <button className="admin-btn admin-btn-primary" onClick={() => setShowAdd(!showAdd)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <Plus size={13} /> Add Test Case
+          </button>
         </div>
       </div>
 
@@ -134,8 +139,8 @@ export default function TestCaseManager() {
           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Hidden</div>
         </div>
         <div className="admin-section-card" style={{ flex: 1, textAlign: 'center', padding: '16px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: publicCount > 0 && privateCount > 0 ? '#4ade80' : '#f85149' }}>
-            {publicCount > 0 && privateCount > 0 ? '✓' : '✗'}
+          <div style={{ fontSize: '24px', fontWeight: 700, color: publicCount > 0 && privateCount > 0 ? '#4ade80' : 'var(--kc-error, #f85149)', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '36px' }}>
+            {publicCount > 0 && privateCount > 0 ? <Check size={22} /> : <X size={22} />}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Publish Ready</div>
         </div>
@@ -150,18 +155,26 @@ export default function TestCaseManager() {
           padding: '12px 16px',
           marginBottom: '20px',
           fontSize: '13px',
-          color: '#f85149',
+          color: 'var(--kc-error, #f85149)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
         }}>
-          ⚠️ <strong>Cannot publish:</strong>{' '}
-          {publicCount === 0 && 'At least one public test case is required. '}
-          {privateCount === 0 && 'At least one hidden (private) test case is required.'}
+          <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+          <div>
+            <strong>Cannot publish:</strong>{' '}
+            {publicCount === 0 && 'At least one public test case is required. '}
+            {privateCount === 0 && 'At least one hidden (private) test case is required.'}
+          </div>
         </div>
       )}
 
       {/* Bulk Import */}
       {showBulk && (
         <div className="admin-section-card" style={{ marginBottom: '20px' }}>
-          <div className="admin-section-title">📦 Bulk Import Test Cases</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Package size={15} style={{ color: 'var(--kc-accent)' }} /> Bulk Import Test Cases
+          </div>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>
             Paste a JSON array: [{`{ "input": "...", "expected_output": "...", "is_sample": false }`}]
           </p>
@@ -176,7 +189,9 @@ export default function TestCaseManager() {
       {/* Add Form */}
       {showAdd && (
         <div className="admin-section-card" style={{ marginBottom: '20px' }}>
-          <div className="admin-section-title">➕ New Test Case</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <PlusCircle size={15} style={{ color: 'var(--kc-accent)' }} /> New Test Case
+          </div>
           <div className="admin-grid-2">
             <div className="admin-form-group">
               <label className="admin-form-label">Input *</label>
@@ -218,7 +233,7 @@ export default function TestCaseManager() {
           </thead>
           <tbody>
             {testCases.length === 0 ? (
-              <tr><td colSpan="5"><div className="admin-empty"><div className="admin-empty-icon">📋</div><div className="admin-empty-text">No test cases yet. Add one to get started.</div></div></td></tr>
+              <tr><td colSpan="5"><div className="admin-empty"><div className="admin-empty-icon"><FileCode2 size={22} style={{ color: 'var(--text-muted)' }} /></div><div className="admin-empty-text">No test cases yet. Add one to get started.</div></div></td></tr>
             ) : testCases.map((tc, idx) => (
               <TestCaseRow
                 key={tc.id}

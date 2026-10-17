@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Mail, Github, MessageSquare, Send, ArrowLeft, HelpCircle, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Mail, Github, MessageSquare, Send, ArrowLeft, HelpCircle, ShieldAlert } from 'lucide-react';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
 
 export default function ContactPage() {
@@ -79,7 +79,7 @@ export default function ContactPage() {
         <div className="mb-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-[#8b949e] hover:text-[#58a6ff] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--kc-text-muted)] hover:text-white transition-colors"
           >
             <ArrowLeft size={13} />
             <span>Back to Home</span>
@@ -88,16 +88,16 @@ export default function ContactPage() {
 
         {/* Page Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-lg bg-[#58a6ff]/15 border border-[#58a6ff]/20 flex items-center justify-center">
-              <Mail size={14} className="text-[#58a6ff]" />
+          <div className="flex items-center gap-2 mb-2.5">
+            <div className="w-6 h-6 rounded-md bg-[var(--kc-accent)]/10 border border-[var(--kc-accent)]/20 flex items-center justify-center">
+              <Mail size={13} className="text-[var(--kc-accent)]" />
             </div>
-            <span className="text-[12px] font-bold text-[#58a6ff] uppercase tracking-widest">Support</span>
+            <span className="text-[11px] font-bold text-[var(--kc-accent)] uppercase tracking-wider">Support</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-display font-extrabold text-white mb-2">
+          <h1 className="text-3xl font-display font-bold text-white mb-2">
             Contact & Support
           </h1>
-          <p className="text-sm text-[#8b949e]">
+          <p className="text-sm text-[var(--kc-text-muted)]">
             Have a question, feedback, or a bug report? Reach out through our community channels or send us a message.
           </p>
         </div>
@@ -105,33 +105,26 @@ export default function ContactPage() {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           {/* Left Column: Direct Project Channels */}
           <div className="md:col-span-2 space-y-4">
-            <div
-              className="rounded-2xl border border-white/[0.08] p-5 sm:p-6 space-y-4"
-              style={{
-                background: 'rgba(255,255,255,0.025)',
-                backdropFilter: 'blur(16px)',
-                boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
-              }}
-            >
-              <h2 className="text-base font-display font-bold text-white flex items-center gap-2">
-                <HelpCircle size={17} className="text-[#58a6ff]" />
+            <div className="rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] p-5 space-y-4 shadow-sm">
+              <h2 className="text-sm font-display font-semibold text-white flex items-center gap-2">
+                <HelpCircle size={16} className="text-[var(--kc-accent)]" />
                 Direct Channels
               </h2>
 
-              <div className="space-y-3.5 text-xs text-[#8b949e]">
+              <div className="space-y-3 text-xs text-[var(--kc-text-muted)]">
                 <a
                   href="mailto:support@kodechirp.com"
-                  className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-all group"
+                  className="flex items-start gap-3 p-3 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] border border-[var(--kc-border)] transition-colors group"
                 >
-                  <Mail size={18} className="text-[#58a6ff] shrink-0 mt-0.5" />
+                  <Mail size={16} className="text-[var(--kc-accent)] shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-white group-hover:text-[#58a6ff] transition-colors block text-xs">
+                    <strong className="text-white group-hover:text-[var(--kc-accent)] transition-colors block text-xs">
                       Official Support Email
                     </strong>
-                    <span className="text-[#c9d1d9] font-mono text-[11px] mt-0.5 block">
+                    <span className="text-[var(--kc-text)] font-mono text-[11px] mt-0.5 block">
                       support@kodechirp.com
                     </span>
-                    <span className="text-[#8b949e] text-[10px] mt-0.5 block">
+                    <span className="text-[var(--kc-text-muted)] text-[10px] mt-0.5 block">
                       Response window: Mon–Fri within 24–48h
                     </span>
                   </div>
@@ -141,14 +134,14 @@ export default function ContactPage() {
                   href="https://github.com/ritam4735/kodechirp/issues"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-all group"
+                  className="flex items-start gap-3 p-3 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] border border-[var(--kc-border)] transition-colors group"
                 >
-                  <Github size={18} className="text-white shrink-0 mt-0.5" />
+                  <Github size={16} className="text-white shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-white group-hover:text-[#58a6ff] transition-colors block text-xs">
+                    <strong className="text-white group-hover:text-[var(--kc-accent)] transition-colors block text-xs">
                       GitHub Issues & Bug Tracker
                     </strong>
-                    <span className="text-[#8b949e] text-[11px] mt-0.5 block">
+                    <span className="text-[var(--kc-text-muted)] text-[11px] mt-0.5 block">
                       Track open bugs, test-case anomalies, and judge worker fixes.
                     </span>
                   </div>
@@ -156,14 +149,14 @@ export default function ContactPage() {
 
                 <Link
                   href="/questions"
-                  className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-all group"
+                  className="flex items-start gap-3 p-3 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] border border-[var(--kc-border)] transition-colors group"
                 >
-                  <MessageSquare size={18} className="text-[#a371f7] shrink-0 mt-0.5" />
+                  <MessageSquare size={16} className="text-[var(--kc-accent)] shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-white group-hover:text-[#a371f7] transition-colors block text-xs">
+                    <strong className="text-white group-hover:text-[var(--kc-accent)] transition-colors block text-xs">
                       Community Chirps
                     </strong>
-                    <span className="text-[#8b949e] text-[11px] mt-0.5 block">
+                    <span className="text-[var(--kc-text-muted)] text-[11px] mt-0.5 block">
                       Discuss optimal algorithms and ask peers directly on challenge pages.
                     </span>
                   </div>
@@ -171,17 +164,17 @@ export default function ContactPage() {
 
                 <a
                   href="mailto:security@kodechirp.com"
-                  className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-all group"
+                  className="flex items-start gap-3 p-3 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] border border-[var(--kc-border)] transition-colors group"
                 >
-                  <ShieldAlert size={18} className="text-[#22c55e] shrink-0 mt-0.5" />
+                  <ShieldAlert size={16} className="text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-white group-hover:text-[#22c55e] transition-colors block text-xs">
+                    <strong className="text-white group-hover:text-emerald-400 transition-colors block text-xs">
                       Security & Responsible Disclosure
                     </strong>
-                    <span className="text-[#c9d1d9] font-mono text-[11px] mt-0.5 block">
+                    <span className="text-[var(--kc-text)] font-mono text-[11px] mt-0.5 block">
                       security@kodechirp.com
                     </span>
-                    <span className="text-[#8b949e] text-[10px] mt-0.5 block">
+                    <span className="text-[var(--kc-text-muted)] text-[10px] mt-0.5 block">
                       Report sandbox vulnerabilities or worker escalation issues.
                     </span>
                   </div>
@@ -190,39 +183,27 @@ export default function ContactPage() {
             </div>
 
             {/* Maintainer Info Card */}
-            <div
-              className="rounded-2xl border border-white/[0.08] p-5 text-xs text-[#8b949e] space-y-2"
-              style={{
-                background: 'rgba(255,255,255,0.02)',
-                backdropFilter: 'blur(16px)',
-              }}
-            >
-              <div className="font-semibold text-white">Project Maintainer</div>
-              <p className="leading-relaxed text-[#c9d1d9]">
-                Created and maintained by <strong>Ritam Chatterjee</strong> (<a href="https://github.com/ritam4735" target="_blank" rel="noopener noreferrer" className="text-[#58a6ff] hover:underline">@ritam4735</a>).
+            <div className="rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] p-5 text-xs text-[var(--kc-text-muted)] space-y-2 shadow-sm">
+              <div className="font-medium text-white">Project Maintainer</div>
+              <p className="leading-relaxed text-[var(--kc-text)]">
+                Created and maintained by <strong>Ritam Chatterjee</strong> (<a href="https://github.com/ritam4735" target="_blank" rel="noopener noreferrer" className="text-[var(--kc-accent)] hover:underline">@ritam4735</a>).
               </p>
-              <p className="text-[11px] text-[#8b949e]">
+              <p className="text-[11px] text-[var(--kc-text-muted)]">
                 Location: Kolkata, India · UTC+05:30
               </p>
             </div>
 
             {/* Quick Policies Card */}
-            <div
-              className="rounded-2xl border border-white/[0.08] p-5 text-xs text-[#8b949e] space-y-2"
-              style={{
-                background: 'rgba(255,255,255,0.02)',
-                backdropFilter: 'blur(16px)',
-              }}
-            >
-              <div className="font-semibold text-white">Policies & Guidelines</div>
+            <div className="rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] p-5 text-xs text-[var(--kc-text-muted)] space-y-2 shadow-sm">
+              <div className="font-medium text-white">Policies & Guidelines</div>
               <p className="leading-relaxed">
                 Before reaching out, check our legal policies:
               </p>
               <div className="flex items-center gap-3 pt-1">
-                <Link href="/privacy" className="text-[#58a6ff] hover:underline">
+                <Link href="/privacy" className="text-[var(--kc-accent)] hover:underline">
                   Privacy Policy →
                 </Link>
-                <Link href="/terms" className="text-[#58a6ff] hover:underline">
+                <Link href="/terms" className="text-[var(--kc-accent)] hover:underline">
                   Terms of Service →
                 </Link>
               </div>
@@ -231,31 +212,24 @@ export default function ContactPage() {
 
           {/* Right Column: Interactive Feedback / Message Form */}
           <div className="md:col-span-3">
-            <div
-              className="rounded-2xl border border-white/[0.08] p-6 sm:p-7"
-              style={{
-                background: 'rgba(255,255,255,0.025)',
-                backdropFilter: 'blur(16px)',
-                boxShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
-              }}
-            >
-              <h2 className="text-lg font-display font-bold text-white mb-1">
+            <div className="rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] p-6 sm:p-7 shadow-sm">
+              <h2 className="text-base font-display font-semibold text-white mb-1">
                 Send a Message
               </h2>
-              <p className="text-xs text-[#8b949e] mb-6">
+              <p className="text-xs text-[var(--kc-text-muted)] mb-5">
                 Fill in your details below and our maintainer team will review your note.
               </p>
 
               {error && (
-                <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs rounded-xl flex items-center gap-2">
-                  <span className="shrink-0">⚠️</span>
+                <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs rounded-md flex items-center gap-2">
+                  <ShieldAlert size={14} className="shrink-0 text-rose-400" />
                   <span>{error}</span>
                 </div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                 <div>
-                  <label htmlFor="contact-name" className="block text-xs font-semibold text-[#8b949e] mb-1.5 uppercase tracking-wider">
+                  <label htmlFor="contact-name" className="block text-xs font-medium text-[var(--kc-text-muted)] mb-1.5 uppercase tracking-wider">
                     Your Name
                   </label>
                   <input
@@ -271,21 +245,21 @@ export default function ContactPage() {
                       setForm({ ...form, name: e.target.value });
                       clearFieldError('name');
                     }}
-                    className={`w-full bg-[#0d1117] text-sm text-[#e6edf3] placeholder-[#484f58] rounded-xl px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
+                    className={`w-full bg-[var(--kc-surface-subtle)] text-sm text-white placeholder-[var(--kc-text-muted)] rounded-md px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
                       fieldErrors.name
-                        ? 'border-2 border-[#f85149] focus:ring-2 focus:ring-[#f85149]/30'
-                        : 'border border-[#30363d] focus:border-[#58a6ff]'
+                        ? 'border border-rose-500'
+                        : 'border border-[var(--kc-border)] focus:border-[var(--kc-accent)]'
                     }`}
                   />
                   {fieldErrors.name && (
-                    <p id="contact-name-error" role="alert" className="text-xs text-[#ff7b72] mt-1.5 flex items-center gap-1">
+                    <p id="contact-name-error" role="alert" className="text-xs text-rose-400 mt-1.5 flex items-center gap-1">
                       <span>{fieldErrors.name}</span>
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label htmlFor="contact-email" className="block text-xs font-semibold text-[#8b949e] mb-1.5 uppercase tracking-wider">
+                  <label htmlFor="contact-email" className="block text-xs font-medium text-[var(--kc-text-muted)] mb-1.5 uppercase tracking-wider">
                     Email Address
                   </label>
                   <input
@@ -301,21 +275,21 @@ export default function ContactPage() {
                       setForm({ ...form, email: e.target.value });
                       clearFieldError('email');
                     }}
-                    className={`w-full bg-[#0d1117] text-sm text-[#e6edf3] placeholder-[#484f58] rounded-xl px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
+                    className={`w-full bg-[var(--kc-surface-subtle)] text-sm text-white placeholder-[var(--kc-text-muted)] rounded-md px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
                       fieldErrors.email
-                        ? 'border-2 border-[#f85149] focus:ring-2 focus:ring-[#f85149]/30'
-                        : 'border border-[#30363d] focus:border-[#58a6ff]'
+                        ? 'border border-rose-500'
+                        : 'border border-[var(--kc-border)] focus:border-[var(--kc-accent)]'
                     }`}
                   />
                   {fieldErrors.email && (
-                    <p id="contact-email-error" role="alert" className="text-xs text-[#ff7b72] mt-1.5 flex items-center gap-1">
+                    <p id="contact-email-error" role="alert" className="text-xs text-rose-400 mt-1.5 flex items-center gap-1">
                       <span>{fieldErrors.email}</span>
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label htmlFor="contact-category" className="block text-xs font-semibold text-[#8b949e] mb-1.5 uppercase tracking-wider">
+                  <label htmlFor="contact-category" className="block text-xs font-medium text-[var(--kc-text-muted)] mb-1.5 uppercase tracking-wider">
                     Topic / Category
                   </label>
                   <select
@@ -323,7 +297,7 @@ export default function ContactPage() {
                     disabled={submitting}
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full bg-[#0d1117] border border-[#30363d] text-sm text-[#e6edf3] rounded-xl px-3.5 py-2.5 focus:border-[#58a6ff] focus:outline-none transition-colors disabled:opacity-50"
+                    className="w-full bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] text-sm text-white rounded-md px-3.5 py-2.5 focus:border-[var(--kc-accent)] focus:outline-none transition-colors disabled:opacity-50"
                   >
                     <option value="General Feedback">General Feedback</option>
                     <option value="Bug Report">Bug Report & Test Case Issue</option>
@@ -334,7 +308,7 @@ export default function ContactPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="contact-message" className="block text-xs font-semibold text-[#8b949e] mb-1.5 uppercase tracking-wider">
+                  <label htmlFor="contact-message" className="block text-xs font-medium text-[var(--kc-text-muted)] mb-1.5 uppercase tracking-wider">
                     Message
                   </label>
                   <textarea
@@ -350,14 +324,14 @@ export default function ContactPage() {
                       setForm({ ...form, message: e.target.value });
                       clearFieldError('message');
                     }}
-                    className={`w-full bg-[#0d1117] text-sm text-[#e6edf3] placeholder-[#484f58] rounded-xl p-3.5 focus:outline-none transition-colors resize-none disabled:opacity-50 ${
+                    className={`w-full bg-[var(--kc-surface-subtle)] text-sm text-white placeholder-[var(--kc-text-muted)] rounded-md p-3.5 focus:outline-none transition-colors resize-none disabled:opacity-50 ${
                       fieldErrors.message
-                        ? 'border-2 border-[#f85149] focus:ring-2 focus:ring-[#f85149]/30'
-                        : 'border border-[#30363d] focus:border-[#58a6ff]'
+                        ? 'border border-rose-500'
+                        : 'border border-[var(--kc-border)] focus:border-[var(--kc-accent)]'
                     }`}
                   />
                   {fieldErrors.message && (
-                    <p id="contact-message-error" role="alert" className="text-xs text-[#ff7b72] mt-1.5 flex items-center gap-1">
+                    <p id="contact-message-error" role="alert" className="text-xs text-rose-400 mt-1.5 flex items-center gap-1">
                       <span>{fieldErrors.message}</span>
                     </p>
                   )}
@@ -366,16 +340,16 @@ export default function ContactPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-[#238636] hover:bg-[#2ea043] disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 text-sm mt-2"
+                  className="w-full bg-[var(--kc-accent)] hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-md transition-opacity flex items-center justify-center gap-2 text-sm mt-2"
                 >
                   {submitting ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       <span>Sending Message...</span>
                     </>
                   ) : (
                     <>
-                      <Send size={15} />
+                      <Send size={14} />
                       <span>Send Message</span>
                     </>
                   )}

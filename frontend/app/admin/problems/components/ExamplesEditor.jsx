@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GripVertical, Plus, Trash2, ArrowUp, ArrowDown, Sparkles, AlertCircle } from 'lucide-react';
+import { GripVertical, Plus, Trash2, ArrowUp, ArrowDown, Sparkles, AlertCircle, FileText } from 'lucide-react';
 
 /**
  * ExamplesEditor Component
@@ -119,11 +119,12 @@ export default function ExamplesEditor({
       {/* Header */}
       <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span>📋 Examples</span>
-          <span className="admin-badge" style={{ fontSize: '11px', background: 'rgba(88, 166, 255, 0.15)', color: '#58a6ff' }}>
+          <FileText size={16} className="text-[var(--kc-accent)]" />
+          <span style={{ fontWeight: 600 }}>Examples</span>
+          <span className="admin-badge" style={{ fontSize: '11px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--kc-accent)' }}>
             {currentExamples.length}
           </span>
-          <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--kc-text-muted)' }}>
             (At least one example required to publish)
           </span>
         </div>
@@ -137,10 +138,10 @@ export default function ExamplesEditor({
               onClick={onGenerateExamples}
               disabled={generatingExamples}
               title={aiConfigured ? 'Generate examples with AI based on problem description' : 'Extract examples from problem description'}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', borderColor: 'rgba(168, 85, 247, 0.3)', color: '#c084fc' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
-              <Sparkles size={14} />
-              {generatingExamples ? 'Generating...' : '✨ Generate Examples'}
+              <Sparkles size={14} className="text-[var(--kc-accent)]" />
+              <span>{generatingExamples ? 'Generating...' : 'Generate Examples'}</span>
             </button>
           )}
 

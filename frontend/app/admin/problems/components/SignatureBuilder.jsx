@@ -34,24 +34,24 @@ export default function SignatureBuilder({ signature, onChange }) {
   };
 
   return (
-    <div className="signature-builder border p-4 rounded bg-[#0d1117] mb-4">
-      <h3 className="text-lg font-bold text-white mb-4">Function Signature Builder</h3>
+    <div className="signature-builder border border-[var(--kc-border)] p-4 rounded-lg bg-[var(--kc-surface)] mb-4">
+      <h3 className="text-sm font-semibold text-[var(--kc-text-primary)] mb-3">Function Signature Builder</h3>
       
       <div className="flex gap-4 mb-4">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-300 mb-1">Function Name</label>
+          <label className="block text-xs font-medium text-[var(--kc-text-secondary)] mb-1">Function Name</label>
           <input 
             type="text" 
-            className="w-full bg-[#161b22] border border-[#30363d] text-white px-3 py-2 rounded focus:outline-none focus:border-blue-500"
+            className="w-full bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] text-[var(--kc-text-primary)] px-3 py-1.5 rounded-md text-sm focus:outline-none focus:border-[var(--kc-accent)] transition-colors"
             value={currentSignature.name} 
             onChange={(e) => updateName(e.target.value)} 
             placeholder="e.g. two_sum"
           />
         </div>
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-300 mb-1">Return Type</label>
+          <label className="block text-xs font-medium text-[var(--kc-text-secondary)] mb-1">Return Type</label>
           <select 
-            className="w-full bg-[#161b22] border border-[#30363d] text-white px-3 py-2 rounded focus:outline-none focus:border-blue-500"
+            className="w-full bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] text-[var(--kc-text-primary)] px-3 py-1.5 rounded-md text-sm focus:outline-none focus:border-[var(--kc-accent)] transition-colors"
             value={currentSignature.returnType} 
             onChange={(e) => updateReturnType(e.target.value)}
           >
@@ -65,31 +65,31 @@ export default function SignatureBuilder({ signature, onChange }) {
 
       <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
-          <label className="block text-sm font-medium text-gray-300">Parameters</label>
+          <label className="block text-xs font-medium text-[var(--kc-text-secondary)]">Parameters</label>
           <button 
             type="button" 
             onClick={addParam}
-            className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded"
+            className="text-xs bg-[var(--kc-accent)] hover:opacity-90 text-white px-2.5 py-1 rounded-md transition-opacity"
           >
             + Add Parameter
           </button>
         </div>
         
         {currentSignature.params.length === 0 ? (
-          <p className="text-sm text-gray-500 italic">No parameters defined.</p>
+          <p className="text-xs text-[var(--kc-text-muted)] italic">No parameters defined.</p>
         ) : (
           <div className="space-y-2">
             {currentSignature.params.map((param, idx) => (
-              <div key={idx} className="flex gap-2 items-center bg-[#161b22] p-2 rounded border border-[#30363d]">
+              <div key={idx} className="flex gap-2 items-center bg-[var(--kc-surface-subtle)] p-2 rounded-md border border-[var(--kc-border)]">
                 <input 
                   type="text" 
-                  className="flex-1 bg-transparent border border-[#30363d] text-white px-2 py-1 rounded focus:outline-none focus:border-blue-500"
+                  className="flex-1 bg-transparent border border-[var(--kc-border)] text-[var(--kc-text-primary)] px-2 py-1 rounded text-xs focus:outline-none focus:border-[var(--kc-accent)]"
                   value={param.name} 
                   onChange={(e) => updateParam(idx, 'name', e.target.value)} 
                   placeholder="Param name (e.g. nums)"
                 />
                 <select 
-                  className="flex-1 bg-transparent border border-[#30363d] text-white px-2 py-1 rounded focus:outline-none focus:border-blue-500"
+                  className="flex-1 bg-[var(--kc-surface)] border border-[var(--kc-border)] text-[var(--kc-text-primary)] px-2 py-1 rounded text-xs focus:outline-none focus:border-[var(--kc-accent)]"
                   value={param.type} 
                   onChange={(e) => updateParam(idx, 'type', e.target.value)}
                 >
@@ -100,7 +100,7 @@ export default function SignatureBuilder({ signature, onChange }) {
                 <button 
                   type="button" 
                   onClick={() => removeParam(idx)}
-                  className="text-red-500 hover:text-red-400 px-2 font-bold"
+                  className="text-red-400 hover:text-red-300 px-2 font-bold text-xs"
                 >
                   ✕
                 </button>
@@ -110,8 +110,8 @@ export default function SignatureBuilder({ signature, onChange }) {
         )}
       </div>
 
-      <div className="mt-4 p-3 bg-[#161b22] rounded border border-[#30363d] font-mono text-sm text-gray-300">
-        <span className="text-blue-400">def</span> <span className="text-yellow-200">{currentSignature.name || 'function_name'}</span>(
+      <div className="mt-4 p-3 bg-[var(--kc-surface-subtle)] rounded-md border border-[var(--kc-border)] font-mono text-xs text-[var(--kc-text-secondary)]">
+        <span className="text-[var(--kc-accent)]">def</span> <span className="text-amber-300">{currentSignature.name || 'function_name'}</span>(
         {currentSignature.params.map(p => `${p.name}: ${p.type}`).join(', ')}
         ) -&gt; {currentSignature.returnType}
       </div>

@@ -33,7 +33,7 @@ export default function TermsPage() {
           <p>
             Our platform provides automated code execution within isolated Docker sandboxes. You are granted access to run and submit code for educational and algorithmic problem-solving purposes.
           </p>
-          <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-300 text-xs space-y-1.5">
+          <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-md text-rose-300 text-xs space-y-1.5">
             <div className="font-semibold text-rose-200 flex items-center gap-1.5">
               <AlertTriangle size={14} /> Strictly Prohibited Activities:
             </div>
@@ -54,19 +54,19 @@ export default function TermsPage() {
       icon: MessageSquare,
       title: '3. Intellectual Property & Community Chirps',
       content: (
-        <div className="space-y-3 text-sm text-[#8b949e] leading-relaxed">
+        <div className="space-y-3 text-sm text-[var(--kc-text-muted)] leading-relaxed">
           <p>
             You retain ownership of the original code and algorithmic explanations you write and publish on KodeChirp.
           </p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
-              <strong className="text-[#c9d1d9]">License to Execute:</strong> By submitting code to the judge, you grant KodeChirp the technical license to compile, execute, test, and generate runtime diagnostics for your code.
+              <strong className="text-[var(--kc-text)]">License to Execute:</strong> By submitting code to the judge, you grant KodeChirp the technical license to compile, execute, test, and generate runtime diagnostics for your code.
             </li>
             <li>
-              <strong className="text-[#c9d1d9]">Community Contributions:</strong> When you share a Chirp on a problem, you grant other developers permission to view, learn from, and discuss your approach in the spirit of open peer learning.
+              <strong className="text-[var(--kc-text)]">Community Contributions:</strong> When you share a Chirp on a problem, you grant other developers permission to view, learn from, and discuss your approach in the spirit of open peer learning.
             </li>
             <li>
-              <strong className="text-[#c9d1d9]">Community Standards:</strong> Chirps and discussions must remain respectful, constructive, and free of abusive or harmful content.
+              <strong className="text-[var(--kc-text)]">Community Standards:</strong> Chirps and discussions must remain respectful, constructive, and free of abusive or harmful content.
             </li>
           </ul>
         </div>
@@ -76,7 +76,7 @@ export default function TermsPage() {
       icon: Terminal,
       title: '4. Service Availability & Limitations',
       content: (
-        <div className="space-y-3 text-sm text-[#8b949e] leading-relaxed">
+        <div className="space-y-3 text-sm text-[var(--kc-text-muted)] leading-relaxed">
           <p>
             KodeChirp is provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis. While we strive for maximum uptime and sub-second queue processing:
           </p>
@@ -92,9 +92,9 @@ export default function TermsPage() {
       icon: FileText,
       title: '5. Open Source & Project License',
       content: (
-        <div className="space-y-3 text-sm text-[#8b949e] leading-relaxed">
+        <div className="space-y-3 text-sm text-[var(--kc-text-muted)] leading-relaxed">
           <p>
-            KodeChirp is an open-source project created by <a href="https://github.com/ritam4735" target="_blank" rel="noopener noreferrer" className="text-[#58a6ff] hover:underline font-medium">Ritam</a>. You can inspect the source code, review architectural diagrams, report issues, and contribute improvements directly on GitHub.
+            KodeChirp is an open-source project created by <a href="https://github.com/ritam4735" target="_blank" rel="noopener noreferrer" className="text-[var(--kc-accent)] hover:underline font-medium">Ritam</a>. You can inspect the source code, review architectural diagrams, report issues, and contribute improvements directly on GitHub.
           </p>
         </div>
       ),
@@ -110,7 +110,7 @@ export default function TermsPage() {
         <div className="mb-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-[#8b949e] hover:text-[#58a6ff] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--kc-text-muted)] hover:text-white transition-colors"
           >
             <ArrowLeft size={13} />
             <span>Back to Home</span>
@@ -119,39 +119,32 @@ export default function TermsPage() {
 
         {/* Page Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-lg bg-[#a371f7]/15 border border-[#a371f7]/20 flex items-center justify-center">
-              <FileText size={14} className="text-[#a371f7]" />
+          <div className="flex items-center gap-2 mb-2.5">
+            <div className="w-6 h-6 rounded-md bg-[var(--kc-accent)]/10 border border-[var(--kc-accent)]/20 flex items-center justify-center">
+              <FileText size={13} className="text-[var(--kc-accent)]" />
             </div>
-            <span className="text-[12px] font-bold text-[#a371f7] uppercase tracking-widest">Legal</span>
+            <span className="text-[11px] font-bold text-[var(--kc-accent)] uppercase tracking-wider">Legal</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-display font-extrabold text-white mb-2">
+          <h1 className="text-3xl font-display font-bold text-white mb-2">
             Terms & Conditions
           </h1>
-          <p className="text-sm text-[#8b949e]">
+          <p className="text-sm text-[var(--kc-text-muted)]">
             Last updated: {lastUpdated} · Fair usage guidelines for developers and learners.
           </p>
         </div>
 
         {/* Terms Content Card */}
-        <div
-          className="rounded-2xl border border-white/[0.08] p-6 sm:p-8 space-y-8"
-          style={{
-            background: 'rgba(255,255,255,0.025)',
-            backdropFilter: 'blur(16px)',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
-          }}
-        >
+        <div className="rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] p-6 sm:p-8 space-y-8 shadow-sm">
           {sections.map((section, idx) => {
             const Icon = section.icon;
             return (
               <div
                 key={idx}
-                className={idx > 0 ? 'pt-8 border-t border-white/[0.06]' : ''}
+                className={idx > 0 ? 'pt-8 border-t border-[var(--kc-border)]' : ''}
               >
                 <div className="flex items-center gap-2.5 mb-3">
-                  <Icon size={18} className="text-[#a371f7] shrink-0" />
-                  <h2 className="text-lg font-display font-bold text-white">
+                  <Icon size={16} className="text-[var(--kc-accent)] shrink-0" />
+                  <h2 className="text-base font-display font-semibold text-white">
                     {section.title}
                   </h2>
                 </div>
@@ -161,24 +154,24 @@ export default function TermsPage() {
           })}
 
           {/* Bottom Card Footer */}
-          <div className="pt-8 border-t border-white/[0.06] bg-white/[0.01] -mx-6 sm:-mx-8 -mb-6 sm:-mb-8 p-6 sm:p-8 rounded-b-2xl">
+          <div className="pt-6 border-t border-[var(--kc-border)] bg-[var(--kc-surface-subtle)]/50 -mx-6 sm:-mx-8 -mb-6 sm:-mb-8 p-6 sm:p-8 rounded-b-lg">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-sm font-semibold text-white">Need clarification or support?</h3>
-                <p className="text-xs text-[#8b949e] mt-0.5">
+                <h3 className="text-sm font-medium text-white">Need clarification or support?</h3>
+                <p className="text-xs text-[var(--kc-text-muted)] mt-0.5">
                   Have questions about acceptable use or our sandbox environment?
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <Link
                   href="/contact"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-[#a371f7]/20 hover:bg-[#a371f7]/30 border border-[#a371f7]/30 rounded-lg transition-colors"
+                  className="px-3.5 py-2 text-xs font-medium text-white bg-[var(--kc-accent)] hover:opacity-90 rounded-md transition-opacity"
                 >
                   Contact Support
                 </Link>
                 <Link
                   href="/privacy"
-                  className="px-4 py-2 text-xs font-semibold text-[#8b949e] hover:text-white bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 rounded-lg transition-colors"
+                  className="px-3.5 py-2 text-xs font-medium text-[var(--kc-text-muted)] hover:text-white bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] border border-[var(--kc-border)] rounded-md transition-colors"
                 >
                   Privacy Policy
                 </Link>

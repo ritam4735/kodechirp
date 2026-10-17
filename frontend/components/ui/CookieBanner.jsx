@@ -55,16 +55,16 @@ export function CookieBanner() {
           aria-label="Cookie preferences"
           className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-md z-50 pointer-events-auto"
         >
-          <div className="bg-[#161b22]/95 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-5 shadow-[0_16px_48px_rgba(0,0,0,0.6)] text-white relative">
+          <div className="bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg p-5 shadow-xl text-white relative">
             <div className="flex items-start gap-3.5 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-[#58a6ff]/15 border border-[#58a6ff]/25 flex items-center justify-center shrink-0 text-[#58a6ff]">
-                <Cookie size={18} aria-hidden="true" />
+              <div className="w-8 h-8 rounded-md bg-[var(--kc-accent)]/10 border border-[var(--kc-accent)]/20 flex items-center justify-center shrink-0 text-[var(--kc-accent)]">
+                <Cookie size={16} aria-hidden="true" />
               </div>
               <div className="flex-1 pr-6">
-                <h3 className="text-sm font-display font-bold tracking-tight text-white mb-1">
+                <h3 className="text-sm font-display font-semibold tracking-tight text-white mb-1">
                   Cookie & Privacy Preferences
                 </h3>
-                <p className="text-xs text-[#8b949e] leading-relaxed">
+                <p className="text-xs text-[var(--kc-text-muted)] leading-relaxed">
                   We use essential local tokens for authentication and optional anonymized telemetry to optimize sandbox execution. No third-party data broker tracking.
                 </p>
               </div>
@@ -72,20 +72,20 @@ export function CookieBanner() {
                 type="button"
                 onClick={handleEssentialOnly}
                 aria-label="Dismiss and use essential cookies only"
-                className="absolute top-4 right-4 text-[#8b949e] hover:text-white p-1 rounded-lg hover:bg-white/[0.06] transition-colors"
+                className="absolute top-4 right-4 text-[var(--kc-text-muted)] hover:text-white p-1 rounded-md hover:bg-[var(--kc-surface-subtle)] transition-colors"
               >
-                <X size={15} aria-hidden="true" />
+                <X size={14} aria-hidden="true" />
               </button>
             </div>
 
-            <div className="flex items-center justify-between text-[11px] text-[#8b949e] pb-3.5 mb-3 border-b border-white/[0.06]">
+            <div className="flex items-center justify-between text-[11px] text-[var(--kc-text-muted)] pb-3 mb-3 border-b border-[var(--kc-border)]">
               <div className="flex items-center gap-1.5 text-emerald-400">
                 <ShieldCheck size={13} aria-hidden="true" />
                 <span>GDPR & CCPA Compliant</span>
               </div>
               <Link
                 href="/privacy"
-                className="text-[#58a6ff] hover:underline"
+                className="text-[var(--kc-accent)] hover:underline"
               >
                 Privacy Policy →
               </Link>
@@ -95,7 +95,7 @@ export function CookieBanner() {
               <button
                 type="button"
                 onClick={handleAcceptAll}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#238636] hover:bg-[#2ea043] text-white text-xs font-semibold shadow-md shadow-[#238636]/20 transition-all hover:scale-[1.01]"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md bg-[var(--kc-accent)] hover:opacity-90 text-white text-xs font-medium transition-opacity"
               >
                 <Check size={13} aria-hidden="true" />
                 <span>Accept All</span>
@@ -103,7 +103,7 @@ export function CookieBanner() {
               <button
                 type="button"
                 onClick={handleEssentialOnly}
-                className="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-white/[0.1] bg-white/[0.03] hover:bg-white/[0.08] text-[#c9d1d9] hover:text-white text-xs font-medium transition-all"
+                className="inline-flex items-center justify-center px-3.5 py-2 rounded-md border border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] text-[var(--kc-text)] hover:text-white text-xs font-medium transition-colors"
               >
                 <span>Essential Only</span>
               </button>

@@ -163,7 +163,7 @@ export default function ProfilePage() {
   const user = profileData || authUser;
 
   return (
-    <div className="relative flex-1 bg-[#0d1117] min-h-screen overflow-hidden">
+    <div className="relative flex-1 bg-[var(--kc-bg)] min-h-screen overflow-hidden">
       <AnimatedBackground variant="particles" />
       
       <div className="relative z-10 max-w-6xl mx-auto w-full px-4 py-12">
@@ -172,12 +172,12 @@ export default function ProfilePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-3xl font-display font-bold text-white mb-8">My Profile</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold text-[var(--kc-text-primary)] mb-8 tracking-tight">My Profile</h1>
         </motion.div>
 
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#58a6ff]"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-[var(--kc-accent)] border-t-transparent"></div>
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-8">
@@ -189,34 +189,34 @@ export default function ProfilePage() {
               className="w-full lg:w-1/3 flex flex-col gap-6"
             >
               {/* Profile Card */}
-              <div className="bg-[#161b22]/80 backdrop-blur-md border border-[#30363d] rounded-2xl p-6 flex flex-col items-center text-center shadow-lg relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-r from-[#58a6ff]/20 to-[#8957e5]/20"></div>
+              <div className="bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg p-6 flex flex-col items-center text-center shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-16 bg-[var(--kc-surface-subtle)] border-b border-[var(--kc-border)]"></div>
                 
-                <div className="relative group mt-4">
-                  <div className="w-32 h-32 rounded-full mb-4 border-4 border-[#161b22] bg-[#0d1117] flex items-center justify-center overflow-hidden z-10 relative">
+                <div className="relative group mt-2">
+                  <div className="w-28 h-28 rounded-full mb-4 border-4 border-[var(--kc-surface)] bg-[var(--kc-surface-subtle)] flex items-center justify-center overflow-hidden z-10 relative">
                     {user?.avatar_url ? (
                       <Image 
                         src={user.avatar_url} 
                         alt={user?.display_name ? `${user.display_name}'s profile avatar` : user?.username ? `${user.username}'s profile avatar` : 'Profile avatar'} 
-                        width={128}
-                        height={128}
+                        width={112}
+                        height={112}
                         priority
                         unoptimized={user.avatar_url.startsWith('data:')}
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <User size={64} className="text-[#8b949e]" aria-hidden="true" />
+                      <User size={52} className="text-[var(--kc-text-muted)]" aria-hidden="true" />
                     )}
                   </div>
                   {activeTab === 'edit' && (
                     <button 
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-4 right-0 bg-[#58a6ff] hover:bg-[#3182ce] text-white p-2 rounded-full transition-colors z-20 shadow-md"
+                      className="absolute bottom-4 right-0 bg-[var(--kc-accent)] hover:opacity-90 text-white p-2 rounded-full transition-opacity z-20 shadow-sm"
                       title="Upload Avatar"
                       aria-label="Upload new profile avatar"
                     >
-                      <Camera size={16} aria-hidden="true" />
+                      <Camera size={15} aria-hidden="true" />
                     </button>
                   )}
                   <input 
@@ -230,36 +230,36 @@ export default function ProfilePage() {
                   />
                 </div>
                 
-                <h2 className="text-2xl font-bold text-white tracking-tight">
+                <h2 className="text-xl font-bold text-[var(--kc-text-primary)] tracking-tight">
                   {user?.display_name || user?.username}
                 </h2>
-                <p className="text-[#58a6ff] font-medium mb-1">@{user?.username}</p>
-                <p className="text-[#8b949e] text-sm mb-2">{user?.email}</p>
+                <p className="text-[var(--kc-accent)] font-medium text-sm mb-1">@{user?.username}</p>
+                <p className="text-[var(--kc-text-secondary)] text-xs mb-2">{user?.email}</p>
                 {user?.created_at && (
-                  <p className="text-[#8b949e] text-xs mb-6 flex items-center justify-center gap-1">
-                    <CheckCircle size={12} className="text-[#3fb950]"/> 
+                  <p className="text-[var(--kc-text-muted)] text-xs mb-5 flex items-center justify-center gap-1">
+                    <CheckCircle size={12} className="text-[#4ade80]"/> 
                     Joined {new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}
                   </p>
                 )}
                 
                 {user?.bio && (
-                  <p className="text-[#c9d1d9] text-sm italic mb-6 leading-relaxed max-w-xs px-2">&ldquo;{user.bio}&rdquo;</p>
+                  <p className="text-[var(--kc-text-secondary)] text-xs italic mb-5 leading-relaxed max-w-xs px-2">&ldquo;{user.bio}&rdquo;</p>
                 )}
 
-                <div className="flex gap-4 mb-6">
+                <div className="flex gap-3 mb-2">
                   {user?.github_url && (
-                    <a href={user.github_url} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-[#21262d] flex items-center justify-center text-[#8b949e] hover:text-white hover:bg-[#30363d] transition-all">
-                      <Github size={18} />
+                    <a href={user.github_url} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-md bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] flex items-center justify-center text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] hover:border-[var(--kc-accent)] transition-colors">
+                      <Github size={15} />
                     </a>
                   )}
                   {user?.linkedin_url && (
-                    <a href={user.linkedin_url} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-[#21262d] flex items-center justify-center text-[#8b949e] hover:text-[#0a66c2] hover:bg-[#30363d] transition-all">
-                      <Linkedin size={18} />
+                    <a href={user.linkedin_url} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-md bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] flex items-center justify-center text-[var(--kc-text-muted)] hover:text-[var(--kc-accent)] hover:border-[var(--kc-accent)] transition-colors">
+                      <Linkedin size={15} />
                     </a>
                   )}
                   {user?.website_url && (
-                    <a href={user.website_url} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-[#21262d] flex items-center justify-center text-[#8b949e] hover:text-[#58a6ff] hover:bg-[#30363d] transition-all">
-                      <Globe size={18} />
+                    <a href={user.website_url} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-md bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] flex items-center justify-center text-[var(--kc-text-muted)] hover:text-[var(--kc-accent)] hover:border-[var(--kc-accent)] transition-colors">
+                      <Globe size={15} />
                     </a>
                   )}
                 </div>
@@ -267,39 +267,39 @@ export default function ProfilePage() {
 
               {/* Stats Card */}
               {stats && (
-                <div className="bg-[#161b22]/80 backdrop-blur-md border border-[#30363d] rounded-2xl p-6 shadow-lg">
-                  <h3 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
-                    <Award size={18} className="text-[#d2a8ff]" />
+                <div className="bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg p-5 shadow-sm">
+                  <h3 className="text-sm font-semibold text-[var(--kc-text-primary)] mb-4 flex items-center gap-2">
+                    <Award size={16} className="text-[var(--kc-accent)]" />
                     Submission Statistics
                   </h3>
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center p-3 bg-[#21262d]/50 rounded-xl border border-[#30363d]">
-                      <div className="w-10 h-10 rounded-lg bg-[#2ea043]/20 flex items-center justify-center text-[#3fb950] mr-4">
-                        <CheckSquare size={18} />
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center p-3 bg-[var(--kc-surface-subtle)] rounded-md border border-[var(--kc-border)]">
+                      <div className="w-8 h-8 rounded-md bg-[rgba(74,222,128,0.12)] flex items-center justify-center text-[#4ade80] mr-3">
+                        <CheckSquare size={16} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs text-[#8b949e] uppercase tracking-wider font-semibold">Solved</p>
-                        <p className="text-xl font-bold text-white">{stats.problems_solved}</p>
+                        <p className="text-[11px] font-mono text-[var(--kc-text-muted)] uppercase tracking-wider">Solved</p>
+                        <p className="text-lg font-bold text-[var(--kc-text-primary)]">{stats.problems_solved}</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center p-3 bg-[#21262d]/50 rounded-xl border border-[#30363d]">
-                      <div className="w-10 h-10 rounded-lg bg-[#58a6ff]/20 flex items-center justify-center text-[#58a6ff] mr-4">
-                        <Activity size={18} />
+                    <div className="flex items-center p-3 bg-[var(--kc-surface-subtle)] rounded-md border border-[var(--kc-border)]">
+                      <div className="w-8 h-8 rounded-md bg-[rgba(59,130,246,0.12)] flex items-center justify-center text-[var(--kc-accent)] mr-3">
+                        <Activity size={16} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs text-[#8b949e] uppercase tracking-wider font-semibold">Submissions</p>
-                        <p className="text-xl font-bold text-white">{stats.total_submissions}</p>
+                        <p className="text-[11px] font-mono text-[var(--kc-text-muted)] uppercase tracking-wider">Submissions</p>
+                        <p className="text-lg font-bold text-[var(--kc-text-primary)]">{stats.total_submissions}</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center p-3 bg-[#21262d]/50 rounded-xl border border-[#30363d]">
-                      <div className="w-10 h-10 rounded-lg bg-[#f0883e]/20 flex items-center justify-center text-[#f0883e] mr-4">
-                        <Award size={18} />
+                    <div className="flex items-center p-3 bg-[var(--kc-surface-subtle)] rounded-md border border-[var(--kc-border)]">
+                      <div className="w-8 h-8 rounded-md bg-[rgba(251,191,36,0.12)] flex items-center justify-center text-[#fbbf24] mr-3">
+                        <Award size={16} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs text-[#8b949e] uppercase tracking-wider font-semibold">Acceptance Rate</p>
-                        <p className="text-xl font-bold text-white">{stats.acceptance_rate}%</p>
+                        <p className="text-[11px] font-mono text-[var(--kc-text-muted)] uppercase tracking-wider">Acceptance Rate</p>
+                        <p className="text-lg font-bold text-[var(--kc-text-primary)]">{stats.acceptance_rate}%</p>
                       </div>
                     </div>
                   </div>
@@ -315,7 +315,7 @@ export default function ProfilePage() {
               className="w-full lg:w-2/3 flex flex-col gap-6"
             >
               {/* Navigation Tabs */}
-              <div className="bg-[#161b22]/80 backdrop-blur-md border border-[#30363d] rounded-2xl p-1.5 sm:p-2 flex gap-1.5 sm:gap-2 shadow-sm">
+              <div className="bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg p-1.5 flex gap-1.5 shadow-sm">
                 {[
                   { id: 'profile', label: 'Overview', fullLabel: 'Overview', icon: User },
                   { id: 'edit', label: 'Edit', fullLabel: 'Edit Profile', icon: Camera },
@@ -323,14 +323,14 @@ export default function ProfilePage() {
                 ].map((tab) => (
                   <button 
                     key={tab.id}
-                    className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 font-medium text-xs sm:text-sm transition-all duration-200 ${
+                    className={`flex-1 py-2 px-3 rounded-md flex items-center justify-center gap-1.5 font-medium text-xs sm:text-sm transition-colors ${
                       activeTab === tab.id 
-                        ? 'bg-[#21262d] text-white shadow-sm border border-[#30363d]' 
-                        : 'text-[#8b949e] hover:text-[#c9d1d9] hover:bg-[#21262d]/50'
+                        ? 'bg-[var(--kc-surface-subtle)] text-[var(--kc-text-primary)] border border-[var(--kc-border)] shadow-xs' 
+                        : 'text-[var(--kc-text-secondary)] hover:text-[var(--kc-text-primary)] hover:bg-[var(--kc-surface-subtle)]'
                     }`}
                     onClick={() => { setActiveTab(tab.id); setError(''); setSuccess(''); }}
                   >
-                    <tab.icon size={15} className={activeTab === tab.id ? 'text-[#58a6ff]' : ''} />
+                    <tab.icon size={14} className={activeTab === tab.id ? 'text-[var(--kc-accent)]' : ''} />
                     <span>
                       <span className="sm:hidden">{tab.label}</span>
                       <span className="hidden sm:inline">{tab.fullLabel}</span>
@@ -346,9 +346,9 @@ export default function ProfilePage() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="bg-[#f85149]/10 border border-[#f85149]/30 text-[#ff7b72] px-4 py-3 rounded-xl text-sm flex items-center gap-3"
+                    className="bg-[rgba(248,81,73,0.1)] border border-[rgba(248,81,73,0.25)] text-[var(--kc-error, #f87171)] px-4 py-2.5 rounded-md text-xs sm:text-sm flex items-center gap-2.5"
                   >
-                    <AlertCircle size={16} className="shrink-0" />
+                    <AlertCircle size={15} className="shrink-0" />
                     {error}
                   </motion.div>
                 )}
@@ -357,38 +357,38 @@ export default function ProfilePage() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="bg-[#2ea043]/10 border border-[#2ea043]/30 text-[#3fb950] px-4 py-3 rounded-xl text-sm flex items-center gap-3"
+                    className="bg-[rgba(74,222,128,0.1)] border border-[rgba(74,222,128,0.25)] text-[#4ade80] px-4 py-2.5 rounded-md text-xs sm:text-sm flex items-center gap-2.5"
                   >
-                    <CheckCircle size={16} className="shrink-0" />
+                    <CheckCircle size={15} className="shrink-0" />
                     {success}
                   </motion.div>
                 )}
               </AnimatePresence>
 
               {/* Tab Contents */}
-              <div className="bg-[#161b22]/80 backdrop-blur-md border border-[#30363d] rounded-2xl p-4 sm:p-6 md:p-8 shadow-lg min-h-[400px]">
+              <div className="bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg p-5 sm:p-7 shadow-sm min-h-[400px]">
                 
                 {activeTab === 'profile' && (
                   <motion.div 
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    className="flex flex-col gap-8"
+                    className="flex flex-col gap-6"
                   >
                     <div>
-                      <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2 border-b border-[#30363d] pb-3">
-                        <User size={20} className="text-[#58a6ff]" />
+                      <h3 className="text-base font-bold text-[var(--kc-text-primary)] mb-4 flex items-center gap-2 border-b border-[var(--kc-border)] pb-3">
+                        <User size={16} className="text-[var(--kc-accent)]" />
                         About Me
                       </h3>
                       {user?.bio ? (
-                        <p className="text-[#c9d1d9] leading-relaxed whitespace-pre-wrap">{user.bio}</p>
+                        <p className="text-[var(--kc-text-secondary)] text-sm leading-relaxed whitespace-pre-wrap">{user.bio}</p>
                       ) : (
-                        <div className="flex flex-col items-center justify-center py-8 text-[#8b949e]">
-                          <User size={32} className="mb-3 opacity-20" />
-                          <p>No bio provided yet.</p>
+                        <div className="flex flex-col items-center justify-center py-8 text-[var(--kc-text-muted)]">
+                          <User size={28} className="mb-2 opacity-30" />
+                          <p className="text-sm">No bio provided yet.</p>
                           <button 
                             onClick={() => setActiveTab('edit')} 
-                            className="mt-4 text-[#58a6ff] hover:underline text-sm font-medium flex items-center"
+                            className="mt-3 text-[var(--kc-accent)] hover:underline text-xs font-medium flex items-center"
                           >
-                            Add a bio <ChevronRight size={14} className="ml-1" />
+                            Add a bio <ChevronRight size={13} className="ml-1" />
                           </button>
                         </div>
                       )}
@@ -398,86 +398,86 @@ export default function ProfilePage() {
 
                 {activeTab === 'edit' && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2 border-b border-[#30363d] pb-3">
-                      <SettingsIcon size={20} className="text-[#58a6ff]" />
+                    <h3 className="text-base font-bold text-[var(--kc-text-primary)] mb-6 flex items-center gap-2 border-b border-[var(--kc-border)] pb-3">
+                      <SettingsIcon size={16} className="text-[var(--kc-accent)]" />
                       Profile Details
                     </h3>
-                    <form onSubmit={handleEditSubmit} className="flex flex-col gap-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="flex flex-col gap-2">
-                          <label className="text-sm text-[#c9d1d9] font-semibold">Username</label>
+                    <form onSubmit={handleEditSubmit} className="flex flex-col gap-5">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs text-[var(--kc-text-secondary)] font-medium">Username</label>
                           <input 
                             type="text" 
                             value={editForm.username} 
                             onChange={(e) => setEditForm({...editForm, username: e.target.value})}
-                            className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white placeholder-[#484f58] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                            className="bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] rounded-md px-3.5 py-2 text-[var(--kc-text-primary)] placeholder-[var(--kc-text-muted)] text-sm focus:outline-none focus:border-[var(--kc-accent)] transition-colors"
                             required
                           />
                         </div>
-                        <div className="flex flex-col gap-2">
-                          <label className="text-sm text-[#c9d1d9] font-semibold">Display Name</label>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs text-[var(--kc-text-secondary)] font-medium">Display Name</label>
                           <input 
                             type="text" 
                             value={editForm.display_name} 
                             onChange={(e) => setEditForm({...editForm, display_name: e.target.value})}
-                            className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white placeholder-[#484f58] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                            className="bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] rounded-md px-3.5 py-2 text-[var(--kc-text-primary)] placeholder-[var(--kc-text-muted)] text-sm focus:outline-none focus:border-[var(--kc-accent)] transition-colors"
                             placeholder="John Doe"
                           />
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-2">
-                        <label className="text-sm text-[#c9d1d9] font-semibold">Bio</label>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-[var(--kc-text-secondary)] font-medium">Bio</label>
                         <textarea 
                           value={editForm.bio} 
                           onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
                           rows={4}
-                          className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white placeholder-[#484f58] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all resize-none"
+                          className="bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] rounded-md px-3.5 py-2 text-[var(--kc-text-primary)] placeholder-[var(--kc-text-muted)] text-sm focus:outline-none focus:border-[var(--kc-accent)] transition-colors resize-none"
                           placeholder="Tell us about yourself..."
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="flex flex-col gap-2">
-                          <label className="text-sm text-[#c9d1d9] font-semibold flex items-center gap-2"><Github size={14}/> GitHub URL</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs text-[var(--kc-text-secondary)] font-medium flex items-center gap-1.5"><Github size={13}/> GitHub URL</label>
                           <input 
                             type="url" 
                             value={editForm.github_url} 
                             onChange={(e) => setEditForm({...editForm, github_url: e.target.value})}
-                            className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white placeholder-[#484f58] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                            className="bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] rounded-md px-3.5 py-2 text-[var(--kc-text-primary)] placeholder-[var(--kc-text-muted)] text-sm focus:outline-none focus:border-[var(--kc-accent)] transition-colors"
                             placeholder="https://github.com/username"
                           />
                         </div>
-                        <div className="flex flex-col gap-2">
-                          <label className="text-sm text-[#c9d1d9] font-semibold flex items-center gap-2"><Linkedin size={14}/> LinkedIn URL</label>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs text-[var(--kc-text-secondary)] font-medium flex items-center gap-1.5"><Linkedin size={13}/> LinkedIn URL</label>
                           <input 
                             type="url" 
                             value={editForm.linkedin_url} 
                             onChange={(e) => setEditForm({...editForm, linkedin_url: e.target.value})}
-                            className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white placeholder-[#484f58] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                            className="bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] rounded-md px-3.5 py-2 text-[var(--kc-text-primary)] placeholder-[var(--kc-text-muted)] text-sm focus:outline-none focus:border-[var(--kc-accent)] transition-colors"
                             placeholder="https://linkedin.com/in/username"
                           />
                         </div>
-                        <div className="flex flex-col gap-2 md:col-span-2">
-                          <label className="text-sm text-[#c9d1d9] font-semibold flex items-center gap-2"><Globe size={14}/> Personal Website</label>
+                        <div className="flex flex-col gap-1.5 md:col-span-2">
+                          <label className="text-xs text-[var(--kc-text-secondary)] font-medium flex items-center gap-1.5"><Globe size={13}/> Personal Website</label>
                           <input 
                             type="url" 
                             value={editForm.website_url} 
                             onChange={(e) => setEditForm({...editForm, website_url: e.target.value})}
-                            className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white placeholder-[#484f58] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                            className="bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] rounded-md px-3.5 py-2 text-[var(--kc-text-primary)] placeholder-[var(--kc-text-muted)] text-sm focus:outline-none focus:border-[var(--kc-accent)] transition-colors"
                             placeholder="https://yourwebsite.com"
                           />
                         </div>
                       </div>
 
-                      <div className="flex justify-end mt-6 pt-6 border-t border-[#30363d]">
+                      <div className="flex justify-end mt-4 pt-4 border-t border-[var(--kc-border)]">
                         <button 
                           type="submit" 
                           disabled={saving}
-                          className="bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#3fb950] text-white px-8 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-[#2ea043]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          className="bg-[var(--kc-accent)] hover:opacity-90 text-white px-6 py-2 rounded-md font-medium text-xs sm:text-sm transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-xs"
                         >
                           {saving ? (
-                            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Saving...</>
+                            <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Saving...</>
                           ) : (
                             'Save Changes'
                           )}
@@ -489,40 +489,40 @@ export default function ProfilePage() {
 
                 {activeTab === 'settings' && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2 border-b border-[#30363d] pb-3">
-                      <SettingsIcon size={20} className="text-[#f0883e]" />
+                    <h3 className="text-base font-bold text-[var(--kc-text-primary)] mb-6 flex items-center gap-2 border-b border-[var(--kc-border)] pb-3">
+                      <SettingsIcon size={16} className="text-[#fbbf24]" />
                       Security
                     </h3>
-                    <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-6 max-w-md">
-                      <div className="flex flex-col gap-2">
-                        <label className="text-sm text-[#c9d1d9] font-semibold">Current Password</label>
+                    <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4 max-w-md">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-[var(--kc-text-secondary)] font-medium">Current Password</label>
                         <input 
                           type="password" 
                           value={passwordForm.current_password} 
                           onChange={(e) => setPasswordForm({...passwordForm, current_password: e.target.value})}
-                          className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                          className="bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] rounded-md px-3.5 py-2 text-[var(--kc-text-primary)] text-sm focus:outline-none focus:border-[var(--kc-accent)] transition-colors"
                           required
                         />
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-sm text-[#c9d1d9] font-semibold">New Password</label>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-[var(--kc-text-secondary)] font-medium">New Password</label>
                         <input 
                           type="password" 
                           value={passwordForm.new_password} 
                           onChange={(e) => setPasswordForm({...passwordForm, new_password: e.target.value})}
-                          className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] transition-all"
+                          className="bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] rounded-md px-3.5 py-2 text-[var(--kc-text-primary)] text-sm focus:outline-none focus:border-[var(--kc-accent)] transition-colors"
                           required
                         />
-                        <span className="text-xs text-[#8b949e]">Minimum 8 characters, at least one uppercase letter and one number.</span>
+                        <span className="text-[11px] text-[var(--kc-text-muted)]">Minimum 8 characters, at least one uppercase letter and one number.</span>
                       </div>
-                      <div className="flex justify-start mt-4 pt-4">
+                      <div className="flex justify-start mt-3 pt-3">
                         <button 
                           type="submit" 
                           disabled={saving}
-                          className="bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-sm disabled:opacity-50 flex items-center gap-2"
+                          className="bg-[var(--kc-surface-subtle)] hover:bg-[var(--kc-border)] border border-[var(--kc-border)] text-[var(--kc-text-primary)] px-5 py-2 rounded-md font-medium text-xs sm:text-sm transition-colors disabled:opacity-50 flex items-center gap-2 shadow-xs"
                         >
                           {saving ? (
-                            <><div className="w-4 h-4 border-2 border-[#8b949e] border-t-white rounded-full animate-spin"></div> Updating...</>
+                            <><div className="w-3.5 h-3.5 border-2 border-[var(--kc-text-muted)] border-t-[var(--kc-text-primary)] rounded-full animate-spin"></div> Updating...</>
                           ) : (
                             'Update Password'
                           )}

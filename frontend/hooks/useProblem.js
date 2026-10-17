@@ -1,15 +1,16 @@
+import { useCallback } from 'react';
 import { useProblemStore } from '../store/problemStore';
 import { api } from '../lib/api';
 
 export const useProblem = () => {
   const { currentProblem, problems, isLoading, error, pagination, setProblems, setCurrentProblem, setLoading, setError, setPagination } = useProblemStore();
 
-  const fetchProblems = async (searchQuery = '', { page = 1, limit = 50, difficulty = '' } = {}) => {
+  const fetchProblems = useCallback(async (searchQuery = '', { page = 1, limit = 50, difficulty = '' } = {}) => {
     setLoading(true);
     setError(null);
     try {
       const data = await api.getProblems(searchQuery, { page, limit, difficulty });
-      setProblems(data.problems);
+      setProblems(data.problems || []);
       if (data.pagination) {
         setPagination(data.pagination);
       }
@@ -19,9 +20,9 @@ export const useProblem = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setLoading, setError, setProblems, setPagination]);
 
-  const fetchProblemDetails = async (slug) => {
+  const fetchProblemDetails = useCallback(async (slug) => {
     setLoading(true);
     setError(null);
     try {
@@ -33,7 +34,7 @@ export const useProblem = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setLoading, setError, setCurrentProblem]);
 
   return { currentProblem, problems, isLoading, error, pagination, fetchProblems, fetchProblemDetails };
 };

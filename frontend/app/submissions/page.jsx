@@ -53,8 +53,8 @@ export default function SubmissionsPage() {
       <div className="relative flex-1 overflow-hidden">
         <AnimatedBackground variant="questions" />
         <div className="relative z-10 max-w-2xl mx-auto w-full px-4 py-16 text-center">
-          <h1 className="text-2xl font-display font-bold text-white mb-4">My Submissions</h1>
-          <p className="text-[#8b949e]">Please <Link href="/auth" className="text-[#58a6ff] hover:underline">sign in</Link> to view your submissions.</p>
+          <h1 className="text-2xl font-display font-bold text-[var(--kc-text-primary)] mb-3">My Submissions</h1>
+          <p className="text-[var(--kc-text-secondary)] text-sm">Please <Link href="/auth" className="text-[var(--kc-accent)] hover:underline">sign in</Link> to view your submissions.</p>
         </div>
       </div>
     );
@@ -67,78 +67,73 @@ export default function SubmissionsPage() {
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-lg bg-[#a371f7]/15 border border-[#a371f7]/20 flex items-center justify-center">
-              <FileCode2 size={14} className="text-[#a371f7]" />
+          <div className="flex items-center gap-2 mb-2.5">
+            <div className="w-6 h-6 rounded-md bg-[rgba(59,130,246,0.12)] border border-[rgba(59,130,246,0.25)] flex items-center justify-center">
+              <FileCode2 size={13} className="text-[var(--kc-accent)]" />
             </div>
-            <span className="text-[12px] font-bold text-[#a371f7] uppercase tracking-widest">Submissions</span>
+            <span className="text-[11px] font-mono font-semibold text-[var(--kc-accent)] uppercase tracking-wider">Submissions</span>
           </div>
-          <h1 className="text-3xl font-display font-extrabold text-white mb-1">My Submissions</h1>
-          <p className="text-[#8b949e] text-sm">Track your coding journey and submission history.</p>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold text-[var(--kc-text-primary)] mb-1 tracking-tight">My Submissions</h1>
+          <p className="text-[var(--kc-text-secondary)] text-sm">Track your coding journey and submission history.</p>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="rounded-2xl overflow-hidden border border-white/[0.07]"
-          style={{
-            background: 'rgba(255,255,255,0.025)',
-            backdropFilter: 'blur(16px)',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
-          }}
+          transition={{ duration: 0.5, delay: 0.15 }}
+          className="rounded-lg overflow-hidden border border-[var(--kc-border)] bg-[var(--kc-surface)] shadow-sm"
         >
           {loading ? (
             <div className="py-20 flex flex-col items-center gap-3">
-              <div className="w-6 h-6 border-2 border-[#a371f7] border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm text-[#484f58]">Loading submissions…</span>
+              <div className="w-5 h-5 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs font-mono text-[var(--kc-text-muted)]">Loading submissions…</span>
             </div>
           ) : error ? (
             <div className="py-16 flex flex-col items-center gap-3 text-center px-4">
-              <AlertTriangle size={32} className="text-[#f87171]" />
-              <p className="text-sm font-semibold text-[#f87171]">{error}</p>
-              <p className="text-xs text-[#8b949e]">Unable to fetch your submission history.</p>
+              <AlertTriangle size={28} className="text-[var(--kc-error, #f87171)]" />
+              <p className="text-sm font-semibold text-[var(--kc-error, #f87171)]">{error}</p>
+              <p className="text-xs text-[var(--kc-text-muted)]">Unable to fetch your submission history.</p>
               <button
                 type="button"
                 onClick={loadSubmissions}
-                className="mt-2 px-4 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/10 transition-colors"
+                className="mt-2 px-3.5 py-1.5 rounded-md text-xs font-medium bg-[var(--kc-surface-subtle)] hover:bg-[var(--kc-border)] text-[var(--kc-text-primary)] border border-[var(--kc-border)] transition-colors"
               >
                 Try again
               </button>
             </div>
           ) : submissions.length === 0 ? (
             <div className="py-20 flex flex-col items-center gap-3 text-center px-4">
-              <FileCode2 size={28} className="text-[#484f58]" />
-              <p className="text-sm text-[#8b949e]">No submissions yet. Start solving problems!</p>
-              <Link href="/questions" className="text-xs text-[#58a6ff] hover:underline">
+              <FileCode2 size={24} className="text-[var(--kc-text-muted)]" />
+              <p className="text-sm text-[var(--kc-text-secondary)]">No submissions yet. Start solving problems!</p>
+              <Link href="/questions" className="text-xs text-[var(--kc-accent)] hover:underline">
                 Browse questions →
               </Link>
             </div>
           ) : (
             submissions.map((sub, i) => {
-              const cfg = STATUS_CONFIG[sub.status] || { icon: Clock, color: '#8b949e', bg: 'rgba(139,148,158,0.08)' };
+              const cfg = STATUS_CONFIG[sub.status] || { icon: Clock, color: 'var(--kc-text-muted)', bg: 'rgba(255,255,255,0.04)' };
               const Icon = cfg.icon;
               return (
                 <motion.div
                   key={sub.id}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: i * 0.03 }}
-                  className="flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-3.5 border-b border-white/[0.04] hover:bg-white/[0.03] transition-all duration-200"
+                  transition={{ duration: 0.25, delay: i * 0.02 }}
+                  className="flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-3.5 border-b border-[var(--kc-border)] hover:bg-[var(--kc-surface-subtle)] transition-colors"
                 >
-                  <Icon size={16} style={{ color: cfg.color, flexShrink: 0 }} />
+                  <Icon size={15} style={{ color: cfg.color, flexShrink: 0 }} />
                   <div className="flex-1 min-w-0">
-                    <Link href={`/problems/${sub.problem_slug}`} className="text-[13px] sm:text-[14px] font-semibold text-[#c9d1d9] hover:text-white transition-colors truncate block">
+                    <Link href={`/problems/${sub.problem_slug}`} className="text-[13px] sm:text-[14px] font-semibold text-[var(--kc-text-primary)] hover:text-[var(--kc-accent)] transition-colors truncate block">
                       {sub.problem_title}
                     </Link>
-                    <div className="text-[11px] text-[#484f58] mt-0.5 truncate">
+                    <div className="text-[11px] font-mono text-[var(--kc-text-muted)] mt-0.5 truncate">
                       {sub.language} · {sub.runtime_ms ? `${sub.runtime_ms}ms` : '–'} · {new Date(sub.created_at).toLocaleDateString()}
                     </div>
                   </div>
-                  <span className="px-2 sm:px-2.5 py-0.5 rounded-md text-[10px] sm:text-[11px] font-semibold shrink-0" style={{ background: cfg.bg, color: cfg.color }}>
+                  <span className="px-2 sm:px-2.5 py-0.5 rounded text-[10px] sm:text-[11px] font-medium shrink-0" style={{ background: cfg.bg, color: cfg.color }}>
                     {sub.status}
                   </span>
                 </motion.div>

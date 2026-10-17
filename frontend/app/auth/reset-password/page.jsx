@@ -61,18 +61,18 @@ function ResetPasswordForm() {
         initial={{ opacity: 0 }} animate={{ opacity: 1 }}
         className="flex flex-col items-center gap-4 text-center"
       >
-        <div className="w-16 h-16 bg-[#2ea043]/20 rounded-full flex items-center justify-center">
-          <CheckCircle size={32} className="text-[#3fb950]" />
+        <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center">
+          <CheckCircle size={24} className="text-emerald-400" />
         </div>
         <div>
-          <p className="text-white font-medium text-lg">Password Reset Successfully</p>
-          <p className="text-[#8b949e] text-sm mt-2">
+          <p className="text-white font-medium text-base">Password Reset Successfully</p>
+          <p className="text-[var(--kc-text-muted)] text-sm mt-1.5">
             Your password has been securely updated. You can now sign in with your new password.
           </p>
         </div>
         <button 
           onClick={() => router.push('/auth')}
-          className="mt-6 w-full py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-[#58a6ff] hover:bg-[#3182ce] transition-colors"
+          className="mt-4 w-full py-2.5 px-4 text-sm font-medium rounded-md text-white bg-[var(--kc-accent)] hover:opacity-90 transition-opacity"
         >
           Go to Sign In
         </button>
@@ -81,9 +81,9 @@ function ResetPasswordForm() {
   }
 
   return (
-    <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+    <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
       {error && (
-        <div className="p-3 bg-[#f85149]/10 border border-[#f85149]/30 rounded-lg flex items-center gap-3 text-[#ff7b72] text-sm">
+        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-md flex items-center gap-2.5 text-rose-400 text-sm">
           <AlertCircle size={16} className="shrink-0" />
           <p>{error}</p>
         </div>
@@ -95,7 +95,7 @@ function ResetPasswordForm() {
           type="email"
           disabled
           value={emailParam || ''}
-          className="appearance-none rounded-xl relative block w-full px-3 py-3 border border-[#30363d] bg-[#21262d] text-[#8b949e] sm:text-sm cursor-not-allowed opacity-70"
+          className="appearance-none rounded-md relative block w-full px-3 py-2.5 border border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] text-[var(--kc-text-muted)] sm:text-sm cursor-not-allowed opacity-75 font-mono"
         />
       </div>
 
@@ -103,7 +103,7 @@ function ResetPasswordForm() {
         <label htmlFor="new-password" className="sr-only">New Password</label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Lock className="h-5 w-5 text-[#8b949e]" />
+            <Lock className="h-4 w-4 text-[var(--kc-text-muted)]" />
           </div>
           <input
             id="new-password"
@@ -112,21 +112,21 @@ function ResetPasswordForm() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="appearance-none rounded-xl relative block w-full px-3 py-3 pl-10 border border-[#30363d] bg-[#0d1117] text-white placeholder-[#8b949e] focus:outline-none focus:ring-1 focus:ring-[#58a6ff] focus:border-[#58a6ff] sm:text-sm transition-colors"
+            className="appearance-none rounded-md relative block w-full px-3 py-2.5 pl-9 border border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] text-white placeholder-[var(--kc-text-muted)] focus:outline-none focus:border-[var(--kc-accent)] sm:text-sm transition-colors"
             placeholder="New password"
           />
         </div>
-        <p className="mt-2 text-xs text-[#8b949e]">Must be at least 8 characters, with 1 uppercase and 1 number.</p>
+        <p className="mt-1.5 text-xs text-[var(--kc-text-muted)]">Must be at least 8 characters, with 1 uppercase and 1 number.</p>
       </div>
 
       <div>
         <button
           type="submit"
           disabled={loading}
-          className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#3fb950] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2ea043] focus:ring-offset-[#0d1117] transition-all disabled:opacity-50 shadow-lg"
+          className="group relative w-full flex justify-center py-2.5 px-4 text-sm font-medium rounded-md text-white bg-[var(--kc-accent)] hover:opacity-90 focus:outline-none transition-opacity disabled:opacity-50"
         >
           {loading ? (
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
           ) : (
             'Reset Password'
           )}
@@ -134,8 +134,8 @@ function ResetPasswordForm() {
       </div>
       
       <div className="text-center">
-        <Link href="/auth" className="flex items-center justify-center gap-2 text-[#8b949e] hover:text-[#58a6ff] transition-colors text-sm font-medium">
-          <ArrowLeft size={16} /> Back to Sign In
+        <Link href="/auth" className="inline-flex items-center justify-center gap-1.5 text-[var(--kc-text-muted)] hover:text-white transition-colors text-xs font-medium">
+          <ArrowLeft size={14} /> Back to Sign In
         </Link>
       </div>
     </form>
@@ -146,17 +146,20 @@ export default function ResetPasswordPage() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full space-y-8 bg-[#161b22] p-8 rounded-2xl border border-[#30363d] shadow-xl"
+        className="max-w-md w-full space-y-6 bg-[var(--kc-surface)] p-8 rounded-lg border border-[var(--kc-border)] shadow-sm"
       >
         <div>
-          <h2 className="mt-2 text-center text-3xl font-display font-bold text-white">
+          <h2 className="text-center text-2xl font-display font-semibold text-white">
             Set new password
           </h2>
+          <p className="text-center text-xs text-[var(--kc-text-muted)] mt-1">
+            Choose a strong, unique password for your account
+          </p>
         </div>
         
-        <Suspense fallback={<div className="flex justify-center py-8"><div className="w-8 h-8 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin"></div></div>}>
+        <Suspense fallback={<div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin"></div></div>}>
           <ResetPasswordForm />
         </Suspense>
       </motion.div>

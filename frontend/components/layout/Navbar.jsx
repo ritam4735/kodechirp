@@ -6,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { usePathname } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import ThemeSwitcher from './ThemeSwitcher';
+import { User, Shield, Settings, FileCode2, BarChart3, LogOut, ChevronDown } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Home', href: '/' },
@@ -79,7 +80,7 @@ export const Navbar = () => {
               href={item.href}
               className={`nav-link ${isActive(item.href) ? 'active' : ''} ${item.label === 'Admin' ? 'nav-link-admin' : ''}`}
             >
-              {item.label === 'Admin' && <span style={{ fontSize: '12px' }} aria-hidden="true">⚙️</span>}
+              {item.label === 'Admin' && <Shield size={12} className="text-[#3B82F6]" aria-hidden="true" />}
               {item.label}
             </Link>
           ))}
@@ -122,7 +123,7 @@ export const Navbar = () => {
                       style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
                     />
                   ) : (
-                    <span aria-hidden="true">🦅</span>
+                    <User size={14} className="text-[#9E9EA4]" aria-hidden="true" />
                   )}
                 </div>
                 <div className="nav-user-info">
@@ -130,9 +131,19 @@ export const Navbar = () => {
                     {user?.display_name || user?.username || 'Profile'}
                     {isAdmin && <span className="nav-admin-badge" style={{ marginLeft: '6px' }}>Admin</span>}
                   </div>
-                  <div className="nav-user-tag">{isAdmin ? 'Administrator' : 'Keep Chirping!'}</div>
+                  <div className="nav-user-tag">{isAdmin ? 'Administrator' : 'Developer'}</div>
                 </div>
-                <span className="nav-chevron" aria-hidden="true" style={{ transform: menuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
+                <ChevronDown 
+                  size={12} 
+                  aria-hidden="true" 
+                  className="nav-chevron" 
+                  style={{ 
+                    transform: menuOpen ? 'rotate(180deg)' : 'none', 
+                    transition: 'transform 0.2s ease',
+                    color: 'var(--kc-text-muted)',
+                    marginLeft: '2px',
+                  }} 
+                />
               </div>
 
               {menuOpen && (
@@ -143,28 +154,28 @@ export const Navbar = () => {
                   </div>
                   <div className="nav-dropdown-divider"></div>
                   <Link href="/profile" className="nav-dropdown-item" role="menuitem">
-                    <span aria-hidden="true">👤</span> Profile
+                    <User size={14} className="text-[#9E9EA4]" aria-hidden="true" /> Profile
                   </Link>
                   <Link href="/settings" className="nav-dropdown-item" role="menuitem">
-                    <span aria-hidden="true">⚙️</span> Settings
+                    <Settings size={14} className="text-[#9E9EA4]" aria-hidden="true" /> Settings
                   </Link>
                   <Link href="/submissions" className="nav-dropdown-item" role="menuitem">
-                    <span aria-hidden="true">📨</span> My Submissions
+                    <FileCode2 size={14} className="text-[#9E9EA4]" aria-hidden="true" /> My Submissions
                   </Link>
                   <Link href="/progress" className="nav-dropdown-item" role="menuitem">
-                    <span aria-hidden="true">📊</span> My Progress
+                    <BarChart3 size={14} className="text-[#9E9EA4]" aria-hidden="true" /> My Progress
                   </Link>
                   {isAdmin && (
                     <>
                       <div className="nav-dropdown-divider"></div>
                       <Link href="/admin" className="nav-dropdown-item" role="menuitem">
-                        <span aria-hidden="true">🛡️</span> Admin Console
+                        <Shield size={14} className="text-[#3B82F6]" aria-hidden="true" /> Admin Console
                       </Link>
                     </>
                   )}
                   <div className="nav-dropdown-divider"></div>
                   <button className="nav-dropdown-item nav-dropdown-logout" onClick={onLogout} role="menuitem">
-                    <span aria-hidden="true">🚪</span> Sign Out
+                    <LogOut size={14} className="text-[#EF4444]" aria-hidden="true" /> Sign Out
                   </button>
                 </div>
               )}
@@ -216,7 +227,7 @@ export const Navbar = () => {
               >
                 <span>{item.label}</span>
                 {item.label === 'Admin' ? (
-                  <span aria-hidden="true">⚙️</span>
+                  <Shield size={13} className="text-[#3B82F6]" aria-hidden="true" />
                 ) : (
                   <span className="nav-mobile-chevron" aria-hidden="true">›</span>
                 )}

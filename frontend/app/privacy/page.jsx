@@ -109,7 +109,7 @@ export default function PrivacyPage() {
         <div className="mb-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-[#8b949e] hover:text-[#58a6ff] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--kc-text-muted)] hover:text-white transition-colors"
           >
             <ArrowLeft size={13} />
             <span>Back to Home</span>
@@ -118,39 +118,32 @@ export default function PrivacyPage() {
 
         {/* Page Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-lg bg-[#58a6ff]/15 border border-[#58a6ff]/20 flex items-center justify-center">
-              <Shield size={14} className="text-[#58a6ff]" />
+          <div className="flex items-center gap-2 mb-2.5">
+            <div className="w-6 h-6 rounded-md bg-[var(--kc-accent)]/10 border border-[var(--kc-accent)]/20 flex items-center justify-center">
+              <Shield size={13} className="text-[var(--kc-accent)]" />
             </div>
-            <span className="text-[12px] font-bold text-[#58a6ff] uppercase tracking-widest">Legal</span>
+            <span className="text-[11px] font-bold text-[var(--kc-accent)] uppercase tracking-wider">Legal</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-display font-extrabold text-white mb-2">
+          <h1 className="text-3xl font-display font-bold text-white mb-2">
             Privacy Policy
           </h1>
-          <p className="text-sm text-[#8b949e]">
+          <p className="text-sm text-[var(--kc-text-muted)]">
             Last updated: {lastUpdated} · Open-source and privacy-respecting by design.
           </p>
         </div>
 
         {/* Policy Content Card */}
-        <div
-          className="rounded-2xl border border-white/[0.08] p-6 sm:p-8 space-y-8"
-          style={{
-            background: 'rgba(255,255,255,0.025)',
-            backdropFilter: 'blur(16px)',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
-          }}
-        >
+        <div className="rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] p-6 sm:p-8 space-y-8 shadow-sm">
           {sections.map((section, idx) => {
             const Icon = section.icon;
             return (
               <div
                 key={idx}
-                className={idx > 0 ? 'pt-8 border-t border-white/[0.06]' : ''}
+                className={idx > 0 ? 'pt-8 border-t border-[var(--kc-border)]' : ''}
               >
                 <div className="flex items-center gap-2.5 mb-3">
-                  <Icon size={18} className="text-[#58a6ff] shrink-0" />
-                  <h2 className="text-lg font-display font-bold text-white">
+                  <Icon size={16} className="text-[var(--kc-accent)] shrink-0" />
+                  <h2 className="text-base font-display font-semibold text-white">
                     {section.title}
                   </h2>
                 </div>
@@ -160,18 +153,18 @@ export default function PrivacyPage() {
           })}
 
           {/* Contact note */}
-          <div className="pt-8 border-t border-white/[0.06] bg-white/[0.01] -mx-6 sm:-mx-8 -mb-6 sm:-mb-8 p-6 sm:p-8 rounded-b-2xl">
+          <div className="pt-6 border-t border-[var(--kc-border)] bg-[var(--kc-surface-subtle)]/50 -mx-6 sm:-mx-8 -mb-6 sm:-mb-8 p-6 sm:p-8 rounded-b-lg">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-sm font-semibold text-white">Questions about privacy?</h3>
-                <p className="text-xs text-[#8b949e] mt-0.5">
+                <h3 className="text-sm font-medium text-white">Questions about privacy?</h3>
+                <p className="text-xs text-[var(--kc-text-muted)] mt-0.5">
                   Reach out to the maintainers or inspect our codebase on GitHub.
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <Link
                   href="/contact"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-[#58a6ff]/20 hover:bg-[#58a6ff]/30 border border-[#58a6ff]/30 rounded-lg transition-colors"
+                  className="px-3.5 py-2 text-xs font-medium text-white bg-[var(--kc-accent)] hover:opacity-90 rounded-md transition-opacity"
                 >
                   Contact Us
                 </Link>
@@ -179,7 +172,7 @@ export default function PrivacyPage() {
                   href="https://github.com/ritam4735/kodechirp"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 text-xs font-semibold text-[#8b949e] hover:text-white bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 rounded-lg transition-colors"
+                  className="px-3.5 py-2 text-xs font-medium text-[var(--kc-text-muted)] hover:text-white bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] border border-[var(--kc-border)] rounded-md transition-colors"
                 >
                   GitHub Repository
                 </a>

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import SignatureBuilder from '../../components/SignatureBuilder';
 import ExamplesEditor from '../../components/ExamplesEditor';
 import { JUDGE_MODES } from '../../../../../lib/typeSystem';
+import { AlertTriangle, CheckCircle2, Cpu, Sparkles, Key } from 'lucide-react';
 
 export default function EditProblem() {
   const router = useRouter();
@@ -330,7 +331,9 @@ export default function EditProblem() {
           marginBottom: '20px',
           fontSize: '13px',
         }}>
-          <div style={{ color: '#f85149', fontWeight: 600, marginBottom: '6px' }}>⚠️ Cannot Publish — Fix the following:</div>
+          <div style={{ color: 'var(--kc-error, #f85149)', fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <AlertTriangle size={15} /> Cannot Publish — Fix the following:
+          </div>
           <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)' }}>
             {validation.errors.map((err, i) => {
               const isExampleError = err.toLowerCase().includes('example');
@@ -340,7 +343,7 @@ export default function EditProblem() {
                   style={{
                     marginBottom: '2px',
                     cursor: isExampleError ? 'pointer' : 'default',
-                    color: isExampleError ? '#58a6ff' : undefined,
+                    color: isExampleError ? 'var(--kc-accent)' : undefined,
                     textDecoration: isExampleError ? 'underline' : 'none',
                   }}
                   onClick={() => {
@@ -369,8 +372,11 @@ export default function EditProblem() {
           marginBottom: '20px',
           fontSize: '13px',
           color: '#4ade80',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
         }}>
-          ✅ This problem is ready to be published.
+          <CheckCircle2 size={15} /> This problem is ready to be published.
         </div>
       )}
 
@@ -474,11 +480,14 @@ export default function EditProblem() {
       {/* ── Reference Solution Section ──────────────────────────────────── */}
       <div className="admin-section-card" style={{ marginTop: '28px' }}>
         <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span>🔑 Reference Solution</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Key size={15} className="text-[var(--kc-accent)]" />
+            <span>Reference Solution</span>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {refSolution && (
               <span className={`admin-badge ${isVerified ? 'badge-published' : refStatus === 'compile_error' || refStatus === 'example_failed' ? 'badge-draft' : 'badge-queued'}`} style={{ fontSize: '10px' }}>
-                {isVerified ? '✓ Verified' : refStatus === 'compile_error' ? '✗ Compile Error' : refStatus === 'example_failed' ? '✗ Example Failed' : '◌ Pending'}
+                {isVerified ? 'Verified' : refStatus === 'compile_error' ? 'Compile Error' : refStatus === 'example_failed' ? 'Example Failed' : 'Pending'}
               </span>
             )}
           </div>
@@ -493,8 +502,12 @@ export default function EditProblem() {
             marginBottom: '16px',
             fontSize: '12px',
             color: '#fbbf24',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
           }}>
-            ⚠️ A reference solution is required to publish this problem and to generate tests.
+            <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+            <span>A reference solution is required to publish this problem and to generate tests.</span>
           </div>
         )}
 
@@ -529,7 +542,7 @@ export default function EditProblem() {
                   onClick={handleVerify}
                   disabled={verifying}
                 >
-                  {verifying ? '⏳ Verifying...' : '🔬 Verify'}
+                  {verifying ? 'Verifying...' : 'Verify'}
                 </button>
                 <button
                   className="admin-btn admin-btn-danger admin-btn-sm"
@@ -611,7 +624,9 @@ export default function EditProblem() {
       {/* ── Test Generation Section ─────────────────────────────────────── */}
       <div className="admin-section-card" style={{ marginTop: '20px' }}>
         <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span>🧪 Automated Test Generation</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+            <Cpu size={15} style={{ color: 'var(--kc-accent)' }} /> Automated Test Generation
+          </span>
         </div>
 
         {!isVerified ? (
@@ -635,8 +650,17 @@ export default function EditProblem() {
               className="admin-btn admin-btn-primary"
               onClick={handleGenerateTests}
               disabled={generating}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
-              {generating ? '⏳ Generating Tests...' : '🚀 Generate Tests'}
+              {generating ? (
+                <>
+                  <span className="admin-spinner" style={{ width: '13px', height: '13px' }}></span> Generating Tests...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={13} /> Generate Tests
+                </>
+              )}
             </button>
 
             {genResult && (
@@ -673,8 +697,9 @@ export default function EditProblem() {
                       ))}
                     </div>
                     {genResult.quality.allOutputsIdentical && (
-                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#fbbf24' }}>
-                        ⚠️ All outputs are identical — this may indicate a problem with test diversity.
+                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <AlertTriangle size={13} style={{ flexShrink: 0 }} />
+                        <span>All outputs are identical — this may indicate a problem with test diversity.</span>
                       </div>
                     )}
                   </div>

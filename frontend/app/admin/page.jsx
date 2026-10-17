@@ -3,6 +3,16 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '../../lib/adminApi';
 import Link from 'next/link';
+import { 
+  Users, 
+  FileCode2, 
+  CheckSquare, 
+  BarChart3, 
+  Activity, 
+  Zap, 
+  Clock, 
+  User 
+} from 'lucide-react';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -15,11 +25,16 @@ export default function AdminDashboard() {
   }, []);
 
   if (error) {
-    return <div style={{ color: '#f85149', padding: '40px' }}>Failed to load: {error}</div>;
+    return <div style={{ color: '#EF4444', padding: '40px' }}>Failed to load dashboard statistics: {error}</div>;
   }
 
   if (!stats) {
-    return <div className="admin-loading"><div className="admin-spinner"></div>Loading dashboard...</div>;
+    return (
+      <div className="admin-loading">
+        <div className="admin-spinner"></div>
+        <span>Loading platform telemetry…</span>
+      </div>
+    );
   }
 
   const difficultyMap = {};
@@ -29,38 +44,47 @@ export default function AdminDashboard() {
     <div>
       <div className="admin-page-header">
         <div>
-          <h1 className="admin-page-title">Dashboard</h1>
-          <p className="admin-page-subtitle">Platform overview and quick actions</p>
+          <h1 className="admin-page-title">Platform Dashboard</h1>
+          <p className="admin-page-subtitle">Telemetry, cluster health, and administrative controls</p>
         </div>
       </div>
 
       {/* Stat Cards */}
       <div className="admin-stats-grid">
-        <Link href="/admin/users" className="admin-stat-card stat-users">
-          <div className="admin-stat-icon">👥</div>
+        <Link href="/admin/users" className="admin-stat-card">
+          <div className="admin-stat-icon">
+            <Users size={16} />
+          </div>
           <div className="admin-stat-value">{stats.totalUsers.toLocaleString()}</div>
           <div className="admin-stat-label">Total Users</div>
           <div className="admin-stat-sub">+{stats.newUsersThisWeek} this week · +{stats.newUsersThisMonth} this month</div>
         </Link>
 
-        <Link href="/admin/problems" className="admin-stat-card stat-problems">
-          <div className="admin-stat-icon">📝</div>
+        <Link href="/admin/problems" className="admin-stat-card">
+          <div className="admin-stat-icon">
+            <FileCode2 size={16} />
+          </div>
           <div className="admin-stat-value">{stats.totalProblems.toLocaleString()}</div>
-          <div className="admin-stat-label">Total Problems</div>
+          <div className="admin-stat-label">Total Challenges</div>
           <div className="admin-stat-sub">{stats.publishedProblems} published · {stats.totalProblems - stats.publishedProblems} drafts</div>
         </Link>
 
-        <Link href="/admin/submissions" className="admin-stat-card stat-submissions">
-          <div className="admin-stat-icon">🔍</div>
+        <Link href="/admin/submissions" className="admin-stat-card">
+          <div className="admin-stat-icon">
+            <CheckSquare size={16} />
+          </div>
           <div className="admin-stat-value">{stats.totalSubmissions.toLocaleString()}</div>
-          <div className="admin-stat-label">Total Submissions</div>
-          <div className="admin-stat-sub">{stats.acceptedSubmissions} accepted</div>
+          <div className="admin-stat-label">Submissions</div>
+          <div className="admin-stat-sub">{stats.acceptedSubmissions} verified accepted</div>
         </Link>
 
-        <Link href="/admin/analytics" className="admin-stat-card stat-rate">
-          <div className="admin-stat-icon">✅</div>
+        <Link href="/admin/analytics" className="admin-stat-card">
+          <div className="admin-stat-icon">
+            <BarChart3 size={16} className="text-[#10B981]" />
+          </div>
           <div className="admin-stat-value">{stats.successRate}%</div>
           <div className="admin-stat-label">Acceptance Rate</div>
+          <div className="admin-stat-sub">Across all runtime sandboxes</div>
         </Link>
       </div>
 
@@ -68,17 +92,23 @@ export default function AdminDashboard() {
       <div className="admin-grid-3" style={{ marginBottom: '24px' }}>
         {/* Problems by Difficulty */}
         <div className="admin-section-card">
-          <div className="admin-section-title">📊 Problems by Difficulty</div>
+          <div className="admin-section-title">
+            <BarChart3 size={14} className="text-[var(--kc-accent)]" />
+            <span>Problems by Difficulty</span>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <DifficultyBar label="Easy" count={difficultyMap['Easy'] || 0} total={stats.totalProblems} color="#4ade80" />
-            <DifficultyBar label="Medium" count={difficultyMap['Medium'] || 0} total={stats.totalProblems} color="#fbbf24" />
-            <DifficultyBar label="Hard" count={difficultyMap['Hard'] || 0} total={stats.totalProblems} color="#f87171" />
+            <DifficultyBar label="Easy" count={difficultyMap['Easy'] || 0} total={stats.totalProblems} color="#10B981" />
+            <DifficultyBar label="Medium" count={difficultyMap['Medium'] || 0} total={stats.totalProblems} color="#F59E0B" />
+            <DifficultyBar label="Hard" count={difficultyMap['Hard'] || 0} total={stats.totalProblems} color="#EF4444" />
           </div>
         </div>
 
         {/* Quick Actions */}
         <div className="admin-section-card">
-          <div className="admin-section-title">⚡ Quick Actions</div>
+          <div className="admin-section-title">
+            <Zap size={14} className="text-[var(--kc-accent)]" />
+            <span>Quick Actions</span>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <Link href="/admin/problems/new" className="admin-btn admin-btn-primary" style={{ justifyContent: 'center' }}>
               + Create New Problem
@@ -97,27 +127,30 @@ export default function AdminDashboard() {
 
         {/* Platform Health */}
         <div className="admin-section-card">
-          <div className="admin-section-title">🩺 Platform Summary</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+          <div className="admin-section-title">
+            <Activity size={14} className="text-[#10B981]" />
+            <span>Platform Metrics</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--kc-text-secondary)' }}>
               <span>Published Problems</span>
-              <span style={{ color: '#4ade80', fontWeight: 600 }}>{stats.publishedProblems}</span>
+              <span style={{ color: '#10B981', fontWeight: 600, fontFamily: 'var(--kc-font-code)' }}>{stats.publishedProblems}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--kc-text-secondary)' }}>
               <span>Draft Problems</span>
-              <span style={{ color: '#8b949e', fontWeight: 600 }}>{stats.totalProblems - stats.publishedProblems}</span>
+              <span style={{ color: 'var(--kc-text-muted)', fontWeight: 600, fontFamily: 'var(--kc-font-code)' }}>{stats.totalProblems - stats.publishedProblems}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--kc-text-secondary)' }}>
               <span>New Users (7d)</span>
-              <span style={{ color: '#c084fc', fontWeight: 600 }}>{stats.newUsersThisWeek}</span>
+              <span style={{ color: 'var(--kc-text-primary)', fontWeight: 600, fontFamily: 'var(--kc-font-code)' }}>{stats.newUsersThisWeek}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--kc-text-secondary)' }}>
               <span>New Users (30d)</span>
-              <span style={{ color: '#c084fc', fontWeight: 600 }}>{stats.newUsersThisMonth}</span>
+              <span style={{ color: 'var(--kc-text-primary)', fontWeight: 600, fontFamily: 'var(--kc-font-code)' }}>{stats.newUsersThisMonth}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--kc-text-secondary)' }}>
               <span>Acceptance Rate</span>
-              <span style={{ color: '#4ade80', fontWeight: 600 }}>{stats.successRate}%</span>
+              <span style={{ color: '#10B981', fontWeight: 600, fontFamily: 'var(--kc-font-code)' }}>{stats.successRate}%</span>
             </div>
           </div>
         </div>
@@ -126,20 +159,25 @@ export default function AdminDashboard() {
       {/* Recent Activity */}
       <div className="admin-grid-2">
         <div className="admin-section-card">
-          <div className="admin-section-title">👤 Recent Users</div>
+          <div className="admin-section-title">
+            <User size={14} className="text-[var(--kc-accent)]" />
+            <span>Recent Users</span>
+          </div>
           {stats.recentActivity.length === 0 ? (
-            <div className="admin-empty"><div className="admin-empty-text">No recent users</div></div>
+            <div className="admin-empty"><div className="admin-empty-text">No recent user registrations</div></div>
           ) : (
             stats.recentActivity.map((u, i) => (
               <div key={i} className="admin-activity-item">
-                <div className="admin-activity-dot" style={{ background: u.role === 'admin' ? '#c084fc' : '#4d9fff' }}></div>
+                <div className="admin-activity-dot" style={{ background: u.role === 'admin' ? 'var(--kc-accent)' : 'var(--kc-text-muted)' }}></div>
                 <div className="admin-activity-text">
-                  <strong style={{ color: 'var(--text-primary)' }}>{u.username}</strong>
-                  <span className="admin-badge" style={{ marginLeft: '6px', fontSize: '10px' ,
-                    ...(u.role === 'admin' ? { background: 'rgba(168,85,247,0.15)', color: '#c084fc' } : { background: 'rgba(77,159,255,0.12)', color: '#4d9fff' })
+                  <strong style={{ color: 'var(--kc-text-primary)' }}>{u.username}</strong>
+                  <span className="admin-badge" style={{ marginLeft: '6px', fontSize: '10px',
+                    ...(u.role === 'admin' 
+                      ? { background: 'var(--kc-accent-subtle)', color: 'var(--kc-accent-hover)', border: '1px solid rgba(59,130,246,0.25)' } 
+                      : { background: 'rgba(255,255,255,0.04)', color: 'var(--kc-text-secondary)', border: '1px solid var(--kc-border)' })
                   }}>{u.role}</span>
                 </div>
-                <div className="admin-activity-time">
+                <div className="admin-activity-time font-mono">
                   {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
                 </div>
               </div>
@@ -148,19 +186,22 @@ export default function AdminDashboard() {
         </div>
 
         <div className="admin-section-card">
-          <div className="admin-section-title">📨 Recent Submissions</div>
+          <div className="admin-section-title">
+            <Clock size={14} className="text-[var(--kc-accent)]" />
+            <span>Recent Submissions</span>
+          </div>
           {stats.recentSubmissions.length === 0 ? (
-            <div className="admin-empty"><div className="admin-empty-text">No recent submissions</div></div>
+            <div className="admin-empty"><div className="admin-empty-text">No recent submissions evaluated</div></div>
           ) : (
             stats.recentSubmissions.map((sub, i) => (
               <div key={i} className="admin-activity-item">
                 <div className="admin-activity-dot" style={{
-                  background: sub.status === 'Accepted' ? '#4ade80' :
-                    sub.status === 'Wrong Answer' ? '#f87171' : '#fbbf24'
+                  background: sub.status === 'Accepted' ? '#10B981' :
+                    sub.status === 'Wrong Answer' ? '#EF4444' : '#F59E0B'
                 }}></div>
                 <div className="admin-activity-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  <strong style={{ color: 'var(--text-primary)' }}>{sub.title || 'Unknown'}</strong>
-                  <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>by {sub.username || '?'}</span>
+                  <strong style={{ color: 'var(--kc-text-primary)' }}>{sub.title || 'Unknown'}</strong>
+                  <span style={{ color: 'var(--kc-text-muted)', marginLeft: '6px' }}>by {sub.username || '?'}</span>
                 </div>
                 <span className={`admin-badge ${
                   sub.status === 'Accepted' ? 'badge-accepted' :
@@ -179,16 +220,16 @@ function DifficultyBar({ label, count, total, color }) {
   const pct = total > 0 ? (count / total) * 100 : 0;
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '12px' }}>
-        <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '11.5px', fontFamily: 'var(--kc-font-code)' }}>
+        <span style={{ color: 'var(--kc-text-secondary)' }}>{label}</span>
         <span style={{ color, fontWeight: 600 }}>{count}</span>
       </div>
-      <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+      <div style={{ height: '4px', background: 'var(--kc-surface-subtle)', borderRadius: '2px', overflow: 'hidden' }}>
         <div style={{
           height: '100%',
           width: `${pct}%`,
           background: color,
-          borderRadius: '3px',
+          borderRadius: '2px',
           transition: 'width 0.6s ease',
         }}></div>
       </div>

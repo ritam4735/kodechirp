@@ -266,13 +266,13 @@ body {
    NAVIGATION
    ============================================ */
 .navbar {
-  position: fixed;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
   z-index: 100;
-  padding: 0 32px;
-  height: 60px;
+  height: var(--kc-nav-height, 64px);
+  padding: 0 clamp(16px, 4vw, 32px);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -2616,17 +2616,17 @@ body {
     display: flex;
     flex-direction: column;
     position: fixed;
-    top: 68px;
+    top: var(--kc-nav-height, 64px);
     left: 0;
     right: 0;
-    background: rgba(8, 12, 24, 0.97);
+    background: var(--kc-nav-bg);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-bottom: 1px solid var(--border-glass);
+    border-bottom: 1px solid var(--kc-border);
     padding: 16px 20px 24px;
     gap: 8px;
     z-index: 99;
-    max-height: calc(100vh - 68px);
+    max-height: calc(100vh - var(--kc-nav-height, 64px));
     overflow-y: auto;
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
     animation: drawerSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -5461,7 +5461,36 @@ body {
   }
 }
 
+@media (max-width: 640px) {
+  .kc-table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+  .kc-diff-filters {
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .kc-search-box {
+    width: 100%;
+  }
+  .kc-search-input {
+    width: 100% !important;
+  }
+}
+
 @media (max-width: 480px) {
+  .kc-table-head,
+  .kc-prob-row {
+    padding: 10px 12px;
+    gap: 8px;
+    grid-template-columns: 28px 1fr 70px;
+  }
+  .kc-prob-name {
+    font-size: 13px;
+  }
   .kc-actions {
     flex-direction: column;
     align-items: stretch;
@@ -5476,16 +5505,6 @@ body {
   .kc-hero-specs {
     flex-direction: column;
     gap: 12px;
-  }
-  .kc-table-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .kc-search-input {
-    width: 100%;
-  }
-  .kc-search-input:focus {
-    width: 100%;
   }
 }
 

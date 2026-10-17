@@ -36,8 +36,8 @@ export const TestCases = ({ testCases: propTestCases, problem: propProblem }) =>
 
   if (!rawList || rawList.length === 0) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[#8b949e]">
-        No test cases available.
+      <div className="flex items-center justify-center p-8 text-sm text-[var(--kc-text-muted)] font-mono">
+        No test cases defined for this challenge.
       </div>
     );
   }
@@ -50,11 +50,11 @@ export const TestCases = ({ testCases: propTestCases, problem: propProblem }) =>
   const allPassed = isResultMode && passedCount === totalCases;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {/* Top Bar: Case Pills + View Mode Toggle + Run Status */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white/[0.02] p-2 rounded-xl border border-white/5 backdrop-blur-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 bg-[var(--kc-surface-subtle)] p-2 rounded-lg border border-[var(--kc-border)]">
         {/* Case Pills Tabs */}
-        <div className="flex items-center flex-wrap gap-1.5">
+        <div className="flex items-center flex-wrap gap-1">
           {rawList.map((tc, idx) => {
             const isPassed = tc.status === 'Passed';
             const isActive = !viewAll && activeTab === idx;
@@ -66,16 +66,16 @@ export const TestCases = ({ testCases: propTestCases, problem: propProblem }) =>
                   setViewAll(false);
                   setActiveTab(idx);
                 }}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-colors cursor-pointer ${
                   isActive
-                    ? 'bg-[#58a6ff]/20 text-white border border-[#58a6ff]/40 shadow-sm'
-                    : 'bg-white/[0.03] text-[#8b949e] hover:text-white hover:bg-white/[0.06] border border-transparent'
+                    ? 'bg-[var(--kc-surface)] text-[var(--kc-text-primary)] border border-[var(--kc-border-hover)] shadow-sm'
+                    : 'text-[var(--kc-text-secondary)] hover:text-[var(--kc-text-primary)] hover:bg-[var(--kc-surface)] border border-transparent'
                 }`}
               >
                 {isResultMode && (
                   <span
-                    className={`w-2 h-2 rounded-full shrink-0 ${
-                      isPassed ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.6)]'
+                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                      isPassed ? 'bg-[#10B981]' : 'bg-[#EF4444]'
                     }`}
                   />
                 )}
@@ -86,18 +86,18 @@ export const TestCases = ({ testCases: propTestCases, problem: propProblem }) =>
         </div>
 
         {/* Right side controls: View Mode toggle & Overall Verdict Summary */}
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex items-center gap-2.5 ml-auto">
           {isRunning ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/30 animate-pulse">
-              <div className="w-2.5 h-2.5 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin" />
-              <span>Running...</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium bg-[var(--kc-accent-subtle)] text-[var(--kc-accent)] border border-[rgba(59,130,246,0.2)]">
+              <div className="w-2.5 h-2.5 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin" />
+              <span>Running…</span>
             </div>
           ) : isResultMode ? (
             <div
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium border ${
                 allPassed
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                  : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                  ? 'bg-[rgba(16,185,129,0.1)] text-[#10B981] border-[rgba(16,185,129,0.25)]'
+                  : 'bg-[rgba(239,68,68,0.1)] text-[#EF4444] border-[rgba(239,68,68,0.25)]'
               }`}
             >
               {allPassed ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
@@ -111,23 +111,23 @@ export const TestCases = ({ testCases: propTestCases, problem: propProblem }) =>
             <button
               onClick={() => setViewAll(!viewAll)}
               title={viewAll ? 'Switch to single case tab view' : 'View all cases together'}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer ${
                 viewAll
-                  ? 'bg-[#a855f7]/20 text-white border-[#a855f7]/40'
-                  : 'bg-white/[0.02] text-[#8b949e] hover:text-white border-white/5'
+                  ? 'bg-[var(--kc-surface)] text-[var(--kc-text-primary)] border-[var(--kc-border-hover)]'
+                  : 'bg-transparent text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] border-[var(--kc-border)]'
               }`}
             >
               {viewAll ? <Layers size={13} /> : <LayoutGrid size={13} />}
-              <span className="hidden sm:inline">{viewAll ? 'Tabs View' : 'View All'}</span>
+              <span className="hidden sm:inline">{viewAll ? 'Tabs' : 'All Cases'}</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Content Rendering: View All or Single Active Case */}
-      <div className={isRunning ? 'opacity-70 transition-opacity pointer-events-none' : 'opacity-100 transition-opacity'}>
+      <div className={isRunning ? 'opacity-60 transition-opacity pointer-events-none' : 'opacity-100 transition-opacity'}>
         {viewAll ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {rawList.map((tc, idx) => (
               <TestCaseCard
                 key={idx}
@@ -169,25 +169,25 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
 
   return (
     <div
-      className={`bg-white/[0.02] rounded-xl border p-4 backdrop-blur-sm transition-all duration-200 ${
+      className={`bg-[var(--kc-surface-subtle)] rounded-lg border p-4 transition-colors ${
         isResultMode
           ? isPassed
-            ? 'border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.03)]'
-            : 'border-rose-500/20 shadow-[0_0_20px_rgba(244,63,94,0.03)]'
-          : 'border-white/5'
+            ? 'border-[rgba(16,185,129,0.2)]'
+            : 'border-[rgba(239,68,68,0.2)]'
+          : 'border-[var(--kc-border)]'
       }`}
     >
       {/* Case Header */}
-      <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-white/5">
-        <span className="text-xs font-bold text-[#8b949e] uppercase tracking-wider">
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--kc-border-subtle)]">
+        <span className="text-xs font-mono font-bold text-[var(--kc-text-muted)] uppercase tracking-wider">
           Case {idx + 1}
         </span>
         {isResultMode && (
           <span
-            className={`px-2.5 py-0.5 text-xs font-semibold rounded-full border flex items-center gap-1.5 ${
+            className={`px-2 py-0.5 text-[11px] font-mono font-semibold rounded border flex items-center gap-1.5 ${
               isPassed
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                ? 'bg-[rgba(16,185,129,0.1)] text-[#10B981] border-[rgba(16,185,129,0.25)]'
+                : 'bg-[rgba(239,68,68,0.1)] text-[#EF4444] border-[rgba(239,68,68,0.25)]'
             }`}
           >
             {isPassed ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
@@ -197,61 +197,61 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
       </div>
 
       {/* Case Content Sections */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Input */}
         <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-[#8b949e] font-semibold uppercase tracking-wider">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] text-[var(--kc-text-muted)] font-mono font-semibold uppercase tracking-wider">
               Input
             </span>
             <button
               onClick={() => onCopy(formattedInput, `input-${idx}`)}
-              className="text-[#8b949e] hover:text-white text-xs flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-white/5 cursor-pointer"
+              className="text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] text-xs flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--kc-surface)] cursor-pointer"
               title="Copy input"
             >
               {copiedKey === `input-${idx}` ? (
                 <>
-                  <Check size={12} className="text-emerald-400" />
-                  <span className="text-emerald-400 text-[11px]">Copied</span>
+                  <Check size={11} className="text-[#10B981]" />
+                  <span className="text-[#10B981] text-[10.5px]">Copied</span>
                 </>
               ) : (
                 <>
-                  <Copy size={12} />
-                  <span className="text-[11px]">Copy</span>
+                  <Copy size={11} />
+                  <span className="text-[10.5px]">Copy</span>
                 </>
               )}
             </button>
           </div>
-          <pre className="text-[13px] text-[#e6edf3] font-mono bg-black/40 p-3 rounded-lg border border-white/5 whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
+          <pre className="text-[12.5px] text-[var(--kc-text-primary)] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
             {formattedInput}
           </pre>
         </div>
 
         {/* Expected Output */}
         <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-[#8b949e] font-semibold uppercase tracking-wider">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] text-[var(--kc-text-muted)] font-mono font-semibold uppercase tracking-wider">
               {isResultMode ? 'Expected Output' : 'Output'}
             </span>
             <button
               onClick={() => onCopy(formattedExpected, `expected-${idx}`)}
-              className="text-[#8b949e] hover:text-white text-xs flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-white/5 cursor-pointer"
+              className="text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] text-xs flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--kc-surface)] cursor-pointer"
               title="Copy output"
             >
               {copiedKey === `expected-${idx}` ? (
                 <>
-                  <Check size={12} className="text-emerald-400" />
-                  <span className="text-emerald-400 text-[11px]">Copied</span>
+                  <Check size={11} className="text-[#10B981]" />
+                  <span className="text-[#10B981] text-[10.5px]">Copied</span>
                 </>
               ) : (
                 <>
-                  <Copy size={12} />
-                  <span className="text-[11px]">Copy</span>
+                  <Copy size={11} />
+                  <span className="text-[10.5px]">Copy</span>
                 </>
               )}
             </button>
           </div>
-          <pre className="text-[13px] text-[#58a6ff] font-mono bg-black/40 p-3 rounded-lg border border-white/5 whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
+          <pre className="text-[12.5px] text-[var(--kc-accent-hover)] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
             {formattedExpected}
           </pre>
         </div>
@@ -259,33 +259,33 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
         {/* Your Output (Result Mode Only) */}
         {isResultMode && (
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-[#8b949e] font-semibold uppercase tracking-wider">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] text-[var(--kc-text-muted)] font-mono font-semibold uppercase tracking-wider">
                 Your Output
               </span>
               <button
                 onClick={() => onCopy(formattedYour, `your-${idx}`)}
-                className="text-[#8b949e] hover:text-white text-xs flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-white/5 cursor-pointer"
+                className="text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] text-xs flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--kc-surface)] cursor-pointer"
                 title="Copy your output"
               >
                 {copiedKey === `your-${idx}` ? (
                   <>
-                    <Check size={12} className="text-emerald-400" />
-                    <span className="text-emerald-400 text-[11px]">Copied</span>
+                    <Check size={11} className="text-[#10B981]" />
+                    <span className="text-[#10B981] text-[10.5px]">Copied</span>
                   </>
                 ) : (
                   <>
-                    <Copy size={12} />
-                    <span className="text-[11px]">Copy</span>
+                    <Copy size={11} />
+                    <span className="text-[10.5px]">Copy</span>
                   </>
                 )}
               </button>
             </div>
             <pre
-              className={`text-[13px] font-mono bg-black/40 p-3 rounded-lg border whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed ${
+              className={`text-[12.5px] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed ${
                 isPassed
-                  ? 'text-emerald-400 border-emerald-500/20'
-                  : 'text-rose-400 border-rose-500/20'
+                  ? 'text-[#10B981] border-[rgba(16,185,129,0.25)]'
+                  : 'text-[#EF4444] border-[rgba(239,68,68,0.25)]'
               }`}
             >
               {formattedYour ?? 'null'}
@@ -296,10 +296,10 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
         {/* Console / Stdout (Result Mode Only) */}
         {isResultMode && tc.consoleOutput && tc.consoleOutput.trim().length > 0 && (
           <div>
-            <span className="text-xs text-[#8b949e] font-semibold block mb-1.5 uppercase tracking-wider">
-              Console Output
+            <span className="text-[11px] text-[var(--kc-text-muted)] font-mono font-semibold block mb-1 uppercase tracking-wider">
+              Standard Output
             </span>
-            <pre className="text-[12px] text-[#e6edf3] font-mono bg-black/60 p-3 rounded-lg border border-white/5 whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
+            <pre className="text-[12px] text-[var(--kc-text-secondary)] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
               {tc.consoleOutput}
             </pre>
           </div>

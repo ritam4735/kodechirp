@@ -115,27 +115,27 @@ export default function AuthPage() {
 
   return (
     <div className="flex-1 flex items-center justify-center py-8 sm:py-12 px-3 sm:px-4">
-      <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-5 sm:p-8 max-w-md w-full shadow-2xl">
-        <h1 className="text-xl sm:text-2xl font-bold font-display text-[#e6edf3] mb-6 text-center">
+      <div className="bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg p-6 sm:p-8 max-w-md w-full shadow-sm">
+        <h1 className="text-xl sm:text-2xl font-bold font-display text-[var(--kc-text-primary)] mb-6 text-center tracking-tight">
           {isLogin ? 'Welcome Back' : 'Create an Account'}
         </h1>
 
         {successMessage && (
-          <div className="bg-[#2ea043]/10 border border-[#2ea043]/30 text-[#3fb950] p-3 rounded-xl mb-4 text-sm" role="status">
+          <div className="bg-[rgba(74,222,128,0.1)] border border-[rgba(74,222,128,0.25)] text-[#4ade80] p-3 rounded-md mb-4 text-xs sm:text-sm" role="status">
             {successMessage}
           </div>
         )}
 
         {resendSuccess && (
-          <div className="bg-[#2ea043]/10 border border-[#2ea043]/30 text-[#3fb950] p-3 rounded-xl mb-4 text-sm" role="status">
+          <div className="bg-[rgba(74,222,128,0.1)] border border-[rgba(74,222,128,0.25)] text-[#4ade80] p-3 rounded-md mb-4 text-xs sm:text-sm" role="status">
             {resendSuccess}
           </div>
         )}
 
         {error && (
-          <div className="bg-red-900/40 border border-red-500/50 text-red-200 p-3 rounded-xl mb-4 text-xs sm:text-sm flex flex-col gap-2" role="alert">
+          <div className="bg-[rgba(248,81,73,0.1)] border border-[rgba(248,81,73,0.25)] text-[var(--kc-error, #f87171)] p-3 rounded-md mb-4 text-xs sm:text-sm flex flex-col gap-2" role="alert">
             <div className="flex items-center gap-2">
-              <AlertCircle size={15} className="text-red-400 shrink-0" aria-hidden="true" />
+              <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
               <span>{error}</span>
             </div>
             {unverifiedEmail && !resendSuccess && (
@@ -143,7 +143,7 @@ export default function AuthPage() {
                 type="button"
                 onClick={handleResend}
                 disabled={resending || submitting}
-                className="self-start text-[#58a6ff] hover:underline text-xs font-medium disabled:opacity-50"
+                className="self-start text-[var(--kc-accent)] hover:underline text-xs font-medium disabled:opacity-50"
               >
                 {resending ? 'Sending...' : 'Resend verification email'}
               </button>
@@ -154,7 +154,7 @@ export default function AuthPage() {
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {!isLogin && (
             <div>
-              <label htmlFor="username-field" className="block text-xs font-semibold uppercase tracking-wider text-[#8b949e] mb-1.5">
+              <label htmlFor="username-field" className="block text-xs font-mono font-medium text-[var(--kc-text-secondary)] mb-1.5 uppercase tracking-wider">
                 Username
               </label>
               <input
@@ -172,14 +172,14 @@ export default function AuthPage() {
                   setName(e.target.value);
                   clearFieldError('name');
                 }}
-                className={`w-full bg-[#0d1117] text-[#e6edf3] text-sm rounded-xl px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
+                className={`w-full bg-[var(--kc-surface-subtle)] text-[var(--kc-text-primary)] text-sm rounded-md px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
                   fieldErrors.name
-                    ? 'border-2 border-[#f85149] focus:ring-2 focus:ring-[#f85149]/30'
-                    : 'border border-[#30363d] focus:border-[#58a6ff]'
+                    ? 'border-2 border-[var(--kc-error, #f85149)] focus:ring-1 focus:ring-[var(--kc-error, #f85149)]'
+                    : 'border border-[var(--kc-border)] focus:border-[var(--kc-accent)]'
                 }`}
               />
               {fieldErrors.name && (
-                <p id="username-error" role="alert" className="text-xs text-[#ff7b72] mt-1.5 flex items-center gap-1">
+                <p id="username-error" role="alert" className="text-xs text-[var(--kc-error, #f87171)] mt-1.5 flex items-center gap-1">
                   <span>{fieldErrors.name}</span>
                 </p>
               )}
@@ -187,7 +187,7 @@ export default function AuthPage() {
           )}
 
           <div>
-            <label htmlFor="identifier-field" className="block text-xs font-semibold uppercase tracking-wider text-[#8b949e] mb-1.5">
+            <label htmlFor="identifier-field" className="block text-xs font-mono font-medium text-[var(--kc-text-secondary)] mb-1.5 uppercase tracking-wider">
               {isLogin ? 'Username or Email' : 'Email Address'}
             </label>
             <input
@@ -203,14 +203,14 @@ export default function AuthPage() {
                 setIdentifier(e.target.value);
                 clearFieldError('identifier');
               }}
-              className={`w-full bg-[#0d1117] text-[#e6edf3] text-sm rounded-xl px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
+              className={`w-full bg-[var(--kc-surface-subtle)] text-[var(--kc-text-primary)] text-sm rounded-md px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
                 fieldErrors.identifier
-                  ? 'border-2 border-[#f85149] focus:ring-2 focus:ring-[#f85149]/30'
-                  : 'border border-[#30363d] focus:border-[#58a6ff]'
+                  ? 'border-2 border-[var(--kc-error, #f85149)] focus:ring-1 focus:ring-[var(--kc-error, #f85149)]'
+                  : 'border border-[var(--kc-border)] focus:border-[var(--kc-accent)]'
               }`}
             />
             {fieldErrors.identifier && (
-              <p id="identifier-error" role="alert" className="text-xs text-[#ff7b72] mt-1.5 flex items-center gap-1">
+              <p id="identifier-error" role="alert" className="text-xs text-[var(--kc-error, #f87171)] mt-1.5 flex items-center gap-1">
                 <span>{fieldErrors.identifier}</span>
               </p>
             )}
@@ -218,11 +218,11 @@ export default function AuthPage() {
 
           <div>
             <div className="flex justify-between items-center mb-1.5">
-              <label htmlFor="password-field" className="block text-xs font-semibold uppercase tracking-wider text-[#8b949e]">
+              <label htmlFor="password-field" className="block text-xs font-mono font-medium text-[var(--kc-text-secondary)] uppercase tracking-wider">
                 Password
               </label>
               {isLogin && (
-                <Link href="/auth/forgot-password" className="text-xs text-[#58a6ff] hover:underline">
+                <Link href="/auth/forgot-password" className="text-xs text-[var(--kc-accent)] hover:underline">
                   Forgot password?
                 </Link>
               )}
@@ -241,23 +241,23 @@ export default function AuthPage() {
                   setPassword(e.target.value);
                   clearFieldError('password');
                 }}
-                className={`w-full bg-[#0d1117] text-[#e6edf3] text-sm rounded-xl px-3.5 py-2.5 pr-10 focus:outline-none transition-colors disabled:opacity-50 ${
+                className={`w-full bg-[var(--kc-surface-subtle)] text-[var(--kc-text-primary)] text-sm rounded-md px-3.5 py-2.5 pr-10 focus:outline-none transition-colors disabled:opacity-50 ${
                   fieldErrors.password
-                    ? 'border-2 border-[#f85149] focus:ring-2 focus:ring-[#f85149]/30'
-                    : 'border border-[#30363d] focus:border-[#58a6ff]'
+                    ? 'border-2 border-[var(--kc-error, #f85149)] focus:ring-1 focus:ring-[var(--kc-error, #f85149)]'
+                    : 'border border-[var(--kc-border)] focus:border-[var(--kc-accent)]'
                 }`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8b949e] hover:text-white transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] transition-colors"
               >
-                {showPassword ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+                {showPassword ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
               </button>
             </div>
             {fieldErrors.password && (
-              <p id="password-error" role="alert" className="text-xs text-[#ff7b72] mt-1.5 flex items-center gap-1">
+              <p id="password-error" role="alert" className="text-xs text-[var(--kc-error, #f87171)] mt-1.5 flex items-center gap-1">
                 <span>{fieldErrors.password}</span>
               </p>
             )}
@@ -266,7 +266,7 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-[#238636] hover:bg-[#2ea043] disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-xl transition-all shadow-md mt-2 flex items-center justify-center gap-2 text-sm"
+            className="w-full bg-[var(--kc-accent)] hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-md transition-opacity shadow-xs mt-3 flex items-center justify-center gap-2 text-sm"
           >
             {submitting && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
             <span>
@@ -281,7 +281,7 @@ export default function AuthPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-[#8b949e]">
+        <div className="mt-6 text-center text-xs text-[var(--kc-text-secondary)]">
           {isLogin ? "Don't have an account? " : 'Already have an account? '}
           <button
             type="button"
@@ -292,7 +292,7 @@ export default function AuthPage() {
               setSuccessMessage('');
               setIsLogin(!isLogin);
             }}
-            className="text-[#58a6ff] hover:underline disabled:opacity-50 font-medium"
+            className="text-[var(--kc-accent)] hover:underline disabled:opacity-50 font-medium"
           >
             {isLogin ? 'Sign up' : 'Sign in'}
           </button>

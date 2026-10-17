@@ -7,11 +7,27 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-outfit)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-jetbrains)', 'Menlo', 'monospace'],
-        display: ['var(--font-syne)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-body)', 'var(--font-outfit)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-jetbrains)', 'var(--font-code)', 'Menlo', 'monospace'],
+        display: ['var(--font-display)', 'var(--font-syne)', 'system-ui', 'sans-serif'],
+        body: ['var(--font-body)', 'system-ui', 'sans-serif'],
       },
       colors: {
+        kc: {
+          bg: 'var(--kc-bg)',
+          surface: 'var(--kc-surface)',
+          subtle: 'var(--kc-surface-subtle)',
+          elevated: 'var(--kc-surface-elevated)',
+          border: 'var(--kc-border)',
+          'border-subtle': 'var(--kc-border-subtle)',
+          'border-hover': 'var(--kc-border-hover)',
+          text: 'var(--kc-text-primary)',
+          'text-muted': 'var(--kc-text-muted)',
+          'text-secondary': 'var(--kc-text-secondary)',
+          accent: 'var(--kc-accent)',
+          'accent-hover': 'var(--kc-accent-hover)',
+          'accent-subtle': 'var(--kc-accent-subtle)',
+        },
         // KodeChirp custom palette
         chirp: {
           50: '#f0fdf4',

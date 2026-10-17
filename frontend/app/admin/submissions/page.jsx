@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { adminApi } from '../../../lib/adminApi';
+import { RotateCw, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const PAGE_SIZE = 50;
 
@@ -45,7 +46,7 @@ export default function AdminSubmissions() {
     return 'badge-queued';
   };
 
-  if (error) return <div style={{ color: '#f85149', padding: '40px' }}>Error: {error}</div>;
+  if (error) return <div style={{ color: 'var(--kc-error, #f85149)', padding: '40px' }}>Error: {error}</div>;
 
   return (
     <div>
@@ -54,7 +55,9 @@ export default function AdminSubmissions() {
           <h1 className="admin-page-title">Submission Monitor</h1>
           <p className="admin-page-subtitle">{meta.total.toLocaleString()} submissions total</p>
         </div>
-        <button className="admin-btn admin-btn-ghost" onClick={fetchSubmissions}>↻ Refresh</button>
+        <button className="admin-btn admin-btn-ghost" onClick={fetchSubmissions} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          <RotateCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
+        </button>
       </div>
 
       <div className="admin-toolbar">
@@ -97,7 +100,7 @@ export default function AdminSubmissions() {
             {loading ? (
               <tr><td colSpan="8"><div className="admin-loading"><div className="admin-spinner"></div>Loading...</div></td></tr>
             ) : submissions.length === 0 ? (
-              <tr><td colSpan="8"><div className="admin-empty"><div className="admin-empty-icon">🔍</div><div className="admin-empty-text">No submissions found</div></div></td></tr>
+              <tr><td colSpan="8"><div className="admin-empty"><div className="admin-empty-icon"><Search size={22} style={{ color: 'var(--text-muted)' }} /></div><div className="admin-empty-text">No submissions found</div></div></td></tr>
             ) : submissions.map(s => (
               <tr key={s.id}>
                 <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{s.username || '—'}</td>
@@ -120,8 +123,12 @@ export default function AdminSubmissions() {
         <div className="admin-pagination">
           <div className="admin-pagination-info">Page {page + 1} of {totalPages}</div>
           <div className="admin-pagination-btns">
-            <button className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>← Prev</button>
-            <button className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next →</button>
+            <button className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page === 0} onClick={() => setPage(p => p - 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <ChevronLeft size={13} /> Prev
+            </button>
+            <button className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              Next <ChevronRight size={13} />
+            </button>
           </div>
         </div>
       )}

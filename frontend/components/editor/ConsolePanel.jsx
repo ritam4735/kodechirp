@@ -21,37 +21,37 @@ export const ConsolePanel = () => {
     <div className="flex-1 flex flex-col min-h-0 bg-transparent relative">
       <div className="flex-1 p-2 overflow-y-auto font-mono text-sm custom-scrollbar">
         {isRunning && (
-          <div className="flex flex-col items-center justify-center py-12 text-center text-[#8b949e]">
-            <div className="w-6 h-6 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin mb-3" />
-            <p className="text-sm font-medium text-[#c9d1d9]">Executing code...</p>
-            <p className="text-xs mt-1 text-[#8b949e]">Running against test suite in sandbox</p>
+          <div className="flex flex-col items-center justify-center py-12 text-center text-[var(--kc-text-muted)]">
+            <div className="w-6 h-6 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin mb-3" />
+            <p className="text-sm font-medium text-[var(--kc-text-primary)]">Executing in sandbox…</p>
+            <p className="text-xs mt-1 text-[var(--kc-text-muted)]">Testing code against verification cluster</p>
           </div>
         )}
 
         {!isRunning && verdict && (
           <div
-            className={`mb-4 bg-white/[0.02] p-5 rounded-xl border shadow-lg backdrop-blur-sm ${
-              isAccepted ? 'border-emerald-500/20' : 'border-rose-500/20'
+            className={`mb-4 bg-[var(--kc-surface-subtle)] p-4 rounded-lg border ${
+              isAccepted ? 'border-[rgba(16,185,129,0.25)]' : 'border-[rgba(239,68,68,0.25)]'
             }`}
           >
             {/* Verdict Header */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 mb-4">
-              <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3 pb-2.5 border-b border-[var(--kc-border-subtle)]">
+              <div className="flex items-center gap-2">
                 {isAccepted ? (
-                  <CheckCircle2 size={22} className="text-[#4ade80]" />
+                  <CheckCircle2 size={18} className="text-[#10B981]" />
                 ) : (
-                  <XCircle size={22} className="text-[#f87171]" />
+                  <XCircle size={18} className="text-[#EF4444]" />
                 )}
                 <span
-                  className={`font-bold text-xl ${
-                    isAccepted ? 'text-[#4ade80]' : 'text-[#f87171]'
+                  className={`font-bold text-lg font-mono ${
+                    isAccepted ? 'text-[#10B981]' : 'text-[#EF4444]'
                   }`}
                 >
                   {verdict.verdict}
                 </span>
               </div>
               {verdict.total > 0 && (
-                <span className="text-xs text-[#8b949e] font-semibold bg-white/5 px-2.5 py-1 rounded-full border border-white/5">
+                <span className="text-xs text-[var(--kc-text-secondary)] font-mono bg-[var(--kc-bg)] px-2.5 py-1 rounded border border-[var(--kc-border)]">
                   {verdict.passed} / {verdict.total} Test Cases Passed
                 </span>
               )}
@@ -59,12 +59,12 @@ export const ConsolePanel = () => {
 
             {/* Metrics */}
             {verdict.runtime && (
-              <div className="flex flex-wrap gap-3 sm:gap-4 text-[#8b949e] text-xs font-medium bg-black/40 px-3 py-2 rounded-lg border border-white/5 inline-flex mb-4">
+              <div className="flex flex-wrap gap-4 text-[var(--kc-text-secondary)] text-xs font-mono bg-[var(--kc-bg)] px-3 py-1.5 rounded-md border border-[var(--kc-border)] inline-flex mb-3">
                 <span>
-                  <strong className="text-[#e6edf3]">Runtime:</strong> {verdict.runtime}
+                  <strong className="text-[var(--kc-text-primary)] font-semibold">Runtime:</strong> {verdict.runtime}
                 </span>
                 <span>
-                  <strong className="text-[#e6edf3]">Memory:</strong> {verdict.memory}
+                  <strong className="text-[var(--kc-text-primary)] font-semibold">Memory:</strong> {verdict.memory}
                 </span>
               </div>
             )}
@@ -72,35 +72,35 @@ export const ConsolePanel = () => {
             {/* Formatted Failed Test Case Details if available */}
             {hasFailedDetails ? (
               <div className="space-y-3 mt-2 text-xs">
-                <div className="text-[#e6edf3] font-semibold mb-2">
+                <div className="text-[var(--kc-text-primary)] font-semibold font-mono">
                   Failed on test case {(verdict.passed || 0) + 1} of {verdict.total}:
                 </div>
                 {verdict.failedInput && (
                   <div>
-                    <span className="text-[#8b949e] font-semibold block mb-1 uppercase tracking-wider text-[11px]">
+                    <span className="text-[var(--kc-text-muted)] font-mono font-semibold block mb-1 uppercase tracking-wider text-[11px]">
                       Input
                     </span>
-                    <pre className="text-[13px] text-[#e6edf3] bg-black/40 p-2.5 rounded-lg border border-white/5 whitespace-pre-wrap break-words max-w-full overflow-x-auto">
+                    <pre className="text-[12.5px] text-[var(--kc-text-primary)] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto">
                       {formatInput(verdict.failedInput, signature)}
                     </pre>
                   </div>
                 )}
                 {verdict.failedExpected && (
                   <div>
-                    <span className="text-[#8b949e] font-semibold block mb-1 uppercase tracking-wider text-[11px]">
+                    <span className="text-[var(--kc-text-muted)] font-mono font-semibold block mb-1 uppercase tracking-wider text-[11px]">
                       Expected Output
                     </span>
-                    <pre className="text-[13px] text-[#58a6ff] bg-black/40 p-2.5 rounded-lg border border-white/5 whitespace-pre-wrap break-words max-w-full overflow-x-auto">
+                    <pre className="text-[12.5px] text-[var(--kc-accent-hover)] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto">
                       {formatOutput(verdict.failedExpected, returnType)}
                     </pre>
                   </div>
                 )}
                 {verdict.failedActual && (
                   <div>
-                    <span className="text-[#8b949e] font-semibold block mb-1 uppercase tracking-wider text-[11px]">
+                    <span className="text-[var(--kc-text-muted)] font-mono font-semibold block mb-1 uppercase tracking-wider text-[11px]">
                       Your Output
                     </span>
-                    <pre className="text-[13px] text-rose-400 bg-black/40 p-2.5 rounded-lg border border-rose-500/20 whitespace-pre-wrap break-words max-w-full overflow-x-auto">
+                    <pre className="text-[12.5px] text-[#EF4444] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border border-[rgba(239,68,68,0.25)] whitespace-pre-wrap break-words max-w-full overflow-x-auto">
                       {formatOutput(verdict.failedActual, returnType)}
                     </pre>
                   </div>
@@ -108,7 +108,7 @@ export const ConsolePanel = () => {
               </div>
             ) : (
               verdict.details && (
-                <div className="text-[#e6edf3] mt-3 whitespace-pre-wrap leading-relaxed">
+                <div className="text-[var(--kc-text-primary)] font-mono text-xs mt-3 whitespace-pre-wrap leading-relaxed bg-[var(--kc-bg)] p-2.5 rounded-md border border-[var(--kc-border)]">
                   {verdict.details}
                 </div>
               )
@@ -117,23 +117,23 @@ export const ConsolePanel = () => {
         )}
 
         {!isRunning && !verdict && errorMessage && (
-          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2.5 text-xs font-semibold text-rose-400">
-              <XCircle size={15} className="text-rose-400 shrink-0" />
-              <span>Execution / Compiler Error</span>
+          <div className="bg-[var(--kc-surface-subtle)] border border-[rgba(239,68,68,0.25)] rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2 text-xs font-mono font-semibold text-[#EF4444]">
+              <XCircle size={14} className="text-[#EF4444] shrink-0" />
+              <span>Execution / Diagnostics Log</span>
             </div>
-            <pre className="text-rose-300 text-xs font-mono leading-relaxed bg-black/50 p-3.5 rounded-lg border border-rose-500/10 whitespace-pre-wrap overflow-x-auto">
+            <pre className="text-[#EF4444] text-xs font-mono leading-relaxed bg-[var(--kc-bg)] p-3 rounded-md border border-[rgba(239,68,68,0.15)] whitespace-pre-wrap overflow-x-auto">
               {errorMessage}
             </pre>
           </div>
         )}
 
         {!isRunning && !verdict && !errorMessage && (
-          <div className="flex flex-col items-center justify-center py-12 text-center text-[#8b949e]">
-            <Terminal size={32} className="mb-2 text-[#58a6ff]/40" />
-            <p className="text-sm font-medium text-[#c9d1d9]">No console output</p>
-            <p className="text-xs mt-1 text-[#8b949e] max-w-sm">
-              Run your code to execute test cases or submit a solution to view diagnostics and verdicts.
+          <div className="flex flex-col items-center justify-center py-12 text-center text-[var(--kc-text-muted)]">
+            <Terminal size={26} className="mb-2 text-[var(--kc-text-muted)] opacity-50" />
+            <p className="text-sm font-medium text-[var(--kc-text-primary)]">Ready for execution</p>
+            <p className="text-xs mt-1 text-[var(--kc-text-muted)] max-w-sm">
+              Run your code to evaluate against test cases or submit a solution to verify correctness.
             </p>
           </div>
         )}

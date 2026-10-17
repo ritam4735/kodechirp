@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import { adminApi } from '../../../../lib/adminApi';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import {
+  ArrowLeft, Edit3, X, BarChart3, Tag, FileText, Sparkles,
+  ListOrdered, ShieldAlert, Cpu, FileCode2, Search, Check, CheckCircle2
+} from 'lucide-react';
 
 function formatReviewStatus(status) {
   return (status || 'imported').replace(/_/g, ' ');
@@ -132,8 +136,8 @@ export default function ProblemReview() {
       <div className="admin-page-header">
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-            <Link href="/admin/normalize" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '13px' }}>
-              ← Back to Queue
+            <Link href="/admin/normalize" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <ArrowLeft size={13} /> Back to Queue
             </Link>
           </div>
           <h1 className="admin-page-title">{problem.title}</h1>
@@ -149,10 +153,14 @@ export default function ProblemReview() {
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {!editMode && (
-            <button className="admin-btn admin-btn-ghost" onClick={() => setEditMode(true)}>✏️ Edit</button>
+            <button className="admin-btn admin-btn-ghost" onClick={() => setEditMode(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <Edit3 size={13} /> Edit
+            </button>
           )}
           {editMode && (
-            <button className="admin-btn admin-btn-ghost" onClick={() => setEditMode(false)}>Cancel Edit</button>
+            <button className="admin-btn admin-btn-ghost" onClick={() => setEditMode(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <X size={13} /> Cancel Edit
+            </button>
           )}
         </div>
       </div>
@@ -160,7 +168,9 @@ export default function ProblemReview() {
       {/* Confidence & Quality */}
       <div className="admin-grid-2" style={{ marginBottom: '20px' }}>
         <div className="admin-section-card">
-          <div className="admin-section-title">📊 Parser Confidence</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BarChart3 size={15} style={{ color: 'var(--kc-accent)' }} /> Parser Confidence
+          </div>
           {problem.parser_confidence != null ? (
             <ConfidenceMeter value={problem.parser_confidence} />
           ) : (
@@ -168,7 +178,9 @@ export default function ProblemReview() {
           )}
         </div>
         <div className="admin-section-card">
-          <div className="admin-section-title">🏷️ AI Quality Flags</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Tag size={15} style={{ color: 'var(--kc-accent)' }} /> AI Quality Flags
+          </div>
           {flags ? (
             <div className="quality-flags">
               {Object.entries(flags).map(([key, val]) => (
@@ -188,7 +200,9 @@ export default function ProblemReview() {
         {/* Raw Statement */}
         <div className="norm-pane">
           <div className="norm-pane-header">
-            <span>📄 Raw Statement (Source of Truth)</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <FileText size={14} style={{ color: 'var(--kc-accent)' }} /> Raw Statement (Source of Truth)
+            </span>
           </div>
           <div className="norm-pane-body">
             <pre>{problem.raw_statement || problem.description || 'No raw statement available'}</pre>
@@ -198,7 +212,9 @@ export default function ProblemReview() {
         {/* Parsed Description */}
         <div className="norm-pane">
           <div className="norm-pane-header">
-            <span>✨ Parsed Description</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <Sparkles size={14} style={{ color: 'var(--kc-accent)' }} /> Parsed Description
+            </span>
           </div>
           <div className="norm-pane-body">
             {editMode ? (
@@ -217,7 +233,9 @@ export default function ProblemReview() {
 
       {/* Examples */}
       <div className="admin-section-card" style={{ marginBottom: '20px' }}>
-        <div className="admin-section-title">📋 Examples ({examples.length})</div>
+        <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ListOrdered size={15} style={{ color: 'var(--kc-accent)' }} /> Examples ({examples.length})
+        </div>
         {editMode ? (
           <textarea
             className="admin-textarea"
@@ -256,7 +274,9 @@ export default function ProblemReview() {
       {/* Constraints */}
       <div className="admin-grid-2" style={{ marginBottom: '20px' }}>
         <div className="admin-section-card">
-          <div className="admin-section-title">🔒 Parsed Constraints ({constraints.length})</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ShieldAlert size={15} style={{ color: 'var(--kc-accent)' }} /> Parsed Constraints ({constraints.length})
+          </div>
           {editMode ? (
             <textarea
               className="admin-textarea"
@@ -282,10 +302,10 @@ export default function ProblemReview() {
         </div>
 
         <div className="admin-section-card">
-          <div className="admin-section-title">
-            🤖 AI Generated Constraints ({generatedConstraints.length})
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Cpu size={15} style={{ color: 'var(--kc-accent)' }} /> AI Generated Constraints ({generatedConstraints.length})
             {problem.constraint_source === 'ai_generated' && (
-              <span className="admin-badge" style={{ marginLeft: '8px', background: 'rgba(168,85,247,0.15)', color: '#c084fc', fontSize: '9px' }}>
+              <span className="admin-badge" style={{ marginLeft: '8px', background: 'rgba(59, 130, 246, 0.12)', color: 'var(--kc-accent)', fontSize: '9px' }}>
                 AI Generated
               </span>
             )}
@@ -310,7 +330,9 @@ export default function ProblemReview() {
       {/* Notes */}
       {notes.length > 0 && (
         <div className="admin-section-card" style={{ marginBottom: '20px' }}>
-          <div className="admin-section-title">📝 Notes</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileCode2 size={15} style={{ color: 'var(--kc-accent)' }} /> Notes
+          </div>
           {editMode ? (
             <textarea
               className="admin-textarea"
@@ -348,16 +370,18 @@ export default function ProblemReview() {
           className="admin-btn admin-btn-primary admin-btn-sm"
           onClick={handleParse}
           disabled={!!processing}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
         >
-          🔬 {problem.description_md ? 'Re-parse' : 'Parse'}
+          <Search size={13} /> {problem.description_md ? 'Re-parse' : 'Parse'}
         </button>
 
         <button
           className="admin-btn admin-btn-warning admin-btn-sm"
           onClick={handleNormalize}
           disabled={!!processing}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
         >
-          🤖 AI Normalize
+          <Sparkles size={13} /> AI Normalize
         </button>
 
         {(['parsed', 'ai_normalized', 'review_required'].includes(problem.review_status)) && (
@@ -365,19 +389,20 @@ export default function ProblemReview() {
             className="admin-btn admin-btn-success admin-btn-sm"
             onClick={handleApprove}
             disabled={!!processing}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
           >
-            ✓ {editMode ? 'Save & Approve' : 'Approve Parsing'}
+            <Check size={13} /> {editMode ? 'Save & Approve' : 'Approve Parsing'}
           </button>
         )}
 
         {problem.review_status === 'approved' && (
           <button
-            className="admin-btn admin-btn-sm"
+            className="admin-btn admin-btn-primary admin-btn-sm"
             onClick={handleMarkReady}
             disabled={!!processing}
-            style={{ background: 'rgba(0,212,255,0.15)', color: '#00d4ff', borderColor: 'rgba(0,212,255,0.3)' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
           >
-            🚀 Mark Ready for Publication
+            <CheckCircle2 size={13} /> Mark Ready for Publication
           </button>
         )}
 

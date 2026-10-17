@@ -1,89 +1,75 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Search, ChevronRight, ChevronLeft, Code2, Layers, ChevronsLeft, ChevronsRight, AlertTriangle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { 
+  Search, 
+  ChevronRight, 
+  ChevronLeft, 
+  ChevronsLeft, 
+  ChevronsRight, 
+  AlertTriangle 
+} from 'lucide-react';
 import { useProblem } from '../../hooks/useProblem';
-import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
 
 const PAGE_SIZE = 50;
 
-function DifficultyBadge({ difficulty }) {
-  const styles = {
-    Easy:   'bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20',
-    Medium: 'bg-[#eab308]/10 text-[#eab308] border border-[#eab308]/20',
-    Hard:   'bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/20',
-  };
-  return (
-    <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide ${styles[difficulty] ?? styles.Easy}`}>
-      {difficulty}
-    </span>
-  );
+function formatAcceptanceRate(rate) {
+  if (rate === null || rate === undefined || rate === '') return '0.0%';
+  const num = parseFloat(rate);
+  if (isNaN(num)) return '0.0%';
+  const percent = num <= 1.0 ? num * 100 : num;
+  return `${percent.toFixed(1)}%`;
 }
 
-function ProblemRow({ problem, index, globalIndex }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -8 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.02, ease: 'easeOut' }}
-    >
-      <Link
-        href={`/problems/${problem.slug}`}
-        className="group flex items-center gap-4 px-5 py-3.5 border-b border-white/[0.04] hover:bg-white/[0.03] transition-all duration-200"
-      >
-        <span className="w-7 text-[12px] text-[#484f58] font-mono tabular-nums shrink-0 text-right">
-          {String(globalIndex + 1).padStart(2, '0')}
-        </span>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-[14px] font-semibold text-[#c9d1d9] group-hover:text-white transition-colors truncate">
-            {problem.title}
-          </h3>
-          {problem.short_description && (
-            <p className="text-[12px] text-[#484f58] mt-0.5 truncate">{problem.short_description}</p>
-          )}
-        </div>
-        <DifficultyBadge difficulty={problem.difficulty} />
-        <ChevronRight
-          size={14}
-          aria-hidden="true"
-          className="text-[#484f58] group-hover:text-[#58a6ff] group-hover:translate-x-0.5 transition-all duration-200 shrink-0 ml-1"
-        />
-      </Link>
-    </motion.div>
-  );
+function DifficultyBadge({ difficulty }) {
+  if (difficulty === 'Easy') return <span className="kc-diff-badge kc-diff-easy">Easy</span>;
+  if (difficulty === 'Hard') return <span className="kc-diff-badge kc-diff-hard">Hard</span>;
+  return <span className="kc-diff-badge kc-diff-medium">Medium</span>;
 }
 
 export default function QuestionsPage() {
+  const router = useRouter();
   const { problems, isLoading, error, pagination, fetchProblems } = useProblem();
   const [search, setSearch] = useState('');
   const [difficulty, setDifficulty] = useState('');
   const [page, setPage] = useState(1);
 
-  const doFetch = useCallback(() => {
-    fetchProblems(search, { page, limit: PAGE_SIZE, difficulty });
-  }, [search, page, difficulty]);
-
-  useEffect(() => {
-    const t = setTimeout(doFetch, 220);
-    return () => clearTimeout(t);
-  }, [doFetch]);
-
-  // Reset page when filters change
-  useEffect(() => {
+  const handleSearchChange = (val) => {
+    setSearch(val);
     setPage(1);
-  }, [search, difficulty]);
+  };
+
+  const handleDifficultyChange = (val) => {
+    setDifficulty(val);
+    setPage(1);
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProblems(search, { page, limit: PAGE_SIZE, difficulty });
+    }, search ? 250 : 0);
+
+    return () => clearTimeout(timer);
+  }, [search, page, difficulty, fetchProblems]);
 
   const totalPages = pagination ? Math.ceil(pagination.total / PAGE_SIZE) : 1;
   const total = pagination?.total || problems.length;
   const startIndex = (page - 1) * PAGE_SIZE;
 
-  const easy   = problems.filter(p => p.difficulty === 'Easy').length;
-  const medium = problems.filter(p => p.difficulty === 'Medium').length;
-  const hard   = problems.filter(p => p.difficulty === 'Hard').length;
+  // Derive counts for difficulties
+  const difficultyCounts = useMemo(() => {
+    const counts = { Easy: 0, Medium: 0, Hard: 0 };
+    problems.forEach((p) => {
+      if (counts[p.difficulty] !== undefined) {
+        counts[p.difficulty]++;
+      }
+    });
+    return counts;
+  }, [problems]);
 
-  // Generate page numbers to display
+  // Generate page numbers
   const getPageNumbers = () => {
     const pages = [];
     const maxVisible = 7;
@@ -102,210 +88,205 @@ export default function QuestionsPage() {
   };
 
   return (
-    <div className="relative flex-1 overflow-hidden">
-      <AnimatedBackground variant="questions" />
-
-      <div className="relative z-10 max-w-4xl mx-auto w-full px-4 py-8">
-
-        {/* Page header */}
-        <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: 'easeOut' }}
-          className="mb-8"
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-lg bg-[#58a6ff]/15 border border-[#58a6ff]/20 flex items-center justify-center">
-              <Code2 size={14} className="text-[#58a6ff]" />
-            </div>
-            <span className="text-[12px] font-bold text-[#58a6ff] uppercase tracking-widest">Questions</span>
+    <div className="flex-1 flex flex-col bg-[var(--kc-bg)] py-8 sm:py-12">
+      <div className="kc-container">
+        {/* Editorial Page Header */}
+        <div className="mb-8">
+          <div className="kc-kicker" style={{ animation: 'none' }}>
+            <span className="kc-kicker-dot" />
+            <span>Problem Repository</span>
+            <span className="kc-kicker-sep">/</span>
+            <span className="kc-kicker-ver">Active Catalog</span>
           </div>
-          <h1 className="text-3xl font-display font-extrabold text-white mb-1">
-            Solve. Think. <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#58a6ff] to-[#a371f7]">Chirp.</span>
+
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--kc-text-primary)] mb-2 font-display">
+            Benchmark Challenges
           </h1>
-          <p className="text-[#8b949e] text-sm">
-            Browse challenges, solve them, and share your approach with the flock.
+          <p className="text-sm sm:text-base text-[var(--kc-text-secondary)] max-w-2xl">
+            Algorithmic challenges executed in isolated runtime sandboxes. Master fundamental algorithms, time complexities, and implementation trade-offs.
           </p>
-        </motion.div>
+        </div>
 
-        {/* Stats row */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-6"
-          role="group"
-          aria-label="Filter problems by difficulty"
-        >
-          <button
-            type="button"
-            aria-pressed={difficulty === ''}
-            aria-label="Filter all problems"
-            className="rounded-xl p-3 text-center border cursor-pointer transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#58a6ff]/40"
-            style={{
-              background: difficulty === '' ? 'rgba(88,166,255,0.12)' : 'rgba(88,166,255,0.04)',
-              borderColor: difficulty === '' ? 'rgba(88,166,255,0.3)' : 'rgba(88,166,255,0.1)',
-            }}
-            onClick={() => setDifficulty('')}
-          >
-            <span className="block text-xl font-display font-bold text-[#58a6ff]">{total}</span>
-            <span className="block text-[11px] font-medium text-[#8b949e] mt-0.5">All</span>
-          </button>
-          {[
-            { label: 'Easy',   color: '#22c55e', rgb: '34,197,94',  count: easy },
-            { label: 'Medium', color: '#eab308', rgb: '234,179,8',  count: medium },
-            { label: 'Hard',   color: '#ef4444', rgb: '239,68,68',  count: hard },
-          ].map(({ label, color, rgb, count }) => (
-            <button
-              key={label}
-              type="button"
-              aria-pressed={difficulty === label}
-              aria-label={`Filter ${label} problems`}
-              className="rounded-xl p-3 text-center border cursor-pointer transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#58a6ff]/40"
-              style={{
-                background: difficulty === label ? `rgba(${rgb},0.15)` : `rgba(${rgb},0.06)`,
-                borderColor: difficulty === label ? `rgba(${rgb},0.4)` : `rgba(${rgb},0.15)`,
-              }}
-              onClick={() => setDifficulty(difficulty === label ? '' : label)}
-            >
-              <span className="block text-xl font-display font-bold" style={{ color }}>{count}</span>
-              <span className="block text-[11px] font-medium text-[#8b949e] mt-0.5">{label}</span>
-            </button>
-          ))}
-        </motion.div>
-
-        {/* Search */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.25 }}
-          className="relative mb-5"
-        >
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#484f58] pointer-events-none" aria-hidden="true" />
-          <input
-            type="text"
-            placeholder="Search problems…"
-            aria-label="Search problems by title or topic"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="
-              w-full bg-white/[0.04] border border-white/[0.08]
-              text-sm text-[#e6edf3] placeholder-[#484f58]
-              rounded-xl pl-10 pr-4 py-2.5
-              focus:outline-none focus:border-[#58a6ff]/50 focus:bg-white/[0.06]
-              transition-all duration-200
-            "
-          />
-          {search && (
-            <button
-              type="button"
-              aria-label="Clear search input"
-              onClick={() => setSearch('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#484f58] hover:text-[#8b949e] text-xs transition-colors"
-            >
-              Clear
-            </button>
-          )}
-        </motion.div>
-
-        {/* Problem list glass panel */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.35 }}
-          className="rounded-2xl overflow-hidden border border-white/[0.07]"
-          style={{
-            background: 'rgba(255,255,255,0.025)',
-            backdropFilter: 'blur(16px)',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
-          }}
-        >
-          {/* List header */}
-          <div className="flex items-center justify-between gap-2.5 px-5 py-3 border-b border-white/[0.05] bg-white/[0.02]">
-            <div className="flex items-center gap-2.5">
-              <Layers size={13} className="text-[#58a6ff]" />
-              <span className="text-[11px] font-bold text-[#8b949e] uppercase tracking-wider">
-                {isLoading ? 'Loading…' : `Showing ${startIndex + 1}–${Math.min(startIndex + PAGE_SIZE, total)} of ${total.toLocaleString()} problems`}
-              </span>
+        {/* Problem Table Card */}
+        <div className="kc-table-wrapper">
+          {/* Table Toolbar */}
+          <div className="kc-table-toolbar">
+            <div className="kc-diff-filters" role="tablist" aria-label="Filter problems by difficulty">
+              {[
+                { label: 'All', value: '' },
+                { label: 'Easy', value: 'Easy' },
+                { label: 'Medium', value: 'Medium' },
+                { label: 'Hard', value: 'Hard' },
+              ].map(({ label, value }) => {
+                const isActive = difficulty === value;
+                const count = value === '' ? total : difficultyCounts[value] || 0;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    className={`kc-diff-tab ${isActive ? 'active' : ''}`}
+                    onClick={() => handleDifficultyChange(value)}
+                  >
+                    {label} {count > 0 && <span className="opacity-60 text-[10px] ml-1 font-mono">({count})</span>}
+                  </button>
+                );
+              })}
             </div>
-            {difficulty && (
-              <button
-                onClick={() => setDifficulty('')}
-                className="text-[11px] text-[#58a6ff] hover:underline"
-              >
-                Clear filter
-              </button>
-            )}
-          </div>
 
-          {isLoading ? (
-            <div className="py-20 flex flex-col items-center gap-3">
-              <div className="w-6 h-6 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm text-[#484f58]">Loading questions…</span>
-            </div>
-          ) : error ? (
-            <div className="py-16 flex flex-col items-center gap-3 text-center px-4">
-              <AlertTriangle size={32} className="text-[#f87171]" />
-              <p className="text-sm font-semibold text-[#f87171]">{error}</p>
-              <p className="text-xs text-[#8b949e]">Unable to fetch problems.</p>
-              <button
-                type="button"
-                onClick={doFetch}
-                className="mt-2 px-4 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/10 transition-colors"
-              >
-                Try again
-              </button>
-            </div>
-          ) : problems.length === 0 ? (
-            <div className="py-20 flex flex-col items-center gap-3 text-center px-4">
-              <Search size={28} className="text-[#484f58]" />
-              <p className="text-sm text-[#8b949e]">
-                {search
-                  ? <>No problems match <strong className="text-[#c9d1d9]">&ldquo;{search}&rdquo;</strong></>
-                  : 'No problems found'
-                }
-              </p>
+            <div className="kc-search-box">
+              <Search size={13} className="kc-search-icon" aria-hidden="true" />
+              <input
+                type="text"
+                placeholder="Filter by challenge title..."
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="kc-search-input"
+                aria-label="Filter problems by title"
+              />
               {search && (
-                <button onClick={() => setSearch('')} className="text-xs text-[#58a6ff] hover:underline transition-colors">
-                  Clear search
+                <button
+                  type="button"
+                  className="kc-search-clear"
+                  onClick={() => handleSearchChange('')}
+                  aria-label="Clear search"
+                >
+                  ✕
                 </button>
               )}
             </div>
-          ) : (
-            problems.map((problem, i) => (
-              <ProblemRow key={problem.id} problem={problem} index={i} globalIndex={startIndex + i} />
-            ))
-          )}
+          </div>
 
-          {/* Pagination */}
+          {/* Table Content */}
+          <div className="kc-problems-table" role="table" aria-label="Challenges List">
+            <div className="kc-table-head" role="row">
+              <span role="columnheader">STATUS</span>
+              <span role="columnheader">CHALLENGE TITLE</span>
+              <span role="columnheader">DIFFICULTY</span>
+              <span role="columnheader">ACCEPTANCE</span>
+              <span role="columnheader" className="kc-head-action">ACTION</span>
+            </div>
+
+            {isLoading ? (
+              <div className="py-20 flex flex-col items-center justify-center gap-3 text-center">
+                <div className="w-6 h-6 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-mono text-[var(--kc-text-muted)] uppercase tracking-wider">
+                  Loading challenges from sandbox cluster…
+                </span>
+              </div>
+            ) : error ? (
+              <div className="py-16 flex flex-col items-center gap-3 text-center px-4">
+                <AlertTriangle size={28} className="text-[#EF4444]" />
+                <p className="text-sm font-semibold text-[#EF4444]">{error}</p>
+                <p className="text-xs text-[var(--kc-text-muted)]">Failed to retrieve challenges from the API cluster.</p>
+                <button
+                  type="button"
+                  onClick={() => fetchProblems(search, { page, limit: PAGE_SIZE, difficulty })}
+                  className="kc-btn-secondary"
+                  style={{ padding: '6px 14px', fontSize: '12px', marginTop: '8px' }}
+                >
+                  Retry Connection
+                </button>
+              </div>
+            ) : problems.length === 0 ? (
+              <div className="py-20 flex flex-col items-center gap-3 text-center px-4">
+                <Search size={24} className="text-[var(--kc-text-muted)]" />
+                <p className="text-sm text-[var(--kc-text-secondary)]">
+                  {search ? (
+                    <>No challenges match &ldquo;<strong className="text-[var(--kc-text-primary)]">{search}</strong>&rdquo;</>
+                  ) : (
+                    'No challenges found in this category'
+                  )}
+                </p>
+                {search && (
+                  <button
+                    onClick={() => handleSearchChange('')}
+                    className="text-xs text-[var(--kc-accent)] hover:underline mt-1"
+                  >
+                    Clear search query
+                  </button>
+                )}
+              </div>
+            ) : (
+              problems.map((problem, idx) => (
+                <div
+                  key={problem.id || problem.slug}
+                  className="kc-prob-row"
+                  onClick={() => router.push(`/problems/${problem.slug}`)}
+                  role="row"
+                  tabIndex={0}
+                  aria-label={`Open problem: ${problem.title}, difficulty ${problem.difficulty}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      router.push(`/problems/${problem.slug}`);
+                    }
+                  }}
+                >
+                  <div className="kc-prob-cell-status">
+                    <span className="kc-prob-index">#{String(startIndex + idx + 1).padStart(2, '0')}</span>
+                  </div>
+
+                  <div className="kc-prob-cell-title">
+                    <div className="kc-prob-name">{problem.title}</div>
+                    {problem.short_description ? (
+                      <div className="kc-prob-slug">{problem.short_description}</div>
+                    ) : (
+                      <div className="kc-prob-slug">slug: {problem.slug}</div>
+                    )}
+                  </div>
+
+                  <div className="kc-prob-cell-diff">
+                    <DifficultyBadge difficulty={problem.difficulty} />
+                  </div>
+
+                  <div className="kc-prob-cell-rate">
+                    <span className="kc-rate-val">{formatAcceptanceRate(problem.acceptance_rate)}</span>
+                  </div>
+
+                  <div className="kc-prob-cell-action">
+                    <span className="kc-btn-solve">
+                      <span>Solve</span>
+                      <ChevronRight size={13} aria-hidden="true" />
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Clean Pagination Footer */}
           {!isLoading && totalPages > 1 && (
-            <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-5 py-3 border-t border-white/[0.05] bg-white/[0.02]">
-              <span className="text-[11px] text-[#484f58]">
-                Page {page} of {totalPages}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 border-t border-[var(--kc-border-subtle)] bg-[var(--kc-surface-subtle)]">
+              <span className="text-xs text-[var(--kc-text-muted)] font-mono">
+                Showing {startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, total)} of {total.toLocaleString()} challenges
               </span>
-              <div className="flex items-center gap-1" role="navigation" aria-label="Pagination">
+
+              <div className="flex items-center gap-1" role="navigation" aria-label="Pagination Navigation">
                 <button
                   type="button"
                   aria-label="First page"
                   onClick={() => setPage(1)}
                   disabled={page === 1}
-                  className="p-1.5 rounded-lg text-[#484f58] hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="p-1.5 rounded text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] hover:bg-[var(--kc-surface)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronsLeft size={14} aria-hidden="true" />
                 </button>
                 <button
                   type="button"
                   aria-label="Previous page"
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="p-1.5 rounded-lg text-[#484f58] hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="p-1.5 rounded text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] hover:bg-[var(--kc-surface)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronLeft size={14} aria-hidden="true" />
                 </button>
+
                 <div className="hidden sm:flex items-center gap-1">
                   {getPageNumbers().map((p, i) =>
                     p === '...' ? (
-                      <span key={`dots-${i}`} className="px-1.5 text-[#484f58] text-xs" aria-hidden="true">…</span>
+                      <span key={`dots-${i}`} className="px-1.5 text-[var(--kc-text-muted)] text-xs font-mono" aria-hidden="true">…</span>
                     ) : (
                       <button
                         key={p}
@@ -313,10 +294,10 @@ export default function QuestionsPage() {
                         aria-label={`Page ${p}`}
                         aria-current={page === p ? 'page' : undefined}
                         onClick={() => setPage(p)}
-                        className={`min-w-[28px] h-7 rounded-lg text-[12px] font-medium transition-all ${
+                        className={`min-w-[28px] h-7 rounded text-[11.5px] font-mono font-medium transition-colors ${
                           page === p
-                            ? 'bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30'
-                            : 'text-[#8b949e] hover:text-white hover:bg-white/[0.06]'
+                            ? 'bg-[var(--kc-surface)] text-[var(--kc-text-primary)] border border-[var(--kc-border)] font-semibold shadow-sm'
+                            : 'text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] hover:bg-[var(--kc-surface)]'
                         }`}
                       >
                         {p}
@@ -324,12 +305,13 @@ export default function QuestionsPage() {
                     )
                   )}
                 </div>
+
                 <button
                   type="button"
                   aria-label="Next page"
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="p-1.5 rounded-lg text-[#484f58] hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="p-1.5 rounded text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] hover:bg-[var(--kc-surface)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronRight size={14} aria-hidden="true" />
                 </button>
@@ -338,14 +320,14 @@ export default function QuestionsPage() {
                   aria-label="Last page"
                   onClick={() => setPage(totalPages)}
                   disabled={page >= totalPages}
-                  className="p-1.5 rounded-lg text-[#484f58] hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="p-1.5 rounded text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] hover:bg-[var(--kc-surface)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronsRight size={14} aria-hidden="true" />
                 </button>
               </div>
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
     </div>
   );

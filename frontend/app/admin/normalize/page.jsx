@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { adminApi } from '../../../lib/adminApi';
 import Link from 'next/link';
+import { RotateCw, Cpu, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const PAGE_SIZE = 30;
 const REVIEW_STATUSES = ['imported', 'parsed', 'ai_normalized', 'review_required', 'approved', 'ready_for_publication', 'published'];
@@ -177,13 +178,16 @@ export default function NormalizationQueue() {
             Parse and normalize imported problems · {meta.total} in queue
             {aiStatus && (
               <span className={`ai-status-pill ${aiStatus.configured ? 'ai-active' : 'ai-inactive'}`} style={{ marginLeft: '12px' }}>
-                {aiStatus.configured ? '🟢 AI Active' : '⚪ AI Offline'}
+                <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${aiStatus.configured ? 'bg-emerald-400' : 'bg-gray-400'}`} />
+                {aiStatus.configured ? 'AI Active' : 'AI Offline'}
               </span>
             )}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button className="admin-btn admin-btn-ghost" onClick={fetchData}>↻ Refresh</button>
+          <button className="admin-btn admin-btn-ghost" onClick={fetchData} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <RotateCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
         </div>
       </div>
 
@@ -232,7 +236,7 @@ export default function NormalizationQueue() {
             {loading ? (
               <tr><td colSpan="8"><div className="admin-loading"><div className="admin-spinner"></div>Loading...</div></td></tr>
             ) : problems.length === 0 ? (
-              <tr><td colSpan="8"><div className="admin-empty"><div className="admin-empty-icon">🔬</div><div className="admin-empty-text">No problems in queue</div></div></td></tr>
+              <tr><td colSpan="8"><div className="admin-empty"><div className="admin-empty-icon"><Cpu size={22} style={{ color: 'var(--text-muted)' }} /></div><div className="admin-empty-text">No problems in queue</div></div></td></tr>
             ) : problems.map(p => {
               const isProcessing = processing.has(p.id);
               const flags = p.ai_quality_flags;
@@ -309,8 +313,12 @@ export default function NormalizationQueue() {
             Page {page + 1} of {totalPages} · Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, meta.total)} of {meta.total}
           </div>
           <div className="admin-pagination-btns">
-            <button className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>← Prev</button>
-            <button className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next →</button>
+            <button className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page === 0} onClick={() => setPage(p => p - 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <ChevronLeft size={13} /> Prev
+            </button>
+            <button className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              Next <ChevronRight size={13} />
+            </button>
           </div>
         </div>
       )}

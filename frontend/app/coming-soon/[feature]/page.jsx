@@ -59,159 +59,62 @@ export default function ComingSoonPage({ params }) {
     );
   }
 
-  const { icon: FeatureIcon, accent, accentRgb, title, tagline, description } = config;
-
-  // Floating particle dots
-  const particles = Array.from({ length: 16 }, (_, i) => ({
-    id: i,
-    size: Math.random() * 4 + 2,
-    x: Math.random() * 100,
-    delay: Math.random() * 4,
-    duration: Math.random() * 8 + 6,
-  }));
+  const { icon: FeatureIcon, title, tagline, description } = config;
 
   return (
-    <div className="relative flex-1 flex flex-col items-center justify-center min-h-[70vh] px-4 overflow-hidden">
+    <div className="relative flex-1 flex flex-col items-center justify-center min-h-[70vh] px-4 py-12 overflow-hidden">
       <AnimatedBackground variant="coming_soon" />
 
-      {/* Floating particles */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {particles.map((p) => (
-          <motion.div
-            key={p.id}
-            className="absolute rounded-full opacity-30"
-            style={{
-              width: p.size,
-              height: p.size,
-              left: `${p.x}%`,
-              bottom: '-20px',
-              backgroundColor: accent,
-              boxShadow: `0 0 ${p.size * 2}px ${accent}`,
-            }}
-            animate={{ y: [0, -900] }}
-            transition={{
-              duration: p.duration,
-              delay: p.delay,
-              repeat: Infinity,
-              ease: 'linear',
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Central glass card */}
+      {/* Central card */}
       <motion.div
-        initial={{ opacity: 0, y: 40, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
         className="relative z-10 max-w-lg w-full text-center"
       >
-        {/* Icon orb */}
-        <motion.div
-          animate={{ y: [0, -12, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-          className="flex justify-center mb-8"
-        >
-          <div
-            className="w-24 h-24 rounded-full flex items-center justify-center"
-            style={{
-              background: `radial-gradient(circle at 35% 35%, rgba(255,255,255,0.15), rgba(${accentRgb},0.15) 70%)`,
-              boxShadow: `0 0 40px rgba(${accentRgb},0.3), inset 0 0 20px rgba(255,255,255,0.08)`,
-              border: `1px solid rgba(${accentRgb},0.35)`,
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            <FeatureIcon size={38} style={{ color: accent }} />
+        <div className="rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] p-8 sm:p-10 shadow-sm">
+          {/* Icon badge */}
+          <div className="w-12 h-12 rounded-lg bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] flex items-center justify-center mx-auto mb-5 text-[var(--kc-accent)]">
+            <FeatureIcon size={22} className="text-[var(--kc-accent)]" />
           </div>
-        </motion.div>
 
-        {/* Text */}
-        <div
-          className="px-8 py-10 rounded-3xl border"
-          style={{
-            background: `linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(${accentRgb},0.05) 100%)`,
-            borderColor: `rgba(${accentRgb},0.2)`,
-            boxShadow: `0 0 60px rgba(${accentRgb},0.08), inset 0 1px 0 rgba(255,255,255,0.08)`,
-            backdropFilter: 'blur(16px)',
-          }}
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-6 text-xs font-bold uppercase tracking-widest"
-            style={{
-              color: accent,
-              background: `rgba(${accentRgb},0.12)`,
-              border: `1px solid rgba(${accentRgb},0.25)`,
-            }}
-          >
-            <Bird size={11} />
-            Coming Soon
-          </motion.div>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md mb-4 text-[11px] font-mono tracking-wider uppercase text-[var(--kc-accent)] bg-[var(--kc-accent)]/10 border border-[var(--kc-accent)]/20">
+            <Bird size={12} />
+            <span>Coming Soon</span>
+          </div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="text-4xl md:text-5xl font-display font-extrabold text-white mb-3"
-          >
+          <h1 className="text-3xl font-display font-bold text-white mb-2">
             {title}
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="text-lg font-medium mb-4"
-            style={{ color: accent }}
-          >
+          <p className="text-sm font-medium text-[var(--kc-accent)] mb-3">
             {tagline}
-          </motion.p>
+          </p>
 
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            className="text-[#8b949e] text-sm leading-relaxed mb-8"
-          >
+          <p className="text-sm text-[var(--kc-text-muted)] leading-relaxed mb-4">
             {description}
-          </motion.p>
+          </p>
 
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.85 }}
-            className="text-[#484f58] text-xs italic mb-8"
-          >
-            We&apos;re crafting something amazing. Stay tuned!
-          </motion.p>
+          <p className="text-xs text-[var(--kc-text-muted)]/70 mb-8">
+            We&apos;re crafting this feature with care. Stay tuned.
+          </p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
-            className="flex gap-3 justify-center flex-wrap"
-          >
+          <div className="flex gap-2.5 justify-center flex-wrap">
             <Link
               href="/"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-white bg-white/10 border border-white/10 hover:bg-white/15 transition-all duration-200"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-md text-xs sm:text-sm font-medium text-white bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
             >
               <Home size={14} />
-              Go Home
+              <span>Go Home</span>
             </Link>
             <Link
               href="/questions"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-white transition-all duration-200 hover:opacity-90"
-              style={{
-                background: `linear-gradient(135deg, rgba(${accentRgb},0.8), rgba(${accentRgb},0.5))`,
-                boxShadow: `0 0 20px rgba(${accentRgb},0.3)`,
-              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-md text-xs sm:text-sm font-medium text-white bg-[var(--kc-accent)] hover:opacity-90 transition-opacity"
             >
-              Explore Questions
+              <span>Explore Questions</span>
               <ChevronRight size={14} />
             </Link>
-          </motion.div>
+          </div>
         </div>
       </motion.div>
     </div>

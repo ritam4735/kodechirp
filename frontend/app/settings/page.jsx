@@ -14,10 +14,10 @@ export default function SettingsPage() {
   }, [router]);
 
   return (
-    <div className="relative flex-1 overflow-hidden min-h-screen bg-[#0d1117]">
+    <div className="relative flex-1 overflow-hidden min-h-screen bg-[var(--kc-bg)]">
       <AnimatedBackground variant="particles" />
       <div className="flex items-center justify-center h-full pt-32">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#58a6ff]"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[var(--kc-border)] border-t-[var(--kc-accent)]"></div>
       </div>
     </div>
   );

@@ -55,9 +55,9 @@ function VerifyEmailContent() {
 
   if (status === 'verifying') {
     return (
-      <div className="flex flex-col items-center justify-center space-y-6 py-8">
-        <div className="w-16 h-16 border-4 border-[#58a6ff]/30 border-t-[#58a6ff] rounded-full animate-spin"></div>
-        <p className="text-lg text-white font-medium animate-pulse">Verifying your email...</p>
+      <div className="flex flex-col items-center justify-center space-y-4 py-8">
+        <div className="w-8 h-8 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm text-[var(--kc-text-muted)] font-medium">Verifying your email...</p>
       </div>
     );
   }
@@ -65,24 +65,24 @@ function VerifyEmailContent() {
   if (status === 'success') {
     return (
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }} 
+        initial={{ opacity: 0, scale: 0.98 }} 
         animate={{ opacity: 1, scale: 1 }}
         className="flex flex-col items-center gap-4 text-center"
       >
-        <div className="w-20 h-20 bg-[#2ea043]/20 rounded-full flex items-center justify-center mb-2">
-          <CheckCircle size={40} className="text-[#3fb950]" />
+        <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center">
+          <CheckCircle size={24} className="text-emerald-400" />
         </div>
         <div>
-          <h3 className="text-white font-bold text-2xl mb-2">Email Verified!</h3>
-          <p className="text-[#8b949e] text-sm">
-            Thank you for verifying your email address. Your account is now fully active.
+          <h3 className="text-white font-display font-semibold text-xl mb-1.5">Email Verified</h3>
+          <p className="text-[var(--kc-text-muted)] text-sm">
+            Thank you for verifying your email address. Your account is now active.
           </p>
         </div>
         <button 
           onClick={() => router.push('/auth')}
-          className="mt-6 w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-[#238636] hover:bg-[#2ea043] transition-colors"
+          className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 px-4 text-sm font-medium rounded-md text-white bg-[var(--kc-accent)] hover:opacity-90 transition-opacity"
         >
-          Go to Sign In <ArrowRight size={16} />
+          Go to Sign In <ArrowRight size={14} />
         </button>
       </motion.div>
     );
@@ -91,35 +91,35 @@ function VerifyEmailContent() {
   return (
     <motion.div 
       initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      className="flex flex-col items-center gap-6 text-center"
+      className="flex flex-col items-center gap-5 text-center"
     >
-      <div className="w-20 h-20 bg-[#f85149]/20 rounded-full flex items-center justify-center mb-2">
-        <AlertCircle size={40} className="text-[#ff7b72]" />
+      <div className="w-12 h-12 bg-rose-500/10 border border-rose-500/20 rounded-full flex items-center justify-center">
+        <AlertCircle size={24} className="text-rose-400" />
       </div>
       <div>
-        <h3 className="text-white font-bold text-2xl mb-2">Verification Failed</h3>
-        <p className="text-[#ff7b72] text-sm mb-4">
+        <h3 className="text-white font-display font-semibold text-xl mb-1.5">Verification Failed</h3>
+        <p className="text-rose-400 text-sm">
           {errorMsg}
         </p>
       </div>
 
       {resendSuccess ? (
-        <div className="w-full p-4 bg-[#2ea043]/10 border border-[#2ea043]/30 rounded-xl">
-          <p className="text-[#3fb950] text-sm font-medium">A new verification link has been sent to your email!</p>
+        <div className="w-full p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
+          <p className="text-emerald-400 text-xs font-medium">A new verification link has been sent to your email.</p>
         </div>
       ) : (
         emailParam && (
           <button
             onClick={handleResend}
             disabled={resending}
-            className="w-full py-3 px-4 border border-[#30363d] text-sm font-medium rounded-xl text-[#e6edf3] bg-[#21262d] hover:bg-[#30363d] transition-colors disabled:opacity-50"
+            className="w-full py-2.5 px-4 border border-[var(--kc-border)] text-sm font-medium rounded-md text-white bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] transition-colors disabled:opacity-50"
           >
             {resending ? 'Sending...' : 'Resend Verification Email'}
           </button>
         )
       )}
 
-      <Link href="/auth" className="text-[#58a6ff] hover:underline text-sm font-medium mt-4">
+      <Link href="/auth" className="text-xs text-[var(--kc-text-muted)] hover:text-white transition-colors font-medium">
         Back to Sign In
       </Link>
     </motion.div>
@@ -129,8 +129,8 @@ function VerifyEmailContent() {
 export default function VerifyEmailPage() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full bg-[#161b22] p-8 rounded-2xl border border-[#30363d] shadow-xl">
-        <Suspense fallback={<div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin"></div></div>}>
+      <div className="max-w-md w-full bg-[var(--kc-surface)] p-8 rounded-lg border border-[var(--kc-border)] shadow-sm">
+        <Suspense fallback={<div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin"></div></div>}>
           <VerifyEmailContent />
         </Suspense>
       </div>

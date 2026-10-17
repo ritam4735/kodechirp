@@ -17,7 +17,7 @@ export const CodeEditor = () => {
   const { code, language, setCode, editorPath } = useEditor();
 
   return (
-    <div className="flex-1 min-h-0 relative group bg-[#0d1117]">
+    <div className="flex-1 min-h-0 relative group bg-[var(--kc-surface)]">
       <Editor
         height="100%"
         language={language}
@@ -27,9 +27,9 @@ export const CodeEditor = () => {
         onChange={(value) => setCode(value || '')}
         options={{
           minimap: { enabled: false },
-          fontSize: 15,
+          fontSize: 14,
           fontFamily: 'JetBrains Mono, Menlo, Monaco, Courier New, monospace',
-          padding: { top: 24, bottom: 24 },
+          padding: { top: 20, bottom: 20 },
           scrollBeyondLastLine: false,
           smoothScrolling: true,
           cursorBlinking: 'smooth',
@@ -40,9 +40,9 @@ export const CodeEditor = () => {
           lineHeight: 1.6,
         }}
         loading={
-          <div className="flex flex-col items-center justify-center h-full w-full bg-[#0d1117] gap-3">
-            <div className="w-8 h-8 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin" />
-            <span className="text-[#8b949e] font-medium text-sm animate-pulse">Warming up the nest...</span>
+          <div className="flex flex-col items-center justify-center h-full w-full bg-[var(--kc-surface)] gap-3">
+            <div className="w-7 h-7 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin" />
+            <span className="text-[var(--kc-text-muted)] font-mono text-xs uppercase tracking-wider animate-pulse">Initializing editor…</span>
           </div>
         }
       />

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { adminApi } from '../../../lib/adminApi';
 import { useAuth } from '../../../hooks/useAuth';
+import { Users, ChevronLeft, ChevronRight, Trash2, PauseCircle, PlayCircle, ArrowUpCircle, ArrowDownCircle, AlertTriangle } from 'lucide-react';
 
 const PAGE_SIZE = 30;
 
@@ -209,7 +210,7 @@ export default function AdminUsers() {
             {loading && !users.length ? (
               <tr><td colSpan="8"><div className="admin-loading"><div className="admin-spinner"></div>Loading users...</div></td></tr>
             ) : users.length === 0 ? (
-              <tr><td colSpan="8"><div className="admin-empty"><div className="admin-empty-icon">👤</div><div className="admin-empty-text">No users found</div></div></td></tr>
+              <tr><td colSpan="8"><div className="admin-empty"><div className="admin-empty-icon"><Users size={22} style={{ color: 'var(--text-muted)' }} /></div><div className="admin-empty-text">No users found</div></div></td></tr>
             ) : users.map(u => {
               const isSelf = Boolean(currentUser?.id && currentUser.id === u.id);
               return (
@@ -222,9 +223,9 @@ export default function AdminUsers() {
                         fontSize: '10px',
                         padding: '1px 6px',
                         borderRadius: '4px',
-                        background: 'rgba(99, 102, 241, 0.15)',
-                        color: '#818cf8',
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
+                        background: 'rgba(59, 130, 246, 0.12)',
+                        color: 'var(--kc-accent)',
+                        border: '1px solid rgba(59, 130, 246, 0.25)',
                       }}>
                         You
                       </span>
@@ -242,7 +243,7 @@ export default function AdminUsers() {
                         <button
                           type="button"
                           className="admin-btn admin-btn-sm"
-                          style={{ background: 'rgba(168,85,247,0.12)', color: '#c084fc', border: '1px solid rgba(168,85,247,0.25)' }}
+                          style={{ background: 'rgba(59, 130, 246, 0.12)', color: 'var(--kc-accent)', border: '1px solid rgba(59, 130, 246, 0.25)' }}
                           onClick={() => handleActionClick('promote', u)}
                           title="Promote to administrator"
                         >
@@ -299,8 +300,12 @@ export default function AdminUsers() {
         <div className="admin-pagination">
           <div className="admin-pagination-info">Page {page + 1} of {totalPages}</div>
           <div className="admin-pagination-btns">
-            <button type="button" className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>← Prev</button>
-            <button type="button" className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next →</button>
+            <button type="button" className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page === 0} onClick={() => setPage(p => p - 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <ChevronLeft size={13} /> Prev
+            </button>
+            <button type="button" className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              Next <ChevronRight size={13} />
+            </button>
           </div>
         </div>
       )}
@@ -317,11 +322,12 @@ export default function AdminUsers() {
             onClick={e => e.stopPropagation()}
           >
             <div className="admin-modal-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span>
-                {modal.type === 'delete' ? '🗑️' :
-                 modal.type === 'suspend' ? '⏸️' :
-                 modal.type === 'activate' ? '▶️' :
-                 modal.type === 'promote' ? '⬆️' : '⬇️'}
+              <span style={{ display: 'flex', alignItems: 'center' }}>
+                {modal.type === 'delete' ? <Trash2 size={18} style={{ color: 'var(--kc-error, #f87171)' }} /> :
+                 modal.type === 'suspend' ? <PauseCircle size={18} style={{ color: '#fbbf24' }} /> :
+                 modal.type === 'activate' ? <PlayCircle size={18} style={{ color: '#4ade80' }} /> :
+                 modal.type === 'promote' ? <ArrowUpCircle size={18} style={{ color: 'var(--kc-accent)' }} /> :
+                 <ArrowDownCircle size={18} style={{ color: 'var(--text-muted)' }} />}
               </span>
               <span>
                 {modal.type === 'delete' ? 'Permanently Delete User' :
@@ -355,7 +361,8 @@ export default function AdminUsers() {
             <p style={{ fontSize: '13px', lineHeight: 1.5, color: 'var(--text-secondary)', marginBottom: '24px' }}>
               {modal.type === 'delete' && (
                 <span style={{ color: '#f87171' }}>
-                  ⚠️ This action cannot be undone. All submissions, chirps, and preferences associated with <strong>{modal.user.username}</strong> will be permanently removed from the system.
+                  <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />
+                  This action cannot be undone. All submissions, chirps, and preferences associated with <strong>{modal.user.username}</strong> will be permanently removed from the system.
                 </span>
               )}
               {modal.type === 'suspend' && (

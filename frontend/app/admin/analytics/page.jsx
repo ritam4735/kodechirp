@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { adminApi } from '../../../lib/adminApi';
+import { BarChart3, Target, CheckSquare, TrendingUp, Calendar, Flame, CheckCircle2, Users } from 'lucide-react';
 
 export default function AdminAnalytics() {
   const [data, setData] = useState(null);
@@ -15,7 +16,7 @@ export default function AdminAnalytics() {
   }, []);
 
   if (loading) return <div className="admin-loading"><div className="admin-spinner"></div>Loading analytics...</div>;
-  if (error || !data) return <div style={{ color: '#f85149', padding: '40px' }}>Failed to load analytics: {error || 'No data available'}</div>;
+  if (error || !data) return <div style={{ color: 'var(--kc-error, #f85149)', padding: '40px' }}>Failed to load analytics: {error || 'No data available'}</div>;
 
   const diffMap = {};
   (data.problemsByDifficulty || []).forEach(d => { diffMap[d.difficulty] = d.count; });
@@ -40,7 +41,9 @@ export default function AdminAnalytics() {
       {/* Row 1: Difficulty + Acceptance by Difficulty + Submission Status */}
       <div className="admin-grid-3" style={{ marginBottom: '24px' }}>
         <div className="admin-section-card">
-          <div className="admin-section-title">📊 Problems by Difficulty</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BarChart3 size={15} style={{ color: 'var(--kc-accent)' }} /> Problems by Difficulty
+          </div>
           {['Easy', 'Medium', 'Hard'].map(d => {
             const count = diffMap[d] || 0;
             const pct = (count / totalProblems) * 100;
@@ -60,7 +63,9 @@ export default function AdminAnalytics() {
         </div>
 
         <div className="admin-section-card">
-          <div className="admin-section-title">🎯 Acceptance by Difficulty</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Target size={15} style={{ color: 'var(--kc-accent)' }} /> Acceptance by Difficulty
+          </div>
           {(data.acceptanceByDifficulty || []).map(d => {
             const color = d.difficulty === 'Easy' ? '#4ade80' : d.difficulty === 'Medium' ? '#fbbf24' : '#f87171';
             return (
@@ -78,7 +83,9 @@ export default function AdminAnalytics() {
         </div>
 
         <div className="admin-section-card">
-          <div className="admin-section-title">📋 Submission Status</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckSquare size={15} style={{ color: 'var(--kc-accent)' }} /> Submission Status
+          </div>
           {Object.entries(statusMap).sort((a, b) => b[1] - a[1]).map(([status, count]) => {
             const pct = (count / totalStatusSubs) * 100;
             const color = status === 'Accepted' ? '#4ade80' : status === 'Wrong Answer' ? '#f87171' :
@@ -101,7 +108,9 @@ export default function AdminAnalytics() {
       {/* Row 2: Daily Submissions Chart */}
       <div className="admin-grid-2" style={{ marginBottom: '24px' }}>
         <div className="admin-section-card">
-          <div className="admin-section-title">📈 Daily Submissions (30 days)</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TrendingUp size={15} style={{ color: 'var(--kc-accent)' }} /> Daily Submissions (30 days)
+          </div>
           {(data.dailySubmissions || []).length === 0 ? (
             <div className="admin-empty"><div className="admin-empty-text">No submission data</div></div>
           ) : (
@@ -116,13 +125,15 @@ export default function AdminAnalytics() {
         </div>
 
         <div className="admin-section-card">
-          <div className="admin-section-title">📊 Weekly Submissions (12 weeks)</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Calendar size={15} style={{ color: 'var(--kc-accent)' }} /> Weekly Submissions (12 weeks)
+          </div>
           {(data.weeklySubmissions || []).length === 0 ? (
             <div className="admin-empty"><div className="admin-empty-text">No submission data</div></div>
           ) : (
             <div className="admin-bar-chart">
               {(data.weeklySubmissions || []).map((d, i) => (
-                <div key={i} className="admin-bar" style={{ height: `${(d.count / maxWeekly) * 100}%`, background: 'linear-gradient(to top, rgba(0,212,255,0.5), rgba(168,85,247,0.4))' }}
+                <div key={i} className="admin-bar" style={{ height: `${(d.count / maxWeekly) * 100}%`, background: 'rgba(59, 130, 246, 0.45)' }}
                   title={`Week of ${d.week}: ${d.count} submissions`}>
                   <span className="admin-bar-label">{new Date(d.week).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>
                 </div>
@@ -135,7 +146,9 @@ export default function AdminAnalytics() {
       {/* Row 3: Most Attempted + Most Solved + Most Active Users */}
       <div className="admin-grid-3">
         <div className="admin-section-card">
-          <div className="admin-section-title">🔥 Most Attempted</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Flame size={15} style={{ color: '#f87171' }} /> Most Attempted
+          </div>
           {(data.mostAttempted || []).map((p, i) => (
             <div key={p.id} className="admin-activity-item">
               <span style={{ color: 'var(--text-muted)', fontSize: '12px', width: '20px' }}>#{i + 1}</span>
@@ -148,7 +161,9 @@ export default function AdminAnalytics() {
         </div>
 
         <div className="admin-section-card">
-          <div className="admin-section-title">✅ Most Solved</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle2 size={15} style={{ color: '#4ade80' }} /> Most Solved
+          </div>
           {(data.mostSolved || []).map((p, i) => (
             <div key={p.id} className="admin-activity-item">
               <span style={{ color: 'var(--text-muted)', fontSize: '12px', width: '20px' }}>#{i + 1}</span>
@@ -160,7 +175,9 @@ export default function AdminAnalytics() {
         </div>
 
         <div className="admin-section-card">
-          <div className="admin-section-title">👤 Most Active Users</div>
+          <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Users size={15} style={{ color: 'var(--kc-accent)' }} /> Most Active Users
+          </div>
           {(data.mostActiveUsers || []).map((u, i) => (
             <div key={u.id} className="admin-activity-item">
               <span style={{ color: 'var(--text-muted)', fontSize: '12px', width: '20px' }}>#{i + 1}</span>

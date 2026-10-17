@@ -4,19 +4,28 @@ import { useAuth } from '../../hooks/useAuth';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { 
+  LayoutDashboard, 
+  BarChart3, 
+  FileCode2, 
+  SlidersHorizontal, 
+  Users, 
+  CheckSquare,
+  ShieldAlert
+} from 'lucide-react';
 
 const ADMIN_NAV = [
   { section: 'Overview', items: [
-    { label: 'Dashboard',   href: '/admin',              icon: '📊' },
-    { label: 'Analytics',   href: '/admin/analytics',    icon: '📈' },
+    { label: 'Dashboard',   href: '/admin',              icon: LayoutDashboard },
+    { label: 'Analytics',   href: '/admin/analytics',    icon: BarChart3 },
   ]},
   { section: 'Content', items: [
-    { label: 'Problems',    href: '/admin/problems',     icon: '📝' },
-    { label: 'Normalize',   href: '/admin/normalize',    icon: '🔬' },
+    { label: 'Problems',    href: '/admin/problems',     icon: FileCode2 },
+    { label: 'Normalize',   href: '/admin/normalize',    icon: SlidersHorizontal },
   ]},
   { section: 'Platform', items: [
-    { label: 'Users',       href: '/admin/users',        icon: '👥' },
-    { label: 'Submissions', href: '/admin/submissions',  icon: '🔍' },
+    { label: 'Users',       href: '/admin/users',        icon: Users },
+    { label: 'Submissions', href: '/admin/submissions',  icon: CheckSquare },
   ]},
 ];
 
@@ -45,7 +54,7 @@ export default function AdminClientLayout({ children }) {
     return (
       <div className="admin-loading">
         <div className="admin-spinner"></div>
-        Checking permissions...
+        <span>Verifying administrative authorization…</span>
       </div>
     );
   }
@@ -57,25 +66,29 @@ export default function AdminClientLayout({ children }) {
 
   return (
     <div className="admin-shell">
-      <aside className="admin-sidebar">
+      <aside className="admin-sidebar" aria-label="Admin Navigation">
         <div className="admin-sidebar-header">
           <div className="admin-sidebar-title">Admin Console</div>
-          <div className="admin-sidebar-subtitle">KodeChirp Platform</div>
+          <div className="admin-sidebar-subtitle">Kernel Platform v2.4</div>
         </div>
 
         {ADMIN_NAV.map((section) => (
           <div className="admin-nav-section" key={section.section}>
             <div className="admin-nav-label">{section.section}</div>
-            {section.items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`admin-nav-item ${isActive(item.href) ? 'active' : ''}`}
-              >
-                <span className="admin-nav-icon">{item.icon}</span>
-                {item.label}
-              </Link>
-            ))}
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`admin-nav-item ${active ? 'active' : ''}`}
+                >
+                  <Icon size={14} className="admin-nav-icon" aria-hidden="true" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
           </div>
         ))}
       </aside>

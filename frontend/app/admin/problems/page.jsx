@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { adminApi } from '../../../lib/adminApi';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { FileCode2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const PAGE_SIZE = 30;
 
@@ -175,7 +176,7 @@ export default function AdminProblems() {
             {loading ? (
               <tr><td colSpan="8"><div className="admin-loading"><div className="admin-spinner"></div>Loading...</div></td></tr>
             ) : problems.length === 0 ? (
-              <tr><td colSpan="8"><div className="admin-empty"><div className="admin-empty-icon">📭</div><div className="admin-empty-text">No problems found</div></div></td></tr>
+              <tr><td colSpan="8"><div className="admin-empty"><div className="admin-empty-icon"><FileCode2 size={24} style={{ color: 'var(--text-muted)' }} /></div><div className="admin-empty-text">No problems found</div></div></td></tr>
             ) : problems.map(p => (
               <tr key={p.id}>
                 <td><input type="checkbox" className="admin-checkbox" checked={selected.has(p.id)} onChange={() => toggleSelect(p.id)} /></td>
@@ -231,8 +232,12 @@ export default function AdminProblems() {
             Page {page + 1} of {totalPages} · Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, meta.total)} of {meta.total}
           </div>
           <div className="admin-pagination-btns">
-            <button className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>← Prev</button>
-            <button className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next →</button>
+            <button className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page === 0} onClick={() => setPage(p => p - 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <ChevronLeft size={13} /> Prev
+            </button>
+            <button className="admin-btn admin-btn-ghost admin-btn-sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              Next <ChevronRight size={13} />
+            </button>
           </div>
         </div>
       )}
