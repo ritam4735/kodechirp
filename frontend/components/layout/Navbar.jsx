@@ -6,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { usePathname } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import ThemeSwitcher from './ThemeSwitcher';
+import { Logo } from '../ui/Logo';
 import { User, Shield, Settings, FileCode2, BarChart3, LogOut, ChevronDown } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -67,11 +68,8 @@ export const Navbar = () => {
 
   return (
     <>
-      <nav className="navbar" id="navbar" aria-label="Main Navigation">
-        <Link href="/" className="nav-logo" aria-label="KodeChirp Home">
-          <div className="nav-logo-icon" aria-hidden="true">&lt;/&gt;</div>
-          <span className="nav-logo-text">Kode<span>Chirp</span></span>
-        </Link>
+      <nav className="navbar shrink-0" id="navbar" aria-label="Main Navigation">
+        <Logo asLink href="/" size="md" variant="full" className="nav-logo" ariaLabel="KodeChirp Home" priority />
 
         <div className="nav-links">
           {navItems.map((item) => (

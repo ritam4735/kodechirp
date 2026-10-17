@@ -7,6 +7,7 @@ import { api } from '../lib/api';
 import AlgorithmicHeroVisual from '../components/landing/AlgorithmicHeroVisual';
 import WorkflowSection from '../components/landing/WorkflowSection';
 import InteractiveFeatures from '../components/landing/InteractiveFeatures';
+import Logo from '../components/ui/Logo';
 
 /* ──────────────────────────────────────────────
    HERO SECTION
@@ -519,9 +520,8 @@ function FooterSection() {
       <div className="kc-container">
         <div className="kc-footer-inner">
           <div>
-            <div className="kc-footer-brand">
-              <span className="kc-footer-brand-icon" aria-hidden="true">&lt;/&gt;</span>
-              <span>KodeChirp</span>
+            <div className="mb-3">
+              <Logo asLink href="/" size="sm" variant="full" />
             </div>
             <p className="kc-footer-desc">
               An engineering-first developer platform designed for deep algorithmic practice,

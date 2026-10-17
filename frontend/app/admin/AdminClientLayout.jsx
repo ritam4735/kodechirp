@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Logo } from '../../components/ui/Logo';
 import { 
   LayoutDashboard, 
   BarChart3, 
@@ -68,7 +69,7 @@ export default function AdminClientLayout({ children }) {
     <div className="admin-shell">
       <aside className="admin-sidebar" aria-label="Admin Navigation">
         <div className="admin-sidebar-header">
-          <div className="admin-sidebar-title">Admin Console</div>
+          <Logo size="sm" variant="full" badge="Admin" asLink href="/admin" />
           <div className="admin-sidebar-subtitle">Kernel Platform v2.4</div>
         </div>
 

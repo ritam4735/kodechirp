@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useProblem } from '../../../hooks/useProblem';
 import { ProblemDescription } from '../../../components/problem/ProblemDescription';
@@ -14,7 +14,7 @@ const CodeEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-center h-full w-full bg-[var(--kc-surface)] gap-3">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col items-center justify-center h-full w-full bg-[var(--kc-surface)] gap-3">
         <div className="w-7 h-7 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin" />
         <span className="text-[var(--kc-text-muted)] font-mono text-xs uppercase tracking-wider animate-pulse">Initializing editor…</span>
       </div>
@@ -28,8 +28,6 @@ import { useEditor } from '../../../hooks/useEditor';
 import { useAuth } from '../../../hooks/useAuth';
 import { 
   Code2, 
-  BookOpen, 
-  MessageCircle, 
   Activity, 
   FileCheck, 
   Target, 
@@ -40,6 +38,52 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
+
+const STORAGE_KEY_HORIZONTAL = 'kc_ide_layout_h_v5';
+const STORAGE_KEY_VERTICAL = 'kc_ide_layout_v_v5';
+
+const DEFAULT_HORIZONTAL_LAYOUT = { 'problem-panel': 40, 'workspace-panel': 60 };
+const DEFAULT_VERTICAL_LAYOUT = { 'editor-panel': 65, 'console-panel': 35 };
+
+function validateHorizontalLayout(layout) {
+  if (!layout || typeof layout !== 'object') return false;
+  const p = Number(layout['problem-panel']);
+  const w = Number(layout['workspace-panel']);
+  if (!Number.isFinite(p) || !Number.isFinite(w)) return false;
+  if (p < 20 || p > 70) return false;
+  if (w < 30 || w > 80) return false;
+  const sum = p + w;
+  if (sum < 90 || sum > 110) return false;
+  return true;
+}
+
+function validateVerticalLayout(layout) {
+  if (!layout || typeof layout !== 'object') return false;
+  const e = Number(layout['editor-panel']);
+  const c = Number(layout['console-panel']);
+  if (!Number.isFinite(e) || !Number.isFinite(c)) return false;
+  if (e < 25 || e > 85) return false;
+  if (c < 15 || c > 75) return false;
+  const sum = e + c;
+  if (sum < 90 || sum > 110) return false;
+  return true;
+}
+
+function loadStoredLayout(key, fallback, validator) {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (validator(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    // Ignore invalid JSON / storage errors
+  }
+  return fallback;
+}
 
 function DifficultyBadge({ difficulty }) {
   if (difficulty === 'Easy') return <span className="kc-diff-badge kc-diff-easy">Easy</span>;
@@ -55,6 +99,32 @@ export default function ProblemPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
 
+  const [horizontalLayout, setHorizontalLayout] = useState(() => 
+    loadStoredLayout(STORAGE_KEY_HORIZONTAL, DEFAULT_HORIZONTAL_LAYOUT, validateHorizontalLayout)
+  );
+
+  const [verticalLayout, setVerticalLayout] = useState(() =>
+    loadStoredLayout(STORAGE_KEY_VERTICAL, DEFAULT_VERTICAL_LAYOUT, validateVerticalLayout)
+  );
+
+  const handleHorizontalLayoutChange = useCallback((layout) => {
+    if (validateHorizontalLayout(layout)) {
+      setHorizontalLayout(layout);
+      try {
+        localStorage.setItem(STORAGE_KEY_HORIZONTAL, JSON.stringify(layout));
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleVerticalLayoutChange = useCallback((layout) => {
+    if (validateVerticalLayout(layout)) {
+      setVerticalLayout(layout);
+      try {
+        localStorage.setItem(STORAGE_KEY_VERTICAL, JSON.stringify(layout));
+      } catch (e) {}
+    }
+  }, []);
+
   useEffect(() => {
     if (id) {
       resetConsole();
@@ -65,11 +135,11 @@ export default function ProblemPage() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, [id]);
+  }, [id, fetchProblemDetails, resetConsole]);
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-[calc(100vh-64px)] bg-[var(--kc-bg)] gap-3">
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[calc(100vh-64px)] min-h-[calc(100dvh-var(--kc-nav-height,64px))] bg-[var(--kc-bg)] gap-3">
         <div className="w-7 h-7 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin" />
         <span className="text-xs font-mono text-[var(--kc-text-muted)] uppercase tracking-wider">
           Loading challenge workspace…
@@ -80,10 +150,10 @@ export default function ProblemPage() {
 
   if (error) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-4 min-h-[calc(100vh-64px)] bg-[var(--kc-bg)]">
-        <AlertTriangle size={32} className="text-[#EF4444]" />
-        <p className="text-base font-semibold text-[#EF4444]">{error}</p>
-        <p className="text-xs text-[var(--kc-text-muted)]">Unable to load this challenge from the cluster.</p>
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-4 min-h-[calc(100vh-64px)] min-h-[calc(100dvh-var(--kc-nav-height,64px))] bg-[var(--kc-bg)]">
+        <AlertTriangle size={32} className="text-[var(--kc-error)]" />
+        <p className="text-base font-semibold text-[var(--kc-error)]">{error}</p>
+        <p className="text-xs text-[var(--kc-text-secondary)]">Unable to load this challenge from the cluster.</p>
         <button
           type="button"
           onClick={() => fetchProblemDetails(id)}
@@ -98,7 +168,7 @@ export default function ProblemPage() {
 
   if (!currentProblem) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-[var(--kc-text-secondary)] min-h-[calc(100vh-64px)] bg-[var(--kc-bg)]">
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-[var(--kc-text-secondary)] min-h-[calc(100vh-64px)] min-h-[calc(100dvh-var(--kc-nav-height,64px))] bg-[var(--kc-bg)]">
         <p className="text-sm">Challenge not found.</p>
         <Link href="/questions" className="text-xs text-[var(--kc-accent)] hover:underline">
           Return to challenges repository →
@@ -108,10 +178,19 @@ export default function ProblemPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-64px)] bg-[var(--kc-bg)] p-2 sm:p-3 overflow-hidden">
-      <div className="w-full h-full min-h-0 flex flex-col">
+    <div 
+      className="kc-workspace-root w-full flex-1 flex flex-col overflow-hidden"
+      style={{ 
+        height: 'calc(100vh - var(--kc-nav-height, 64px))', 
+        minHeight: 'calc(100vh - var(--kc-nav-height, 64px))' 
+      }}
+    >
+      <div 
+        className="kc-workspace-inner w-full h-full flex-1 flex flex-col overflow-hidden"
+        style={{ height: '100%', minHeight: '100%' }}
+      >
         {isMobile ? (
-          <div className="flex flex-col h-full overflow-hidden gap-2 relative">
+          <div className="flex flex-col h-full w-full min-h-0 min-w-0 overflow-hidden gap-2 relative">
             <div className="flex gap-1 bg-[var(--kc-surface-subtle)] p-1 rounded-md border border-[var(--kc-border)] shrink-0" role="tablist" aria-label="Problem views">
               <button 
                 type="button" 
@@ -148,7 +227,7 @@ export default function ProblemPage() {
               </button>
             </div>
 
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 min-w-0 flex flex-col h-full w-full overflow-hidden">
               {activeTab === 'description' && <LeftPanelContent currentProblem={currentProblem} isMobile={isMobile} />}
               {activeTab === 'editor' && <EditorContent problemId={currentProblem.id} />}
               {activeTab === 'tests' && <BottomContent testCases={currentProblem.testCases} problem={currentProblem} />}
@@ -170,22 +249,64 @@ export default function ProblemPage() {
             )}
           </div>
         ) : (
-          <PanelGroup id="kodechirp-ide-layout-main" orientation="horizontal" className="h-full w-full">
-            <Panel defaultSize={42} minSize={28} className="flex flex-col min-h-0">
+          <PanelGroup
+            id="kodechirp-ide-layout-main"
+            orientation="horizontal"
+            defaultLayout={horizontalLayout}
+            onLayoutChanged={handleHorizontalLayoutChange}
+            className="h-full w-full min-h-0 min-w-0 flex-1"
+            style={{ height: '100%', width: '100%' }}
+          >
+            <Panel
+              id="problem-panel"
+              defaultSize="40%"
+              minSize="25%"
+              maxSize="60%"
+              className="flex-1 flex flex-col h-full w-full min-h-0 min-w-0 !overflow-hidden"
+              style={{ height: '100%' }}
+            >
               <LeftPanelContent currentProblem={currentProblem} isMobile={false} />
             </Panel>
 
             <ResizeHandle direction="horizontal" />
 
-            <Panel minSize={40} className="flex flex-col min-h-0">
-              <PanelGroup id="kodechirp-ide-layout-right" orientation="vertical">
-                <Panel defaultSize={68} minSize={30} className="flex flex-col min-h-0">
+            <Panel
+              id="workspace-panel"
+              defaultSize="60%"
+              minSize="40%"
+              maxSize="75%"
+              className="flex-1 flex flex-col h-full w-full min-h-0 min-w-0 !overflow-hidden"
+              style={{ height: '100%' }}
+            >
+              <PanelGroup
+                id="kodechirp-ide-layout-right"
+                orientation="vertical"
+                defaultLayout={verticalLayout}
+                onLayoutChanged={handleVerticalLayoutChange}
+                className="h-full w-full min-h-0 min-w-0 flex-1"
+                style={{ height: '100%', width: '100%' }}
+              >
+                <Panel
+                  id="editor-panel"
+                  defaultSize="65%"
+                  minSize="35%"
+                  maxSize="80%"
+                  className="flex-1 flex flex-col h-full w-full min-h-0 min-w-0 !overflow-hidden"
+                  style={{ height: '100%' }}
+                >
                   <EditorContent problemId={currentProblem.id} />
                 </Panel>
 
                 <ResizeHandle direction="vertical" />
 
-                <Panel defaultSize={32} minSize={18} className="flex flex-col min-h-0">
+                <Panel
+                  id="console-panel"
+                  defaultSize="35%"
+                  minSize="20%"
+                  maxSize="65%"
+                  className="flex-1 flex flex-col h-full w-full min-h-0 min-w-0 !overflow-hidden"
+                  style={{ height: '100%' }}
+                >
                   <BottomContent testCases={currentProblem.testCases} problem={currentProblem} />
                 </Panel>
               </PanelGroup>
@@ -199,7 +320,7 @@ export default function ProblemPage() {
 
 // Left Panel Content (Problem Description & Meta)
 const LeftPanelContent = ({ currentProblem, isMobile }) => (
-  <div className="flex flex-col h-full bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg overflow-hidden min-h-0">
+  <div className="flex-1 flex flex-col h-full w-full bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg overflow-hidden min-h-0 min-w-0">
     {/* Problem Header Information */}
     <div className="p-4 sm:p-5 border-b border-[var(--kc-border)] shrink-0 flex flex-col gap-2.5 bg-[var(--kc-surface)]">
       <div className="flex items-center gap-1.5 text-xs text-[var(--kc-text-muted)] font-mono">
@@ -217,20 +338,20 @@ const LeftPanelContent = ({ currentProblem, isMobile }) => (
         <DifficultyBadge difficulty={currentProblem.difficulty} />
       </div>
       
-      <div className="flex items-center flex-wrap gap-4 text-xs font-mono text-[var(--kc-text-muted)] mt-0.5">
+      <div className="flex items-center flex-wrap gap-4 text-xs font-mono text-[var(--kc-text-secondary)] mt-0.5">
         <div className="flex items-center gap-1.5">
           <Target size={13} className="text-[var(--kc-accent)]" />
           <span>Verified Sandbox</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Activity size={13} className="text-[#10B981]" />
+          <Activity size={13} className="text-[var(--kc-success)]" />
           <span>{currentProblem.acceptance_rate || 0}% Acceptance</span>
         </div>
       </div>
     </div>
 
     {/* Scrollable Problem Description & Community Chirps */}
-    <div className={`p-4 sm:p-5 flex-1 overflow-y-auto custom-scrollbar ${isMobile ? 'pb-24' : ''}`}>
+    <div className={`p-4 sm:p-5 flex-1 min-h-0 min-w-0 overflow-y-auto custom-scrollbar ${isMobile ? 'pb-24' : ''}`}>
       <ProblemDescription problem={currentProblem} />
       
       <div className="mt-8 border-t border-[var(--kc-border)] pt-6">
@@ -244,7 +365,7 @@ const LeftPanelContent = ({ currentProblem, isMobile }) => (
 const EditorContent = ({ problemId }) => {
   const { isAuthenticated } = useAuth();
   return (
-    <div className="flex flex-col h-full bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg overflow-hidden min-h-0 relative">
+    <div className="flex-1 flex flex-col h-full w-full bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg overflow-hidden min-h-0 min-w-0 relative">
       {/* Editor Control Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] shrink-0">
         <LanguageSelector />
@@ -255,8 +376,8 @@ const EditorContent = ({ problemId }) => {
       </div>
 
       {/* Editor Canvas Area */}
-      <div className="flex-1 min-h-0 flex flex-col relative">
-        <CodeEditor />
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col relative w-full overflow-hidden">
+        <CodeEditor problemId={problemId} />
         {!isAuthenticated && (
           <div className="absolute inset-0 bg-[var(--kc-surface)]/85 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-6 text-center">
             <Lock className="w-7 h-7 text-[var(--kc-text-muted)] mb-3" />
@@ -285,7 +406,7 @@ const BottomContent = ({ testCases, problem }) => {
   const hasConsoleContent = Boolean(output || verdict || execution?.error);
 
   return (
-    <div className="flex flex-col h-full bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg overflow-hidden min-h-0">
+    <div className="flex-1 flex flex-col h-full w-full bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg overflow-hidden min-h-0 min-w-0">
       {/* Tab Switcher */}
       <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] shrink-0" role="tablist" aria-label="Editor panels">
         <button
@@ -324,7 +445,7 @@ const BottomContent = ({ testCases, problem }) => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-3.5">
+      <div className="flex-1 min-h-0 min-w-0 overflow-y-auto custom-scrollbar p-3.5">
         {!isConsole ? (
           <TestCases testCases={testCases} problem={problem} />
         ) : (
@@ -335,13 +456,13 @@ const BottomContent = ({ testCases, problem }) => {
   );
 };
 
-// Subtle Resizable Divider Handle
+// Resizable Divider Handle
 const ResizeHandle = ({ direction }) => (
-  <PanelResizeHandle className={`group flex items-center justify-center transition-colors ${
+  <PanelResizeHandle className={`group flex items-center justify-center transition-colors hover:bg-[var(--kc-surface-subtle)]/60 shrink-0 ${
     direction === 'horizontal' ? 'w-2 cursor-col-resize mx-0.5' : 'h-2 cursor-row-resize my-0.5'
   }`}>
     <div className={`rounded-full transition-colors bg-[var(--kc-border)] group-hover:bg-[var(--kc-accent)] ${
-      direction === 'horizontal' ? 'w-0.5 h-6 group-hover:h-10' : 'h-0.5 w-6 group-hover:w-10'
+      direction === 'horizontal' ? 'w-1 h-8 group-hover:h-12' : 'h-1 w-8 group-hover:w-12'
     }`} />
   </PanelResizeHandle>
 );

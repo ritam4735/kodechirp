@@ -75,7 +75,7 @@ export const TestCases = ({ testCases: propTestCases, problem: propProblem }) =>
                 {isResultMode && (
                   <span
                     className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                      isPassed ? 'bg-[#10B981]' : 'bg-[#EF4444]'
+                      isPassed ? 'bg-[var(--kc-success)]' : 'bg-[var(--kc-error)]'
                     }`}
                   />
                 )}
@@ -96,8 +96,8 @@ export const TestCases = ({ testCases: propTestCases, problem: propProblem }) =>
             <div
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium border ${
                 allPassed
-                  ? 'bg-[rgba(16,185,129,0.1)] text-[#10B981] border-[rgba(16,185,129,0.25)]'
-                  : 'bg-[rgba(239,68,68,0.1)] text-[#EF4444] border-[rgba(239,68,68,0.25)]'
+                  ? 'bg-[var(--kc-success-subtle)] text-[var(--kc-success)] border-[var(--kc-success-border)]'
+                  : 'bg-[var(--kc-error-subtle)] text-[var(--kc-error)] border-[var(--kc-error-border)]'
               }`}
             >
               {allPassed ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
@@ -172,22 +172,22 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
       className={`bg-[var(--kc-surface-subtle)] rounded-lg border p-4 transition-colors ${
         isResultMode
           ? isPassed
-            ? 'border-[rgba(16,185,129,0.2)]'
-            : 'border-[rgba(239,68,68,0.2)]'
+            ? 'border-[var(--kc-success-border)]'
+            : 'border-[var(--kc-error-border)]'
           : 'border-[var(--kc-border)]'
       }`}
     >
       {/* Case Header */}
       <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--kc-border-subtle)]">
-        <span className="text-xs font-mono font-bold text-[var(--kc-text-muted)] uppercase tracking-wider">
+        <span className="text-xs font-mono font-bold text-[var(--kc-text-secondary)] uppercase tracking-wider">
           Case {idx + 1}
         </span>
         {isResultMode && (
           <span
             className={`px-2 py-0.5 text-[11px] font-mono font-semibold rounded border flex items-center gap-1.5 ${
               isPassed
-                ? 'bg-[rgba(16,185,129,0.1)] text-[#10B981] border-[rgba(16,185,129,0.25)]'
-                : 'bg-[rgba(239,68,68,0.1)] text-[#EF4444] border-[rgba(239,68,68,0.25)]'
+                ? 'bg-[var(--kc-success-subtle)] text-[var(--kc-success)] border-[var(--kc-success-border)]'
+                : 'bg-[var(--kc-error-subtle)] text-[var(--kc-error)] border-[var(--kc-error-border)]'
             }`}
           >
             {isPassed ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
@@ -201,7 +201,7 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
         {/* Input */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] text-[var(--kc-text-muted)] font-mono font-semibold uppercase tracking-wider">
+            <span className="text-[11px] text-[var(--kc-text-secondary)] font-mono font-semibold uppercase tracking-wider">
               Input
             </span>
             <button
@@ -211,8 +211,8 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
             >
               {copiedKey === `input-${idx}` ? (
                 <>
-                  <Check size={11} className="text-[#10B981]" />
-                  <span className="text-[#10B981] text-[10.5px]">Copied</span>
+                  <Check size={11} className="text-[var(--kc-success)]" />
+                  <span className="text-[var(--kc-success)] text-[10.5px]">Copied</span>
                 </>
               ) : (
                 <>
@@ -222,7 +222,7 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
               )}
             </button>
           </div>
-          <pre className="text-[12.5px] text-[var(--kc-text-primary)] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
+          <pre className="text-[12.5px] text-[var(--kc-text-primary)] font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
             {formattedInput}
           </pre>
         </div>
@@ -230,7 +230,7 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
         {/* Expected Output */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] text-[var(--kc-text-muted)] font-mono font-semibold uppercase tracking-wider">
+            <span className="text-[11px] text-[var(--kc-text-secondary)] font-mono font-semibold uppercase tracking-wider">
               {isResultMode ? 'Expected Output' : 'Output'}
             </span>
             <button
@@ -240,8 +240,8 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
             >
               {copiedKey === `expected-${idx}` ? (
                 <>
-                  <Check size={11} className="text-[#10B981]" />
-                  <span className="text-[#10B981] text-[10.5px]">Copied</span>
+                  <Check size={11} className="text-[var(--kc-success)]" />
+                  <span className="text-[var(--kc-success)] text-[10.5px]">Copied</span>
                 </>
               ) : (
                 <>
@@ -251,7 +251,7 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
               )}
             </button>
           </div>
-          <pre className="text-[12.5px] text-[var(--kc-accent-hover)] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
+          <pre className="text-[12.5px] text-[var(--kc-accent)] dark:text-[var(--kc-accent-hover)] font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
             {formattedExpected}
           </pre>
         </div>
@@ -260,7 +260,7 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
         {isResultMode && (
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] text-[var(--kc-text-muted)] font-mono font-semibold uppercase tracking-wider">
+              <span className="text-[11px] text-[var(--kc-text-secondary)] font-mono font-semibold uppercase tracking-wider">
                 Your Output
               </span>
               <button
@@ -270,8 +270,8 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
               >
                 {copiedKey === `your-${idx}` ? (
                   <>
-                    <Check size={11} className="text-[#10B981]" />
-                    <span className="text-[#10B981] text-[10.5px]">Copied</span>
+                    <Check size={11} className="text-[var(--kc-success)]" />
+                    <span className="text-[var(--kc-success)] text-[10.5px]">Copied</span>
                   </>
                 ) : (
                   <>
@@ -282,10 +282,10 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
               </button>
             </div>
             <pre
-              className={`text-[12.5px] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed ${
+              className={`text-[12.5px] font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed ${
                 isPassed
-                  ? 'text-[#10B981] border-[rgba(16,185,129,0.25)]'
-                  : 'text-[#EF4444] border-[rgba(239,68,68,0.25)]'
+                  ? 'text-[var(--kc-success)] border-[var(--kc-success-border)]'
+                  : 'text-[var(--kc-error)] border-[var(--kc-error-border)]'
               }`}
             >
               {formattedYour ?? 'null'}
@@ -296,10 +296,10 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
         {/* Console / Stdout (Result Mode Only) */}
         {isResultMode && tc.consoleOutput && tc.consoleOutput.trim().length > 0 && (
           <div>
-            <span className="text-[11px] text-[var(--kc-text-muted)] font-mono font-semibold block mb-1 uppercase tracking-wider">
+            <span className="text-[11px] text-[var(--kc-text-secondary)] font-mono font-semibold block mb-1 uppercase tracking-wider">
               Standard Output
             </span>
-            <pre className="text-[12px] text-[var(--kc-text-secondary)] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
+            <pre className="text-[12px] text-[var(--kc-text-secondary)] font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
               {tc.consoleOutput}
             </pre>
           </div>

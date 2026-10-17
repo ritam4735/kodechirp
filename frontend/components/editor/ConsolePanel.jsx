@@ -31,27 +31,27 @@ export const ConsolePanel = () => {
         {!isRunning && verdict && (
           <div
             className={`mb-4 bg-[var(--kc-surface-subtle)] p-4 rounded-lg border ${
-              isAccepted ? 'border-[rgba(16,185,129,0.25)]' : 'border-[rgba(239,68,68,0.25)]'
+              isAccepted ? 'border-[var(--kc-success-border)]' : 'border-[var(--kc-error-border)]'
             }`}
           >
             {/* Verdict Header */}
             <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3 pb-2.5 border-b border-[var(--kc-border-subtle)]">
               <div className="flex items-center gap-2">
                 {isAccepted ? (
-                  <CheckCircle2 size={18} className="text-[#10B981]" />
+                  <CheckCircle2 size={18} className="text-[var(--kc-success)]" />
                 ) : (
-                  <XCircle size={18} className="text-[#EF4444]" />
+                  <XCircle size={18} className="text-[var(--kc-error)]" />
                 )}
                 <span
                   className={`font-bold text-lg font-mono ${
-                    isAccepted ? 'text-[#10B981]' : 'text-[#EF4444]'
+                    isAccepted ? 'text-[var(--kc-success)]' : 'text-[var(--kc-error)]'
                   }`}
                 >
                   {verdict.verdict}
                 </span>
               </div>
               {verdict.total > 0 && (
-                <span className="text-xs text-[var(--kc-text-secondary)] font-mono bg-[var(--kc-bg)] px-2.5 py-1 rounded border border-[var(--kc-border)]">
+                <span className="text-xs text-[var(--kc-text-secondary)] font-mono bg-[var(--kc-surface)] px-2.5 py-1 rounded border border-[var(--kc-border)]">
                   {verdict.passed} / {verdict.total} Test Cases Passed
                 </span>
               )}
@@ -59,7 +59,7 @@ export const ConsolePanel = () => {
 
             {/* Metrics */}
             {verdict.runtime && (
-              <div className="flex flex-wrap gap-4 text-[var(--kc-text-secondary)] text-xs font-mono bg-[var(--kc-bg)] px-3 py-1.5 rounded-md border border-[var(--kc-border)] inline-flex mb-3">
+              <div className="flex flex-wrap gap-4 text-[var(--kc-text-secondary)] text-xs font-mono bg-[var(--kc-surface)] px-3 py-1.5 rounded-md border border-[var(--kc-border)] inline-flex mb-3">
                 <span>
                   <strong className="text-[var(--kc-text-primary)] font-semibold">Runtime:</strong> {verdict.runtime}
                 </span>
@@ -77,30 +77,30 @@ export const ConsolePanel = () => {
                 </div>
                 {verdict.failedInput && (
                   <div>
-                    <span className="text-[var(--kc-text-muted)] font-mono font-semibold block mb-1 uppercase tracking-wider text-[11px]">
+                    <span className="text-[var(--kc-text-secondary)] font-mono font-semibold block mb-1 uppercase tracking-wider text-[11px]">
                       Input
                     </span>
-                    <pre className="text-[12.5px] text-[var(--kc-text-primary)] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto">
+                    <pre className="text-[12.5px] text-[var(--kc-text-primary)] font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto">
                       {formatInput(verdict.failedInput, signature)}
                     </pre>
                   </div>
                 )}
                 {verdict.failedExpected && (
                   <div>
-                    <span className="text-[var(--kc-text-muted)] font-mono font-semibold block mb-1 uppercase tracking-wider text-[11px]">
+                    <span className="text-[var(--kc-text-secondary)] font-mono font-semibold block mb-1 uppercase tracking-wider text-[11px]">
                       Expected Output
                     </span>
-                    <pre className="text-[12.5px] text-[var(--kc-accent-hover)] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto">
+                    <pre className="text-[12.5px] text-[var(--kc-accent)] dark:text-[var(--kc-accent-hover)] font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto">
                       {formatOutput(verdict.failedExpected, returnType)}
                     </pre>
                   </div>
                 )}
                 {verdict.failedActual && (
                   <div>
-                    <span className="text-[var(--kc-text-muted)] font-mono font-semibold block mb-1 uppercase tracking-wider text-[11px]">
+                    <span className="text-[var(--kc-text-secondary)] font-mono font-semibold block mb-1 uppercase tracking-wider text-[11px]">
                       Your Output
                     </span>
-                    <pre className="text-[12.5px] text-[#EF4444] font-mono bg-[var(--kc-bg)] p-2.5 rounded-md border border-[rgba(239,68,68,0.25)] whitespace-pre-wrap break-words max-w-full overflow-x-auto">
+                    <pre className="text-[12.5px] text-[var(--kc-error)] font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-error-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto">
                       {formatOutput(verdict.failedActual, returnType)}
                     </pre>
                   </div>
@@ -108,7 +108,7 @@ export const ConsolePanel = () => {
               </div>
             ) : (
               verdict.details && (
-                <div className="text-[var(--kc-text-primary)] font-mono text-xs mt-3 whitespace-pre-wrap leading-relaxed bg-[var(--kc-bg)] p-2.5 rounded-md border border-[var(--kc-border)]">
+                <div className="text-[var(--kc-text-primary)] font-mono text-xs mt-3 whitespace-pre-wrap leading-relaxed bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-border)]">
                   {verdict.details}
                 </div>
               )
@@ -117,12 +117,12 @@ export const ConsolePanel = () => {
         )}
 
         {!isRunning && !verdict && errorMessage && (
-          <div className="bg-[var(--kc-surface-subtle)] border border-[rgba(239,68,68,0.25)] rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2 text-xs font-mono font-semibold text-[#EF4444]">
-              <XCircle size={14} className="text-[#EF4444] shrink-0" />
+          <div className="bg-[var(--kc-surface-subtle)] border border-[var(--kc-error-border)] rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2 text-xs font-mono font-semibold text-[var(--kc-error)]">
+              <XCircle size={14} className="text-[var(--kc-error)] shrink-0" />
               <span>Execution / Diagnostics Log</span>
             </div>
-            <pre className="text-[#EF4444] text-xs font-mono leading-relaxed bg-[var(--kc-bg)] p-3 rounded-md border border-[rgba(239,68,68,0.15)] whitespace-pre-wrap overflow-x-auto">
+            <pre className="text-[var(--kc-error)] text-xs font-mono leading-relaxed bg-[var(--kc-surface)] p-3 rounded-md border border-[var(--kc-error-border)] whitespace-pre-wrap overflow-x-auto">
               {errorMessage}
             </pre>
           </div>
@@ -130,9 +130,9 @@ export const ConsolePanel = () => {
 
         {!isRunning && !verdict && !errorMessage && (
           <div className="flex flex-col items-center justify-center py-12 text-center text-[var(--kc-text-muted)]">
-            <Terminal size={26} className="mb-2 text-[var(--kc-text-muted)] opacity-50" />
+            <Terminal size={26} className="mb-2 text-[var(--kc-text-muted)] opacity-70" />
             <p className="text-sm font-medium text-[var(--kc-text-primary)]">Ready for execution</p>
-            <p className="text-xs mt-1 text-[var(--kc-text-muted)] max-w-sm">
+            <p className="text-xs mt-1 text-[var(--kc-text-secondary)] max-w-sm">
               Run your code to evaluate against test cases or submit a solution to verify correctness.
             </p>
           </div>

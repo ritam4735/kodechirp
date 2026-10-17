@@ -6,6 +6,7 @@ import { Lock, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../../../lib/api';
+import Logo from '../../../components/ui/Logo';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -150,6 +151,9 @@ export default function ResetPasswordPage() {
         animate={{ opacity: 1, y: 0 }}
         className="max-w-md w-full space-y-6 bg-[var(--kc-surface)] p-8 rounded-lg border border-[var(--kc-border)] shadow-sm"
       >
+        <div className="flex justify-center mb-2">
+          <Logo asLink href="/" size="md" variant="full" ariaLabel="KodeChirp Home" />
+        </div>
         <div>
           <h2 className="text-center text-2xl font-display font-semibold text-white">
             Set new password

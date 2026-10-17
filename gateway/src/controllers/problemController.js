@@ -54,6 +54,18 @@ exports.getAllProblems = async (req, res, next) => {
 
     const countResult = await db.query(countQuery, countParams);
 
+    // Get catalog counts across all published problems
+    const countsResult = await db.query(`
+      SELECT 
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE difficulty = 'Easy')::int AS easy,
+        COUNT(*) FILTER (WHERE difficulty = 'Medium')::int AS medium,
+        COUNT(*) FILTER (WHERE difficulty = 'Hard')::int AS hard
+      FROM problems
+      WHERE status = 'Published'
+    `);
+    const catalogCounts = countsResult.rows[0] || { total: 0, easy: 0, medium: 0, hard: 0 };
+
     return res.json({
       success: true,
       data: result.rows,
@@ -61,6 +73,12 @@ exports.getAllProblems = async (req, res, next) => {
         page: parseInt(page),
         limit: parseInt(limit),
         total: parseInt(countResult.rows[0].count),
+      },
+      counts: {
+        total: parseInt(catalogCounts.total || 0),
+        Easy: parseInt(catalogCounts.easy || 0),
+        Medium: parseInt(catalogCounts.medium || 0),
+        Hard: parseInt(catalogCounts.hard || 0),
       },
     });
   } catch (err) {

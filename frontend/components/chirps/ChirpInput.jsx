@@ -28,7 +28,7 @@ export const ChirpInput = ({ problemId, onChirpPosted }) => {
 
   if (!isAuthenticated) {
     return (
-      <div className="bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] rounded-lg p-3 text-center text-xs text-[var(--kc-text-muted)] mb-4">
+      <div className="bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] rounded-lg p-3 text-center text-xs text-[var(--kc-text-secondary)] mb-4">
         Log in to share your algorithmic deconstruction with other engineers.
       </div>
     );
@@ -37,7 +37,7 @@ export const ChirpInput = ({ problemId, onChirpPosted }) => {
   return (
     <div className="mb-4">
       {postError && (
-        <div className="mb-2 p-2 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.25)] rounded-md text-xs text-[#EF4444]">
+        <div className="mb-2 p-2 bg-[var(--kc-error-subtle)] border border-[var(--kc-error-border)] rounded-md text-xs text-[var(--kc-error)]">
           {postError}
         </div>
       )}
@@ -50,7 +50,7 @@ export const ChirpInput = ({ problemId, onChirpPosted }) => {
             if (postError) setPostError('');
           }}
           placeholder="Share your reasoning, complexity analysis, or implementation caveats..."
-          className="w-full bg-[var(--kc-bg)] border border-[var(--kc-border)] text-xs sm:text-sm text-[var(--kc-text-primary)] rounded-lg p-3 pr-10 focus:outline-none focus:border-[var(--kc-accent)] transition-colors resize-none h-20 disabled:opacity-50"
+          className="w-full bg-[var(--kc-surface)] border border-[var(--kc-border)] text-xs sm:text-sm text-[var(--kc-text-primary)] placeholder:text-[var(--kc-text-muted)] rounded-lg p-3 pr-10 focus:outline-none focus:border-[var(--kc-accent)] transition-colors resize-none h-20 disabled:opacity-50"
         />
         <button
           onClick={handleSubmit}

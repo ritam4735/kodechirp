@@ -31,7 +31,7 @@ function DifficultyBadge({ difficulty }) {
 
 export default function QuestionsPage() {
   const router = useRouter();
-  const { problems, isLoading, error, pagination, fetchProblems } = useProblem();
+  const { problems, counts, isLoading, error, fetchProblems } = useProblem();
   const [search, setSearch] = useState('');
   const [difficulty, setDifficulty] = useState('');
   const [page, setPage] = useState(1);
@@ -46,28 +46,61 @@ export default function QuestionsPage() {
     setPage(1);
   };
 
+  // Fetch complete question catalog on mount
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchProblems(search, { page, limit: PAGE_SIZE, difficulty });
-    }, search ? 250 : 0);
+    fetchProblems();
+  }, [fetchProblems]);
 
-    return () => clearTimeout(timer);
-  }, [search, page, difficulty, fetchProblems]);
-
-  const totalPages = pagination ? Math.ceil(pagination.total / PAGE_SIZE) : 1;
-  const total = pagination?.total || problems.length;
-  const startIndex = (page - 1) * PAGE_SIZE;
-
-  // Derive counts for difficulties
+  // Derive counts for difficulties from the complete question dataset
   const difficultyCounts = useMemo(() => {
-    const counts = { Easy: 0, Medium: 0, Hard: 0 };
+    const tally = { Easy: 0, Medium: 0, Hard: 0 };
     problems.forEach((p) => {
-      if (counts[p.difficulty] !== undefined) {
-        counts[p.difficulty]++;
+      if (tally[p.difficulty] !== undefined) {
+        tally[p.difficulty]++;
       }
     });
-    return counts;
-  }, [problems]);
+    // Fallback to backend catalog counts if problems list is not yet populated
+    if (problems.length === 0 && counts) {
+      tally.Easy = counts.Easy || 0;
+      tally.Medium = counts.Medium || 0;
+      tally.Hard = counts.Hard || 0;
+    }
+    return tally;
+  }, [problems, counts]);
+
+  // Total questions in catalog, independent of active difficulty or search query
+  const totalCatalogCount = problems.length || counts?.total || 0;
+
+  // Separate filtering from counting: derive displayed rows from active filters
+  const filteredProblems = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return problems.filter((problem) => {
+      // Difficulty match
+      if (difficulty && problem.difficulty !== difficulty) {
+        return false;
+      }
+      // Search query match
+      if (q) {
+        const titleMatch = problem.title?.toLowerCase().includes(q);
+        const slugMatch = problem.slug?.toLowerCase().includes(q);
+        const descMatch = problem.short_description?.toLowerCase().includes(q) ||
+                          problem.description?.toLowerCase().includes(q);
+        if (!titleMatch && !slugMatch && !descMatch) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [problems, difficulty, search]);
+
+  const totalFiltered = filteredProblems.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
+  const startIndex = (page - 1) * PAGE_SIZE;
+
+  // Derive current page rows
+  const displayedProblems = useMemo(() => {
+    return filteredProblems.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredProblems, startIndex]);
 
   // Generate page numbers
   const getPageNumbers = () => {
@@ -119,7 +152,7 @@ export default function QuestionsPage() {
                 { label: 'Hard', value: 'Hard' },
               ].map(({ label, value }) => {
                 const isActive = difficulty === value;
-                const count = value === '' ? total : difficultyCounts[value] || 0;
+                const count = value === '' ? totalCatalogCount : (difficultyCounts[value] ?? 0);
                 return (
                   <button
                     key={label}
@@ -129,7 +162,7 @@ export default function QuestionsPage() {
                     className={`kc-diff-tab ${isActive ? 'active' : ''}`}
                     onClick={() => handleDifficultyChange(value)}
                   >
-                    {label} {count > 0 && <span className="opacity-60 text-[10px] ml-1 font-mono">({count})</span>}
+                    {label} <span className="opacity-60 text-[10px] ml-1 font-mono">({count})</span>
                   </button>
                 );
               })}
@@ -177,19 +210,19 @@ export default function QuestionsPage() {
               </div>
             ) : error ? (
               <div className="py-16 flex flex-col items-center gap-3 text-center px-4">
-                <AlertTriangle size={28} className="text-[#EF4444]" />
-                <p className="text-sm font-semibold text-[#EF4444]">{error}</p>
-                <p className="text-xs text-[var(--kc-text-muted)]">Failed to retrieve challenges from the API cluster.</p>
+                <AlertTriangle size={28} className="text-[var(--kc-error)]" />
+                <p className="text-sm font-semibold text-[var(--kc-error)]">{error}</p>
+                <p className="text-xs text-[var(--kc-text-secondary)]">Failed to retrieve challenges from the API cluster.</p>
                 <button
                   type="button"
-                  onClick={() => fetchProblems(search, { page, limit: PAGE_SIZE, difficulty })}
+                  onClick={() => fetchProblems()}
                   className="kc-btn-secondary"
                   style={{ padding: '6px 14px', fontSize: '12px', marginTop: '8px' }}
                 >
                   Retry Connection
                 </button>
               </div>
-            ) : problems.length === 0 ? (
+            ) : filteredProblems.length === 0 ? (
               <div className="py-20 flex flex-col items-center gap-3 text-center px-4">
                 <Search size={24} className="text-[var(--kc-text-muted)]" />
                 <p className="text-sm text-[var(--kc-text-secondary)]">
@@ -201,6 +234,7 @@ export default function QuestionsPage() {
                 </p>
                 {search && (
                   <button
+                    type="button"
                     onClick={() => handleSearchChange('')}
                     className="text-xs text-[var(--kc-accent)] hover:underline mt-1"
                   >
@@ -209,7 +243,7 @@ export default function QuestionsPage() {
                 )}
               </div>
             ) : (
-              problems.map((problem, idx) => (
+              displayedProblems.map((problem, idx) => (
                 <div
                   key={problem.id || problem.slug}
                   className="kc-prob-row"
@@ -260,7 +294,7 @@ export default function QuestionsPage() {
           {!isLoading && totalPages > 1 && (
             <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 border-t border-[var(--kc-border-subtle)] bg-[var(--kc-surface-subtle)]">
               <span className="text-xs text-[var(--kc-text-muted)] font-mono">
-                Showing {startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, total)} of {total.toLocaleString()} challenges
+                Showing {startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, totalFiltered)} of {totalFiltered.toLocaleString()} challenges
               </span>
 
               <div className="flex items-center gap-1" role="navigation" aria-label="Pagination Navigation">

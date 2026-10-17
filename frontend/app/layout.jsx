@@ -32,6 +32,7 @@ export const metadata = {
   authors: [{ name: 'KodeChirp Team' }],
   creator: 'KodeChirp',
   publisher: 'KodeChirp',
+  manifest: '/manifest.json',
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
@@ -77,7 +78,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning className="dark">
+    <html lang="en" suppressHydrationWarning className="dark" data-scroll-behavior="smooth">
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -100,9 +101,9 @@ export default function RootLayout({ children }) {
       <body className={`${dmSans.variable} ${syne.variable} ${jetbrainsMono.variable} antialiased`}>
         <AppInitializer />
         <AnalyticsTracker />
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen min-h-[100dvh] flex flex-col">
           <Navbar />
-          <main className="flex-1 flex flex-col min-w-0">
+          <main className="flex-1 flex flex-col min-w-0 min-h-0">
             {children}
           </main>
         </div>

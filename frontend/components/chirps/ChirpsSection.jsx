@@ -51,7 +51,7 @@ export const ChirpsSection = ({ problemId }) => {
           <span>Loading discussions…</span>
         </div>
       ) : error ? (
-        <div className="text-xs text-[#EF4444] text-center py-4 border border-[rgba(239,68,68,0.2)] rounded-lg bg-[rgba(239,68,68,0.05)] mt-3">
+        <div className="text-xs text-[var(--kc-error)] text-center py-4 border border-[var(--kc-error-border)] rounded-lg bg-[var(--kc-error-subtle)] mt-3">
           <p>{error}</p>
           <button
             type="button"
@@ -62,7 +62,7 @@ export const ChirpsSection = ({ problemId }) => {
           </button>
         </div>
       ) : chirps.length === 0 ? (
-        <div className="text-xs font-mono text-[var(--kc-text-muted)] text-center py-6 border border-dashed border-[var(--kc-border)] rounded-lg bg-[var(--kc-surface-subtle)] mt-3">
+        <div className="text-xs font-mono text-[var(--kc-text-secondary)] text-center py-6 border border-dashed border-[var(--kc-border)] rounded-lg bg-[var(--kc-surface-subtle)] mt-3">
           No commentary posted yet. Share your algorithmic breakdown with the community.
         </div>
       ) : (

@@ -13,7 +13,7 @@ router.get(
   query('search').optional().isString(),
   query('difficulty').optional().isIn(['Easy', 'Medium', 'Hard']),
   query('page').optional().isInt({ min: 1 }),
-  query('limit').optional().isInt({ min: 1, max: 100 }),
+  query('limit').optional().isInt({ min: 1, max: 500 }),
   validateRequest,
   problemController.getAllProblems
 );

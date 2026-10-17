@@ -1,11 +1,14 @@
 import Link from 'next/link';
+import { Logo } from '../ui/Logo';
 
 export default function LandingFooter() {
   return (
     <footer className="footer" id="footer">
       <div className="footer-inner">
         <div>
-          <div className="footer-brand-title">🌿 KodeChirp</div>
+          <div className="mb-3">
+            <Logo size="sm" variant="full" />
+          </div>
           <p className="footer-brand-desc">The developer platform where learning flies. Chirp your code, inspire the world, grow through real conversations.</p>
           <div className="footer-social" aria-label="Social media links">
             <a className="social-btn" title="GitHub Repository" aria-label="GitHub Repository" href="https://github.com/ritam4735/kodechirp" target="_blank" rel="noopener noreferrer">⌥</a>

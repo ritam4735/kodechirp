@@ -158,8 +158,8 @@ export const api = {
     if (difficulty) qs.set('difficulty', difficulty);
     const queryStr = qs.toString() ? `?${qs.toString()}` : '';
     const data = await request(`/api/problems${queryStr}`);
-    // Backend returns { success, data: [...], pagination: { page, limit, total } }
-    return { problems: data.data, pagination: data.pagination };
+    // Backend returns { success, data: [...], pagination: { page, limit, total }, counts: { total, Easy, Medium, Hard } }
+    return { problems: data.data, pagination: data.pagination, counts: data.counts };
   },
 
   getProblem: async (slug) => {

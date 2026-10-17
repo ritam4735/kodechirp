@@ -19,16 +19,27 @@
   --kc-surface-subtle: #1A1A1E;
   --kc-surface-elevated: #222228;
   --kc-text-primary: #E8E6E3;
-  --kc-text-secondary: #9E9EA4;
-  --kc-text-muted: #5C5C64;
+  --kc-text-secondary: #A8A8B2;
+  --kc-text-muted: #8A8A93;
   --kc-accent: #3B82F6;
   --kc-accent-hover: #60A5FA;
   --kc-accent-subtle: rgba(59, 130, 246, 0.12);
-  --kc-border: rgba(255, 255, 255, 0.08);
-  --kc-border-subtle: rgba(255, 255, 255, 0.04);
-  --kc-border-hover: rgba(255, 255, 255, 0.18);
+  --kc-border: rgba(255, 255, 255, 0.10);
+  --kc-border-subtle: rgba(255, 255, 255, 0.05);
+  --kc-border-hover: rgba(255, 255, 255, 0.22);
   --kc-nav-bg: rgba(12, 12, 14, 0.85);
   --kc-nav-height: 64px;
+
+  /* Semantic Status Tokens */
+  --kc-success: #10B981;
+  --kc-success-subtle: rgba(16, 185, 129, 0.12);
+  --kc-success-border: rgba(16, 185, 129, 0.25);
+  --kc-warning: #F59E0B;
+  --kc-warning-subtle: rgba(245, 158, 11, 0.12);
+  --kc-warning-border: rgba(245, 158, 11, 0.25);
+  --kc-error: #EF4444;
+  --kc-error-subtle: rgba(239, 68, 68, 0.12);
+  --kc-error-border: rgba(239, 68, 68, 0.25);
 
   /* Mapped aliases for application consistency */
   --bg-primary: var(--kc-bg);
@@ -44,11 +55,11 @@
   --text-secondary: var(--kc-text-secondary);
   --text-muted: var(--kc-text-muted);
 
-  --accent-green: #10B981;
-  --accent-blue: #3B82F6;
+  --accent-green: var(--kc-success);
+  --accent-blue: var(--kc-accent);
   --accent-orange: #F97316;
-  --accent-red: #EF4444;
-  --accent-yellow: #F59E0B;
+  --accent-red: var(--kc-error);
+  --accent-yellow: var(--kc-warning);
   --accent-purple: #8B5CF6;
 
   --radius-sm: 4px;
@@ -63,16 +74,26 @@
   --kc-surface-subtle: #F2F2F0;
   --kc-surface-elevated: #E5E5E3;
   --kc-text-primary: #1A1A1A;
-  --kc-text-secondary: #5A5A5C;
-  --kc-text-muted: #8E8E93;
+  --kc-text-secondary: #4A4A4D;
+  --kc-text-muted: #6E6E73;
   --kc-accent: #2563EB;
   --kc-accent-hover: #1D4ED8;
-  --kc-accent-subtle: rgba(37, 99, 235, 0.08);
-  --kc-border: rgba(0, 0, 0, 0.08);
-  --kc-border-subtle: rgba(0, 0, 0, 0.04);
-  --kc-border-hover: rgba(0, 0, 0, 0.18);
+  --kc-accent-subtle: rgba(37, 99, 235, 0.10);
+  --kc-border: rgba(0, 0, 0, 0.12);
+  --kc-border-subtle: rgba(0, 0, 0, 0.06);
+  --kc-border-hover: rgba(0, 0, 0, 0.24);
   --kc-nav-bg: rgba(250, 250, 249, 0.88);
   --kc-nav-height: 64px;
+
+  --kc-success: #059669;
+  --kc-success-subtle: rgba(5, 150, 105, 0.10);
+  --kc-success-border: rgba(5, 150, 105, 0.25);
+  --kc-warning: #B45309;
+  --kc-warning-subtle: rgba(180, 83, 9, 0.10);
+  --kc-warning-border: rgba(180, 83, 9, 0.25);
+  --kc-error: #DC2626;
+  --kc-error-subtle: rgba(220, 38, 38, 0.10);
+  --kc-error-border: rgba(220, 38, 38, 0.25);
 
   --bg-primary: var(--kc-bg);
   --bg-secondary: var(--kc-surface);
@@ -94,16 +115,26 @@
   --kc-surface-subtle: #1A1A1E;
   --kc-surface-elevated: #222228;
   --kc-text-primary: #E8E6E3;
-  --kc-text-secondary: #9E9EA4;
-  --kc-text-muted: #5C5C64;
+  --kc-text-secondary: #A8A8B2;
+  --kc-text-muted: #8A8A93;
   --kc-accent: #3B82F6;
   --kc-accent-hover: #60A5FA;
   --kc-accent-subtle: rgba(59, 130, 246, 0.12);
-  --kc-border: rgba(255, 255, 255, 0.08);
-  --kc-border-subtle: rgba(255, 255, 255, 0.04);
-  --kc-border-hover: rgba(255, 255, 255, 0.18);
+  --kc-border: rgba(255, 255, 255, 0.10);
+  --kc-border-subtle: rgba(255, 255, 255, 0.05);
+  --kc-border-hover: rgba(255, 255, 255, 0.22);
   --kc-nav-bg: rgba(12, 12, 14, 0.85);
   --kc-nav-height: 64px;
+
+  --kc-success: #10B981;
+  --kc-success-subtle: rgba(16, 185, 129, 0.12);
+  --kc-success-border: rgba(16, 185, 129, 0.25);
+  --kc-warning: #F59E0B;
+  --kc-warning-subtle: rgba(245, 158, 11, 0.12);
+  --kc-warning-border: rgba(245, 158, 11, 0.25);
+  --kc-error: #EF4444;
+  --kc-error-subtle: rgba(239, 68, 68, 0.12);
+  --kc-error-border: rgba(239, 68, 68, 0.25);
 
   --bg-primary: var(--kc-bg);
   --bg-secondary: var(--kc-surface);
@@ -125,6 +156,7 @@
 
 html {
   scroll-behavior: smooth;
+  height: 100%;
 }
 
 body {
@@ -133,6 +165,7 @@ body {
   font-family: var(--font-body), var(--kc-font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100%;
 }
 
 /* ── Scrollbars ─────────────────────────────────────────────── */
@@ -223,18 +256,15 @@ pre code {
 
 /* ── Utility classes ────────────────────────────────────────── */
 .glass {
-  background: rgba(20, 20, 23, 0.8);
+  background: var(--kc-nav-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Monaco editor overrides */
-.monaco-editor .margin {
-  background-color: var(--kc-surface) !important;
-}
-
-.monaco-editor-background {
-  background-color: var(--kc-surface) !important;
+/* Form controls styling */
+select option {
+  background-color: var(--kc-surface);
+  color: var(--kc-text-primary);
 }
 
 /* Tab styles */
@@ -243,33 +273,72 @@ pre code {
   color: var(--kc-accent);
 }
 
-/* Status badge colors - understated, restrained */
-.status-accepted {
-  color: #10B981;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.22);
+/* Status badge colors - theme adaptive, WCAG AA compliant */
+.status-accepted,
+.kc-diff-easy {
+  color: var(--kc-success);
+  background: var(--kc-success-subtle);
+  border: 1px solid var(--kc-success-border);
 }
 
-.status-wrong {
-  color: #EF4444;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.22);
+.status-wrong,
+.kc-diff-hard {
+  color: var(--kc-error);
+  background: var(--kc-error-subtle);
+  border: 1px solid var(--kc-error-border);
 }
 
-.status-tle {
-  color: #F59E0B;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.22);
+.status-tle,
+.kc-diff-medium {
+  color: var(--kc-warning);
+  background: var(--kc-warning-subtle);
+  border: 1px solid var(--kc-warning-border);
 }
 
 .status-error {
-  color: #F97316;
-  background: rgba(249, 115, 22, 0.1);
-  border: 1px solid rgba(249, 115, 22, 0.22);
+  color: var(--kc-error);
+  background: var(--kc-error-subtle);
+  border: 1px solid var(--kc-error-border);
 }
 
 .status-pending {
   color: var(--kc-text-secondary);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--kc-surface-subtle);
   border: 1px solid var(--kc-border-subtle);
+}
+
+/* ── Problem Solving Workspace: Full Available Viewport Layout ── */
+.kc-workspace-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  height: calc(100vh - var(--kc-nav-height, 64px));
+  height: calc(100dvh - var(--kc-nav-height, 64px));
+  min-height: calc(100vh - var(--kc-nav-height, 64px));
+  min-height: calc(100dvh - var(--kc-nav-height, 64px));
+  max-height: calc(100vh - var(--kc-nav-height, 64px));
+  max-height: calc(100dvh - var(--kc-nav-height, 64px));
+  flex: 1 0 auto;
+  min-width: 0;
+  overflow: hidden;
+  background-color: var(--kc-bg);
+  padding: 8px;
+}
+
+@media (min-width: 640px) {
+  .kc-workspace-root {
+    padding: 12px;
+  }
+}
+
+.kc-workspace-inner {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  overflow: hidden;
 }

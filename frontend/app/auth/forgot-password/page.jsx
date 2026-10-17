@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
+import Logo from '../../../components/ui/Logo';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -34,6 +35,9 @@ export default function ForgotPasswordPage() {
         animate={{ opacity: 1, y: 0 }}
         className="max-w-md w-full space-y-6 bg-[var(--kc-surface)] p-6 sm:p-8 rounded-lg border border-[var(--kc-border)] shadow-sm"
       >
+        <div className="flex justify-center mb-2">
+          <Logo asLink href="/" size="md" variant="full" ariaLabel="KodeChirp Home" />
+        </div>
         <div>
           <h2 className="text-center text-2xl font-display font-bold text-[var(--kc-text-primary)] tracking-tight">
             Reset your password

@@ -1,12 +1,12 @@
 'use client';
 
+import { Logo } from '../ui/Logo';
+
 export default function LandingNav({ onOpenModal }) {
   return (
     <nav className="navbar" id="navbar">
       <a href="#" className="nav-logo">
-        <div className="nav-logo-icon">&lt;/&gt;</div>
-        <span className="nav-logo-text">Kode<span>Chirp</span></span>
-        <span className="nav-logo-leaf">🌿</span>
+        <Logo size="md" variant="full" />
       </a>
       <nav className="nav-links">
         <a href="#home" className="nav-link active">Home</a>
@@ -18,10 +18,10 @@ export default function LandingNav({ onOpenModal }) {
       </nav>
       <div className="nav-spacer"></div>
       <div className="nav-user" id="navUser">
-        <div className="nav-avatar">🦅</div>
+        <div className="nav-avatar">U</div>
         <div className="nav-user-info">
           <div className="nav-user-name">DemoUser</div>
-          <div className="nav-user-tag">Keep Chirping!</div>
+          <div className="nav-user-tag">Developer</div>
         </div>
         <span className="nav-chevron">▾</span>
       </div>

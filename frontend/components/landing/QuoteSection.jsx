@@ -10,7 +10,7 @@ export default function QuoteSection() {
           <p className="quote-author">— The KodeChirp Philosophy</p>
         </div>
         <a href="#about" className="quote-cta">
-          🐦 About KodeChirp
+          About KodeChirp
           <span>→</span>
         </a>
       </div>

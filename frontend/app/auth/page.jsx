@@ -7,6 +7,7 @@ import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { api } from '../../lib/api';
 import { trackEvent } from '../../lib/analytics';
+import Logo from '../../components/ui/Logo';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -116,6 +117,9 @@ export default function AuthPage() {
   return (
     <div className="flex-1 flex items-center justify-center py-8 sm:py-12 px-3 sm:px-4">
       <div className="bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg p-6 sm:p-8 max-w-md w-full shadow-sm">
+        <div className="flex justify-center mb-6">
+          <Logo asLink href="/" size="md" variant="full" ariaLabel="KodeChirp Home" />
+        </div>
         <h1 className="text-xl sm:text-2xl font-bold font-display text-[var(--kc-text-primary)] mb-6 text-center tracking-tight">
           {isLogin ? 'Welcome Back' : 'Create an Account'}
         </h1>

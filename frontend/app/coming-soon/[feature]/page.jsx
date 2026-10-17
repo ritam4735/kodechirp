@@ -3,7 +3,8 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { AnimatedBackground } from '../../../components/ui/AnimatedBackground';
-import { Bird, Home, ChevronRight, MessageSquare, Play, Users, Leaf } from 'lucide-react';
+import { Home, ChevronRight, MessageSquare, Play, Users, Leaf } from 'lucide-react';
+import Logo from '../../../components/ui/Logo';
 import { use } from 'react';
 
 const COMING_SOON_CONFIG = {
@@ -78,8 +79,8 @@ export default function ComingSoonPage({ params }) {
             <FeatureIcon size={22} className="text-[var(--kc-accent)]" />
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md mb-4 text-[11px] font-mono tracking-wider uppercase text-[var(--kc-accent)] bg-[var(--kc-accent)]/10 border border-[var(--kc-accent)]/20">
-            <Bird size={12} />
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md mb-4 text-[11px] font-mono tracking-wider uppercase text-[var(--kc-accent)] bg-[var(--kc-accent)]/10 border border-[var(--kc-accent)]/20">
+            <Logo size={14} variant="symbol" />
             <span>Coming Soon</span>
           </div>
 

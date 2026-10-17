@@ -6,6 +6,7 @@ import { Mail, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../../../lib/api';
+import Logo from '../../../components/ui/Logo';
 
 function VerifyEmailContent() {
   const router = useRouter();
@@ -130,6 +131,9 @@ export default function VerifyEmailPage() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-[var(--kc-surface)] p-8 rounded-lg border border-[var(--kc-border)] shadow-sm">
+        <div className="flex justify-center mb-6">
+          <Logo asLink href="/" size="md" variant="full" ariaLabel="KodeChirp Home" />
+        </div>
         <Suspense fallback={<div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin"></div></div>}>
           <VerifyEmailContent />
         </Suspense>
