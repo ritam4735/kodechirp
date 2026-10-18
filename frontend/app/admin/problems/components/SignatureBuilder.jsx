@@ -69,7 +69,7 @@ export default function SignatureBuilder({ signature, onChange }) {
           <button 
             type="button" 
             onClick={addParam}
-            className="text-xs bg-[var(--kc-accent)] hover:opacity-90 text-white px-2.5 py-1 rounded-md transition-opacity"
+            className="text-xs bg-[var(--kc-accent)] hover:opacity-90 text-[var(--kc-on-primary)] px-2.5 py-1 rounded-md transition-opacity"
           >
             + Add Parameter
           </button>

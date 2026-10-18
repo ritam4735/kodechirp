@@ -17,6 +17,7 @@
     "stop": "docker compose down",
     "logs": "docker compose logs -f",
     "logs:gateway": "docker compose logs -f gateway",
-    "logs:worker": "docker compose logs -f worker"
+    "logs:worker": "docker compose logs -f worker",
+    "import:aptitude": "node gateway/src/scripts/import_aptitude.js"
   }
 }

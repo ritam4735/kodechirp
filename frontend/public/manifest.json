@@ -4,8 +4,8 @@
   "description": "Turn Problems into Progress — Engineering-First Algorithmic Platform",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0C0C0E",
-  "theme_color": "#0C0C0E",
+  "background_color": "#171114",
+  "theme_color": "#171114",
   "icons": [
     {
       "src": "/favicon.svg",

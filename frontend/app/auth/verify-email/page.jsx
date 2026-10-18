@@ -74,14 +74,14 @@ function VerifyEmailContent() {
           <CheckCircle size={24} className="text-emerald-400" />
         </div>
         <div>
-          <h3 className="text-white font-display font-semibold text-xl mb-1.5">Email Verified</h3>
+          <h3 className="text-[var(--kc-text-primary)] font-display font-semibold text-xl mb-1.5">Email Verified</h3>
           <p className="text-[var(--kc-text-muted)] text-sm">
             Thank you for verifying your email address. Your account is now active.
           </p>
         </div>
         <button 
           onClick={() => router.push('/auth')}
-          className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 px-4 text-sm font-medium rounded-md text-white bg-[var(--kc-accent)] hover:opacity-90 transition-opacity"
+          className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 px-4 text-sm font-medium rounded-md text-[var(--kc-on-primary)] bg-[var(--kc-accent)] hover:opacity-90 transition-opacity"
         >
           Go to Sign In <ArrowRight size={14} />
         </button>
@@ -98,7 +98,7 @@ function VerifyEmailContent() {
         <AlertCircle size={24} className="text-rose-400" />
       </div>
       <div>
-        <h3 className="text-white font-display font-semibold text-xl mb-1.5">Verification Failed</h3>
+        <h3 className="text-[var(--kc-text-primary)] font-display font-semibold text-xl mb-1.5">Verification Failed</h3>
         <p className="text-rose-400 text-sm">
           {errorMsg}
         </p>
@@ -113,14 +113,14 @@ function VerifyEmailContent() {
           <button
             onClick={handleResend}
             disabled={resending}
-            className="w-full py-2.5 px-4 border border-[var(--kc-border)] text-sm font-medium rounded-md text-white bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] transition-colors disabled:opacity-50"
+            className="w-full py-2.5 px-4 border border-[var(--kc-border)] text-sm font-medium rounded-md text-[var(--kc-text-primary)] bg-[var(--kc-surface-subtle)] hover:bg-[var(--kc-surface-hover)] transition-colors disabled:opacity-50"
           >
             {resending ? 'Sending...' : 'Resend Verification Email'}
           </button>
         )
       )}
 
-      <Link href="/auth" className="text-xs text-[var(--kc-text-muted)] hover:text-white transition-colors font-medium">
+      <Link href="/auth" className="text-xs text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] transition-colors font-medium">
         Back to Sign In
       </Link>
     </motion.div>

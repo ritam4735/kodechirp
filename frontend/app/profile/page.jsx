@@ -212,7 +212,7 @@ export default function ProfilePage() {
                     <button 
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-4 right-0 bg-[var(--kc-accent)] hover:opacity-90 text-white p-2 rounded-full transition-opacity z-20 shadow-sm"
+                      className="absolute bottom-4 right-0 bg-[var(--kc-accent)] hover:opacity-90 text-[var(--kc-on-primary)] p-2 rounded-full transition-opacity z-20 shadow-sm"
                       title="Upload Avatar"
                       aria-label="Upload new profile avatar"
                     >
@@ -474,10 +474,10 @@ export default function ProfilePage() {
                         <button 
                           type="submit" 
                           disabled={saving}
-                          className="bg-[var(--kc-accent)] hover:opacity-90 text-white px-6 py-2 rounded-md font-medium text-xs sm:text-sm transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-xs"
+                          className="bg-[var(--kc-accent)] hover:opacity-90 text-[var(--kc-on-primary)] px-6 py-2 rounded-md font-medium text-xs sm:text-sm transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-xs"
                         >
                           {saving ? (
-                            <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Saving...</>
+                            <><div className="w-3.5 h-3.5 border-2 border-[var(--kc-on-primary)]/30 border-t-[var(--kc-on-primary)] rounded-full animate-spin"></div> Saving...</>
                           ) : (
                             'Save Changes'
                           )}

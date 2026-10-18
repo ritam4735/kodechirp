@@ -79,7 +79,7 @@ export default function ContactPage() {
         <div className="mb-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-[var(--kc-text-muted)] hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] transition-colors"
           >
             <ArrowLeft size={13} />
             <span>Back to Home</span>
@@ -94,7 +94,7 @@ export default function ContactPage() {
             </div>
             <span className="text-[11px] font-bold text-[var(--kc-accent)] uppercase tracking-wider">Support</span>
           </div>
-          <h1 className="text-3xl font-display font-bold text-white mb-2">
+          <h1 className="text-3xl font-display font-bold text-[var(--kc-text-primary)] mb-2">
             Contact & Support
           </h1>
           <p className="text-sm text-[var(--kc-text-muted)]">
@@ -106,7 +106,7 @@ export default function ContactPage() {
           {/* Left Column: Direct Project Channels */}
           <div className="md:col-span-2 space-y-4">
             <div className="rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] p-5 space-y-4 shadow-sm">
-              <h2 className="text-sm font-display font-semibold text-white flex items-center gap-2">
+              <h2 className="text-sm font-display font-semibold text-[var(--kc-text-primary)] flex items-center gap-2">
                 <HelpCircle size={16} className="text-[var(--kc-accent)]" />
                 Direct Channels
               </h2>
@@ -114,11 +114,11 @@ export default function ContactPage() {
               <div className="space-y-3 text-xs text-[var(--kc-text-muted)]">
                 <a
                   href="mailto:support@kodechirp.com"
-                  className="flex items-start gap-3 p-3 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] border border-[var(--kc-border)] transition-colors group"
+                  className="flex items-start gap-3 p-3 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[var(--kc-surface-hover)] border border-[var(--kc-border)] transition-colors group"
                 >
                   <Mail size={16} className="text-[var(--kc-accent)] shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-white group-hover:text-[var(--kc-accent)] transition-colors block text-xs">
+                    <strong className="text-[var(--kc-text-primary)] group-hover:text-[var(--kc-accent)] transition-colors block text-xs">
                       Official Support Email
                     </strong>
                     <span className="text-[var(--kc-text)] font-mono text-[11px] mt-0.5 block">
@@ -134,11 +134,11 @@ export default function ContactPage() {
                   href="https://github.com/ritam4735/kodechirp/issues"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-start gap-3 p-3 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] border border-[var(--kc-border)] transition-colors group"
+                  className="flex items-start gap-3 p-3 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[var(--kc-surface-hover)] border border-[var(--kc-border)] transition-colors group"
                 >
-                  <Github size={16} className="text-white shrink-0 mt-0.5" />
+                  <Github size={16} className="text-[var(--kc-text-primary)] shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-white group-hover:text-[var(--kc-accent)] transition-colors block text-xs">
+                    <strong className="text-[var(--kc-text-primary)] group-hover:text-[var(--kc-accent)] transition-colors block text-xs">
                       GitHub Issues & Bug Tracker
                     </strong>
                     <span className="text-[var(--kc-text-muted)] text-[11px] mt-0.5 block">
@@ -149,11 +149,11 @@ export default function ContactPage() {
 
                 <Link
                   href="/questions"
-                  className="flex items-start gap-3 p-3 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] border border-[var(--kc-border)] transition-colors group"
+                  className="flex items-start gap-3 p-3 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[var(--kc-surface-hover)] border border-[var(--kc-border)] transition-colors group"
                 >
                   <MessageSquare size={16} className="text-[var(--kc-accent)] shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-white group-hover:text-[var(--kc-accent)] transition-colors block text-xs">
+                    <strong className="text-[var(--kc-text-primary)] group-hover:text-[var(--kc-accent)] transition-colors block text-xs">
                       Community Chirps
                     </strong>
                     <span className="text-[var(--kc-text-muted)] text-[11px] mt-0.5 block">
@@ -164,11 +164,11 @@ export default function ContactPage() {
 
                 <a
                   href="mailto:security@kodechirp.com"
-                  className="flex items-start gap-3 p-3 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] border border-[var(--kc-border)] transition-colors group"
+                  className="flex items-start gap-3 p-3 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[var(--kc-surface-hover)] border border-[var(--kc-border)] transition-colors group"
                 >
                   <ShieldAlert size={16} className="text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-white group-hover:text-emerald-400 transition-colors block text-xs">
+                    <strong className="text-[var(--kc-text-primary)] group-hover:text-emerald-400 transition-colors block text-xs">
                       Security & Responsible Disclosure
                     </strong>
                     <span className="text-[var(--kc-text)] font-mono text-[11px] mt-0.5 block">
@@ -184,7 +184,7 @@ export default function ContactPage() {
 
             {/* Maintainer Info Card */}
             <div className="rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] p-5 text-xs text-[var(--kc-text-muted)] space-y-2 shadow-sm">
-              <div className="font-medium text-white">Project Maintainer</div>
+              <div className="font-medium text-[var(--kc-text-primary)]">Project Maintainer</div>
               <p className="leading-relaxed text-[var(--kc-text)]">
                 Created and maintained by <strong>Ritam Chatterjee</strong> (<a href="https://github.com/ritam4735" target="_blank" rel="noopener noreferrer" className="text-[var(--kc-accent)] hover:underline">@ritam4735</a>).
               </p>
@@ -195,7 +195,7 @@ export default function ContactPage() {
 
             {/* Quick Policies Card */}
             <div className="rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] p-5 text-xs text-[var(--kc-text-muted)] space-y-2 shadow-sm">
-              <div className="font-medium text-white">Policies & Guidelines</div>
+              <div className="font-medium text-[var(--kc-text-primary)]">Policies & Guidelines</div>
               <p className="leading-relaxed">
                 Before reaching out, check our legal policies:
               </p>
@@ -213,7 +213,7 @@ export default function ContactPage() {
           {/* Right Column: Interactive Feedback / Message Form */}
           <div className="md:col-span-3">
             <div className="rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] p-6 sm:p-7 shadow-sm">
-              <h2 className="text-base font-display font-semibold text-white mb-1">
+              <h2 className="text-base font-display font-semibold text-[var(--kc-text-primary)] mb-1">
                 Send a Message
               </h2>
               <p className="text-xs text-[var(--kc-text-muted)] mb-5">
@@ -245,7 +245,7 @@ export default function ContactPage() {
                       setForm({ ...form, name: e.target.value });
                       clearFieldError('name');
                     }}
-                    className={`w-full bg-[var(--kc-surface-subtle)] text-sm text-white placeholder-[var(--kc-text-muted)] rounded-md px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
+                    className={`w-full bg-[var(--kc-surface-subtle)] text-sm text-[var(--kc-text-primary)] placeholder-[var(--kc-text-muted)] rounded-md px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
                       fieldErrors.name
                         ? 'border border-rose-500'
                         : 'border border-[var(--kc-border)] focus:border-[var(--kc-accent)]'
@@ -275,7 +275,7 @@ export default function ContactPage() {
                       setForm({ ...form, email: e.target.value });
                       clearFieldError('email');
                     }}
-                    className={`w-full bg-[var(--kc-surface-subtle)] text-sm text-white placeholder-[var(--kc-text-muted)] rounded-md px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
+                    className={`w-full bg-[var(--kc-surface-subtle)] text-sm text-[var(--kc-text-primary)] placeholder-[var(--kc-text-muted)] rounded-md px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
                       fieldErrors.email
                         ? 'border border-rose-500'
                         : 'border border-[var(--kc-border)] focus:border-[var(--kc-accent)]'
@@ -297,7 +297,7 @@ export default function ContactPage() {
                     disabled={submitting}
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] text-sm text-white rounded-md px-3.5 py-2.5 focus:border-[var(--kc-accent)] focus:outline-none transition-colors disabled:opacity-50"
+                    className="w-full bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] text-sm text-[var(--kc-text-primary)] rounded-md px-3.5 py-2.5 focus:border-[var(--kc-accent)] focus:outline-none transition-colors disabled:opacity-50"
                   >
                     <option value="General Feedback">General Feedback</option>
                     <option value="Bug Report">Bug Report & Test Case Issue</option>
@@ -324,7 +324,7 @@ export default function ContactPage() {
                       setForm({ ...form, message: e.target.value });
                       clearFieldError('message');
                     }}
-                    className={`w-full bg-[var(--kc-surface-subtle)] text-sm text-white placeholder-[var(--kc-text-muted)] rounded-md p-3.5 focus:outline-none transition-colors resize-none disabled:opacity-50 ${
+                    className={`w-full bg-[var(--kc-surface-subtle)] text-sm text-[var(--kc-text-primary)] placeholder-[var(--kc-text-muted)] rounded-md p-3.5 focus:outline-none transition-colors resize-none disabled:opacity-50 ${
                       fieldErrors.message
                         ? 'border border-rose-500'
                         : 'border border-[var(--kc-border)] focus:border-[var(--kc-accent)]'
@@ -340,11 +340,11 @@ export default function ContactPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-[var(--kc-accent)] hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-md transition-opacity flex items-center justify-center gap-2 text-sm mt-2"
+                  className="w-full bg-[var(--kc-accent)] hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed text-[var(--kc-on-primary)] font-medium py-2.5 px-4 rounded-md transition-opacity flex items-center justify-center gap-2 text-sm mt-2"
                 >
                   {submitting ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-[var(--kc-on-primary)]/30 border-t-[var(--kc-on-primary)] rounded-full animate-spin" />
                       <span>Sending Message...</span>
                     </>
                   ) : (

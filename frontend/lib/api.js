@@ -176,12 +176,24 @@ export const api = {
 
   // ── Code execution ──────────────────────────────────────────────────────────
 
-  // BUG FIX: was a mock that always returned 'Mock execution successful.'
-  runCode: async (code, language, stdin = '', problemId = null, judgeMode = null, signatureMetadata = null) => {
-    const body = { code, language, stdin };
-    if (problemId) body.problem_id = problemId;
-    if (judgeMode) body.judgeMode = judgeMode;
-    if (signatureMetadata) body.signatureMetadata = signatureMetadata;
+  runCode: async (codeOrObj, language, stdin = '', problemId = null, judgeMode = null, signatureMetadata = null) => {
+    let body;
+    if (codeOrObj && typeof codeOrObj === 'object') {
+      body = {
+        code: codeOrObj.code || '',
+        language: codeOrObj.language || 'python',
+        stdin: codeOrObj.stdin || '',
+      };
+      if (codeOrObj.problem_id || codeOrObj.problemId) body.problem_id = codeOrObj.problem_id || codeOrObj.problemId;
+      if (codeOrObj.judgeMode) body.judgeMode = codeOrObj.judgeMode;
+      if (codeOrObj.signatureMetadata) body.signatureMetadata = codeOrObj.signatureMetadata;
+    } else {
+      body = { code: codeOrObj, language, stdin };
+      if (problemId) body.problem_id = problemId;
+      if (judgeMode) body.judgeMode = judgeMode;
+      if (signatureMetadata) body.signatureMetadata = signatureMetadata;
+    }
+
     const data = await request('/api/submissions/run', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -199,10 +211,21 @@ export const api = {
     };
   },
 
-  submitCode: async (problemId, code, language) => {
+  submitCode: async (problemIdOrObj, code, language) => {
+    let body;
+    if (problemIdOrObj && typeof problemIdOrObj === 'object') {
+      body = {
+        problem_id: problemIdOrObj.problem_id || problemIdOrObj.problemId,
+        code: problemIdOrObj.code,
+        language: problemIdOrObj.language,
+      };
+    } else {
+      body = { problem_id: problemIdOrObj, code, language };
+    }
+
     const data = await request('/api/submissions/submit', {
       method: 'POST',
-      body: JSON.stringify({ problem_id: problemId, code, language }),
+      body: JSON.stringify(body),
     });
     
     // Backend returns { success, data: { submissionId, status, testCasesTotal, queueId } }
@@ -226,6 +249,8 @@ export const api = {
     }
 
     return {
+      submissionId: submission.id || result.submissionId,
+      id: submission.id || result.submissionId,
       verdict: submission.status,
       runtime: submission.runtime_ms ? `${submission.runtime_ms} ms` : 'N/A',
       memory: submission.memory_kb ? `${(submission.memory_kb / 1024).toFixed(1)} MB` : 'N/A',
@@ -259,12 +284,49 @@ export const api = {
     return data.data || [];
   },
 
-  postChirp: async (problemId, content) => {
-    const data = await request('/api/chirps', {
+  // ── Assessments ─────────────────────────────────────────────────────────
+
+  getPublishedAssessments: async (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.category) qs.set('category', params.category);
+    if (params.search) qs.set('search', params.search);
+    const data = await request(`/api/assessments?${qs.toString()}`);
+    return data.assessments || [];
+  },
+
+  getAssessmentOverview: async (id) => {
+    const data = await request(`/api/assessments/${id}`);
+    return data;
+  },
+
+  startAssessmentAttempt: async (id) => {
+    const data = await request(`/api/assessments/${id}/start`, { method: 'POST' });
+    return data;
+  },
+
+  getAttemptData: async (attemptId) => {
+    const data = await request(`/api/assessments/attempts/${attemptId}`);
+    return data;
+  },
+
+  saveAssessmentResponse: async (attemptId, payload) => {
+    const data = await request(`/api/assessments/attempts/${attemptId}/save-response`, {
       method: 'POST',
-      body: JSON.stringify({ problem_id: problemId, content }),
+      body: JSON.stringify(payload),
     });
-    return data.data;
+    return data;
+  },
+
+  submitAssessmentAttempt: async (attemptId) => {
+    const data = await request(`/api/assessments/attempts/${attemptId}/submit`, {
+      method: 'POST',
+    });
+    return data;
+  },
+
+  getAttemptResult: async (attemptId) => {
+    const data = await request(`/api/assessments/attempts/${attemptId}/result`);
+    return data;
   },
 };
 

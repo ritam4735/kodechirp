@@ -16,82 +16,97 @@ if (typeof window !== 'undefined') {
 }
 
 function defineMonacoThemes(monaco) {
-  // Dark Theme: Matches --kc-surface (#141417) and KodeChirp dark aesthetics
+  // Dark Theme: Wine Red (#7F011F) + Light Sand (#F5EBD0) on Charcoal Burgundy (#21181C)
   monaco.editor.defineTheme('kodechirp-dark', {
     base: 'vs-dark',
     inherit: true,
     rules: [
-      { token: 'comment', foreground: '8A8A93', fontStyle: 'italic' },
-      { token: 'keyword', foreground: '60A5FA', fontStyle: 'bold' },
-      { token: 'string', foreground: '34D399' },
-      { token: 'number', foreground: 'FBBF24' },
-      { token: 'type', foreground: 'A78BFA' },
-      { token: 'function', foreground: '93C5FD' },
-      { token: 'variable', foreground: 'E8E6E3' },
-      { token: 'delimiter', foreground: 'A8A8B2' },
-      { token: 'operator', foreground: '93C5FD' },
+      { token: 'comment', foreground: '9E8D93', fontStyle: 'italic' },
+      { token: 'keyword', foreground: 'E25272', fontStyle: 'bold' },
+      { token: 'string', foreground: 'E8C587' },
+      { token: 'number', foreground: 'F59E0B' },
+      { token: 'type', foreground: 'D8B4E2' },
+      { token: 'function', foreground: 'F5A3B3' },
+      { token: 'variable', foreground: 'F5EBD0' },
+      { token: 'delimiter', foreground: 'DFD3B8' },
+      { token: 'operator', foreground: 'E25272' },
     ],
     colors: {
-      'editor.background': '#141417',
-      'editor.foreground': '#E8E6E3',
-      'editor.lineHighlightBackground': '#1A1A1E',
+      'editor.background': '#21181C',
+      'editor.foreground': '#F5EBD0',
+      'editor.lineHighlightBackground': '#2B1E23',
       'editor.lineHighlightBorder': '#00000000',
-      'editor.selectionBackground': '#3B82F633',
-      'editor.inactiveSelectionBackground': '#3B82F618',
-      'editorLineNumber.foreground': '#8A8A93',
-      'editorLineNumber.activeForeground': '#E8E6E3',
-      'editorGutter.background': '#141417',
-      'editorCursor.foreground': '#60A5FA',
-      'editorIndentGuide.background': '#222228',
-      'editorIndentGuide.activeBackground': '#3B82F6',
-      'editorWhitespace.foreground': '#222228',
-      'scrollbarSlider.background': '#22222880',
-      'scrollbarSlider.hoverBackground': '#8A8A9380',
-      'scrollbarSlider.activeBackground': '#3B82F680',
+      'editor.selectionBackground': '#7F011F50',
+      'editor.inactiveSelectionBackground': '#7F011F25',
+      'editorLineNumber.foreground': '#9E8D93',
+      'editorLineNumber.activeForeground': '#F5EBD0',
+      'editorGutter.background': '#21181C',
+      'editorCursor.foreground': '#F5EBD0',
+      'editorIndentGuide.background': '#38252C',
+      'editorIndentGuide.activeBackground': '#7F011F',
+      'editorWhitespace.foreground': '#38252C',
+      'scrollbarSlider.background': '#38252C80',
+      'scrollbarSlider.hoverBackground': '#9E8D9380',
+      'scrollbarSlider.activeBackground': '#7F011F90',
     },
   });
 
-  // Light Theme: Matches --kc-surface (#FFFFFF) and KodeChirp light aesthetics with high-contrast text
+  // Light Theme: Royal Blue (#014BAA) + Slate (#202735) on Clean Surface (#FFFFFF)
   monaco.editor.defineTheme('kodechirp-light', {
     base: 'vs',
     inherit: true,
     rules: [
-      { token: 'comment', foreground: '6E6E73', fontStyle: 'italic' },
-      { token: 'keyword', foreground: '1D4ED8', fontStyle: 'bold' },
-      { token: 'string', foreground: '047857' },
-      { token: 'number', foreground: 'B45309' },
+      { token: 'comment', foreground: '626B78', fontStyle: 'italic' },
+      { token: 'keyword', foreground: '014BAA', fontStyle: 'bold' },
+      { token: 'string', foreground: '059669' },
+      { token: 'number', foreground: 'D97706' },
       { token: 'type', foreground: '7C3AED' },
-      { token: 'function', foreground: '2563EB' },
-      { token: 'variable', foreground: '1A1A1A' },
-      { token: 'delimiter', foreground: '4A4A4D' },
-      { token: 'operator', foreground: '2563EB' },
+      { token: 'function', foreground: '0284C7' },
+      { token: 'variable', foreground: '202735' },
+      { token: 'delimiter', foreground: '495366' },
+      { token: 'operator', foreground: '014BAA' },
     ],
     colors: {
       'editor.background': '#FFFFFF',
-      'editor.foreground': '#1A1A1A',
-      'editor.lineHighlightBackground': '#F5F5F3',
+      'editor.foreground': '#202735',
+      'editor.lineHighlightBackground': '#F8F3F0',
       'editor.lineHighlightBorder': '#00000000',
-      'editor.selectionBackground': '#2563EB25',
-      'editor.inactiveSelectionBackground': '#2563EB12',
-      'editorLineNumber.foreground': '#8E8E93',
-      'editorLineNumber.activeForeground': '#1A1A1A',
+      'editor.selectionBackground': '#014BAA26',
+      'editor.inactiveSelectionBackground': '#014BAA12',
+      'editorLineNumber.foreground': '#8B95A5',
+      'editorLineNumber.activeForeground': '#202735',
       'editorGutter.background': '#FFFFFF',
-      'editorCursor.foreground': '#2563EB',
-      'editorIndentGuide.background': '#E5E5E3',
-      'editorIndentGuide.activeBackground': '#2563EB',
-      'editorWhitespace.foreground': '#E5E5E3',
-      'scrollbarSlider.background': '#E5E5E380',
-      'scrollbarSlider.hoverBackground': '#6E6E7380',
-      'scrollbarSlider.activeBackground': '#2563EB80',
+      'editorCursor.foreground': '#014BAA',
+      'editorIndentGuide.background': '#E8E5E1',
+      'editorIndentGuide.activeBackground': '#014BAA',
+      'editorWhitespace.foreground': '#E8E5E1',
+      'scrollbarSlider.background': '#E8E5E180',
+      'scrollbarSlider.hoverBackground': '#8B95A580',
+      'scrollbarSlider.activeBackground': '#014BAA80',
     },
   });
 }
 
-export const CodeEditor = ({ problemId }) => {
-  const { code, language, setCode, editorPath } = useEditor();
+export const CodeEditor = ({
+  problemId,
+  value,
+  onChange,
+  language: propLanguage,
+  path: propPath,
+  readOnly = false,
+  height = '100%',
+}) => {
+  const editorStore = useEditor();
   const containerRef = useRef(null);
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
+
+  const isControlled = value !== undefined;
+  const activeCode = isControlled ? value : editorStore.code;
+  const activeLanguage = propLanguage || editorStore.language || 'python';
+  const handleCodeChange = onChange || ((val) => editorStore.setCode(val || ''));
+  const ext = { javascript: 'js', python: 'py', c: 'c', cpp: 'cpp', java: 'java' }[activeLanguage] || 'txt';
+  const activePath = propPath || (isControlled ? `editor_${problemId || 'default'}_${activeLanguage}.${ext}` : editorStore.editorPath);
 
   const resolveCurrentTheme = useCallback(() => {
     if (typeof window === 'undefined') return 'kodechirp-dark';
@@ -210,14 +225,14 @@ export const CodeEditor = ({ problemId }) => {
     >
       <Editor
         width="100%"
-        height="100%"
-        language={language}
-        path={editorPath}
-        value={code}
+        height={height}
+        language={activeLanguage}
+        path={activePath}
+        value={activeCode}
         theme={editorTheme}
         beforeMount={handleEditorWillMount}
         onMount={handleEditorDidMount}
-        onChange={(value) => setCode(value || '')}
+        onChange={(value) => handleCodeChange(value || '')}
         options={{
           automaticLayout: false,
           fixedOverflowWidgets: true,
@@ -234,6 +249,7 @@ export const CodeEditor = ({ problemId }) => {
           renderLineHighlight: 'all',
           lineHeight: 1.6,
           tabSize: 4,
+          readOnly: Boolean(readOnly),
         }}
         loading={
           <div className="flex flex-col items-center justify-center h-full w-full bg-[var(--kc-surface)] gap-3">

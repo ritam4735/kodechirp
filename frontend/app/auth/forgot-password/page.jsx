@@ -102,10 +102,10 @@ export default function ForgotPasswordPage() {
                 type="submit"
                 disabled={loading}
                 aria-label={loading ? "Sending reset link..." : "Send reset link"}
-                className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[var(--kc-accent)] hover:opacity-90 focus:outline-none transition-opacity disabled:opacity-50 shadow-xs"
+                className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-md text-[var(--kc-on-primary)] bg-[var(--kc-accent)] hover:opacity-90 focus:outline-none transition-opacity disabled:opacity-50 shadow-xs"
               >
                 {loading ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true"></div>
+                  <div className="w-4 h-4 border-2 border-[var(--kc-on-primary)]/30 border-t-[var(--kc-on-primary)] rounded-full animate-spin" aria-hidden="true"></div>
                 ) : (
                   'Send reset link'
                 )}

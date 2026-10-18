@@ -12,6 +12,7 @@ import { User, Shield, Settings, FileCode2, BarChart3, LogOut, ChevronDown } fro
 const NAV_ITEMS = [
   { label: 'Home', href: '/' },
   { label: 'Questions', href: '/questions' },
+  { label: 'Assessments', href: '/assessments' },
 ];
 
 export const Navbar = () => {
@@ -78,7 +79,7 @@ export const Navbar = () => {
               href={item.href}
               className={`nav-link ${isActive(item.href) ? 'active' : ''} ${item.label === 'Admin' ? 'nav-link-admin' : ''}`}
             >
-              {item.label === 'Admin' && <Shield size={12} className="text-[#3B82F6]" aria-hidden="true" />}
+              {item.label === 'Admin' && <Shield size={12} className="text-[var(--kc-accent-text)]" aria-hidden="true" />}
               {item.label}
             </Link>
           ))}

@@ -9,37 +9,62 @@
   --font-syne: 'Syne', sans-serif;
   --font-jetbrains: 'JetBrains Mono', monospace;
 
-  /* Landing page unified design tokens */
+  /* Landing page unified typography tokens */
   --kc-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --kc-font-code: 'JetBrains Mono', monospace;
 
-  /* Core Palette (Near-black monochrome + restrained blue accent) */
-  --kc-bg: #0C0C0E;
-  --kc-surface: #141417;
-  --kc-surface-subtle: #1A1A1E;
-  --kc-surface-elevated: #222228;
-  --kc-text-primary: #E8E6E3;
-  --kc-text-secondary: #A8A8B2;
-  --kc-text-muted: #8A8A93;
-  --kc-accent: #3B82F6;
-  --kc-accent-hover: #60A5FA;
-  --kc-accent-subtle: rgba(59, 130, 246, 0.12);
-  --kc-border: rgba(255, 255, 255, 0.10);
-  --kc-border-subtle: rgba(255, 255, 255, 0.05);
-  --kc-border-hover: rgba(255, 255, 255, 0.22);
-  --kc-nav-bg: rgba(12, 12, 14, 0.85);
+  /* ─────────────────────────────────────────────────────────────
+     DARK MODE TOKENS (Default) — Wine Red + Light Sand
+     Primary brand color: #7F011F (Wine Red)
+     Primary text / accent: #F5EBD0 (Light Sand)
+     Background: Deep, near-black burgundy-neutral tones (#171114)
+     Surface: Dark charcoal with subtle warm undertones (#21181C)
+     ───────────────────────────────────────────────────────────── */
+  --kc-bg: #171114;
+  --kc-surface: #21181C;
+  --kc-surface-subtle: #281C21;
+  --kc-surface-elevated: #2B1E23;
+  --kc-text-primary: #F5EBD0;
+  --kc-text-secondary: #DFD3B8;
+  --kc-text-muted: #C7B8BB;
+  --kc-accent: #7F011F;
+  --kc-accent-hover: #9E0D31;
+  --kc-accent-active: #5E0016;
+  --kc-accent-subtle: rgba(127, 1, 31, 0.22);
+  --kc-accent-glow: rgba(127, 1, 31, 0.35);
+  --kc-accent-border: rgba(163, 17, 56, 0.35);
+  --kc-accent-text: #F5A3B3;
+  --kc-on-primary: #F5EBD0;
+  --kc-border: #493139;
+  --kc-border-subtle: rgba(245, 235, 208, 0.08);
+  --kc-border-hover: #6E434F;
+  --kc-focus-ring: #A31138;
+  --kc-nav-bg: rgba(23, 17, 20, 0.88);
   --kc-nav-height: 64px;
 
-  /* Semantic Status Tokens */
+  /* Semantic Status Tokens (Clearly distinct from Wine Red brand color) */
   --kc-success: #10B981;
   --kc-success-subtle: rgba(16, 185, 129, 0.12);
   --kc-success-border: rgba(16, 185, 129, 0.25);
   --kc-warning: #F59E0B;
   --kc-warning-subtle: rgba(245, 158, 11, 0.12);
   --kc-warning-border: rgba(245, 158, 11, 0.25);
-  --kc-error: #EF4444;
-  --kc-error-subtle: rgba(239, 68, 68, 0.12);
-  --kc-error-border: rgba(239, 68, 68, 0.25);
+  --kc-error: #F43F5E;
+  --kc-error-subtle: rgba(244, 63, 94, 0.12);
+  --kc-error-border: rgba(244, 63, 94, 0.25);
+
+  /* Centralized Design Tokens (Semantic mapping) */
+  --color-primary: var(--kc-accent);
+  --color-on-primary: var(--kc-on-primary);
+  --color-background: var(--kc-bg);
+  --color-surface: var(--kc-surface);
+  --color-surface-elevated: var(--kc-surface-elevated);
+  --color-text: var(--kc-text-primary);
+  --color-text-muted: var(--kc-text-muted);
+  --color-border: var(--kc-border);
+  --color-border-subtle: var(--kc-border-subtle);
+  --color-primary-hover: var(--kc-accent-hover);
+  --color-focus: var(--kc-focus-ring);
 
   /* Mapped aliases for application consistency */
   --bg-primary: var(--kc-bg);
@@ -56,11 +81,11 @@
   --text-muted: var(--kc-text-muted);
 
   --accent-green: var(--kc-success);
-  --accent-blue: var(--kc-accent);
+  --accent-blue: #38BDF8;
   --accent-orange: #F97316;
   --accent-red: var(--kc-error);
   --accent-yellow: var(--kc-warning);
-  --accent-purple: #8B5CF6;
+  --accent-purple: #C084FC;
 
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -69,31 +94,56 @@
 }
 
 [data-theme="light"] {
-  --kc-bg: #FAFAF9;
+  /* ─────────────────────────────────────────────────────────────
+     LIGHT MODE TOKENS — Royal Blue + Light Cream
+     Primary brand color: #014BAA (Royal Blue)
+     Primary text / background: #F8F3F0 (Light Cream)
+     Surface: White or subtly differentiated warm cream (#FFFFFF, #FFFDFC)
+     Borders: Soft warm grey or muted blue-grey (#DEDDE0)
+     ───────────────────────────────────────────────────────────── */
+  --kc-bg: #F8F3F0;
   --kc-surface: #FFFFFF;
-  --kc-surface-subtle: #F2F2F0;
-  --kc-surface-elevated: #E5E5E3;
-  --kc-text-primary: #1A1A1A;
-  --kc-text-secondary: #4A4A4D;
-  --kc-text-muted: #6E6E73;
-  --kc-accent: #2563EB;
-  --kc-accent-hover: #1D4ED8;
-  --kc-accent-subtle: rgba(37, 99, 235, 0.10);
-  --kc-border: rgba(0, 0, 0, 0.12);
-  --kc-border-subtle: rgba(0, 0, 0, 0.06);
-  --kc-border-hover: rgba(0, 0, 0, 0.24);
-  --kc-nav-bg: rgba(250, 250, 249, 0.88);
+  --kc-surface-subtle: #F1EBE6;
+  --kc-surface-elevated: #FFFDFC;
+  --kc-text-primary: #202735;
+  --kc-text-secondary: #495366;
+  --kc-text-muted: #626B78;
+  --kc-accent: #014BAA;
+  --kc-accent-hover: #013C8A;
+  --kc-accent-active: #002D66;
+  --kc-accent-subtle: rgba(1, 75, 170, 0.08);
+  --kc-accent-glow: rgba(1, 75, 170, 0.25);
+  --kc-accent-border: rgba(1, 75, 170, 0.25);
+  --kc-accent-text: #014BAA;
+  --kc-on-primary: #FFFFFF;
+  --kc-border: #DEDDE0;
+  --kc-border-subtle: #ECEBEA;
+  --kc-border-hover: #BFC5D2;
+  --kc-focus-ring: #014BAA;
+  --kc-nav-bg: rgba(248, 243, 240, 0.88);
   --kc-nav-height: 64px;
 
   --kc-success: #059669;
   --kc-success-subtle: rgba(5, 150, 105, 0.10);
   --kc-success-border: rgba(5, 150, 105, 0.25);
-  --kc-warning: #B45309;
-  --kc-warning-subtle: rgba(180, 83, 9, 0.10);
-  --kc-warning-border: rgba(180, 83, 9, 0.25);
+  --kc-warning: #D97706;
+  --kc-warning-subtle: rgba(217, 119, 6, 0.10);
+  --kc-warning-border: rgba(217, 119, 6, 0.25);
   --kc-error: #DC2626;
   --kc-error-subtle: rgba(220, 38, 38, 0.10);
   --kc-error-border: rgba(220, 38, 38, 0.25);
+
+  --color-primary: var(--kc-accent);
+  --color-on-primary: var(--kc-on-primary);
+  --color-background: var(--kc-bg);
+  --color-surface: var(--kc-surface);
+  --color-surface-elevated: var(--kc-surface-elevated);
+  --color-text: var(--kc-text-primary);
+  --color-text-muted: var(--kc-text-muted);
+  --color-border: var(--kc-border);
+  --color-border-subtle: var(--kc-border-subtle);
+  --color-primary-hover: var(--kc-accent-hover);
+  --color-focus: var(--kc-focus-ring);
 
   --bg-primary: var(--kc-bg);
   --bg-secondary: var(--kc-surface);
@@ -107,23 +157,36 @@
   --text-primary: var(--kc-text-primary);
   --text-secondary: var(--kc-text-secondary);
   --text-muted: var(--kc-text-muted);
+
+  --accent-green: var(--kc-success);
+  --accent-blue: var(--kc-accent);
+  --accent-orange: #EA580C;
+  --accent-red: var(--kc-error);
+  --accent-yellow: var(--kc-warning);
+  --accent-purple: #7C3AED;
 }
 
 [data-theme="dark"] {
-  --kc-bg: #0C0C0E;
-  --kc-surface: #141417;
-  --kc-surface-subtle: #1A1A1E;
-  --kc-surface-elevated: #222228;
-  --kc-text-primary: #E8E6E3;
-  --kc-text-secondary: #A8A8B2;
-  --kc-text-muted: #8A8A93;
-  --kc-accent: #3B82F6;
-  --kc-accent-hover: #60A5FA;
-  --kc-accent-subtle: rgba(59, 130, 246, 0.12);
-  --kc-border: rgba(255, 255, 255, 0.10);
-  --kc-border-subtle: rgba(255, 255, 255, 0.05);
-  --kc-border-hover: rgba(255, 255, 255, 0.22);
-  --kc-nav-bg: rgba(12, 12, 14, 0.85);
+  --kc-bg: #171114;
+  --kc-surface: #21181C;
+  --kc-surface-subtle: #281C21;
+  --kc-surface-elevated: #2B1E23;
+  --kc-text-primary: #F5EBD0;
+  --kc-text-secondary: #DFD3B8;
+  --kc-text-muted: #C7B8BB;
+  --kc-accent: #7F011F;
+  --kc-accent-hover: #9E0D31;
+  --kc-accent-active: #5E0016;
+  --kc-accent-subtle: rgba(127, 1, 31, 0.22);
+  --kc-accent-glow: rgba(127, 1, 31, 0.35);
+  --kc-accent-border: rgba(163, 17, 56, 0.35);
+  --kc-accent-text: #F5A3B3;
+  --kc-on-primary: #F5EBD0;
+  --kc-border: #493139;
+  --kc-border-subtle: rgba(245, 235, 208, 0.08);
+  --kc-border-hover: #6E434F;
+  --kc-focus-ring: #A31138;
+  --kc-nav-bg: rgba(23, 17, 20, 0.88);
   --kc-nav-height: 64px;
 
   --kc-success: #10B981;
@@ -132,9 +195,21 @@
   --kc-warning: #F59E0B;
   --kc-warning-subtle: rgba(245, 158, 11, 0.12);
   --kc-warning-border: rgba(245, 158, 11, 0.25);
-  --kc-error: #EF4444;
-  --kc-error-subtle: rgba(239, 68, 68, 0.12);
-  --kc-error-border: rgba(239, 68, 68, 0.25);
+  --kc-error: #F43F5E;
+  --kc-error-subtle: rgba(244, 63, 94, 0.12);
+  --kc-error-border: rgba(244, 63, 94, 0.25);
+
+  --color-primary: var(--kc-accent);
+  --color-on-primary: var(--kc-on-primary);
+  --color-background: var(--kc-bg);
+  --color-surface: var(--kc-surface);
+  --color-surface-elevated: var(--kc-surface-elevated);
+  --color-text: var(--kc-text-primary);
+  --color-text-muted: var(--kc-text-muted);
+  --color-border: var(--kc-border);
+  --color-border-subtle: var(--kc-border-subtle);
+  --color-primary-hover: var(--kc-accent-hover);
+  --color-focus: var(--kc-focus-ring);
 
   --bg-primary: var(--kc-bg);
   --bg-secondary: var(--kc-surface);
@@ -152,6 +227,11 @@
 
 * {
   box-sizing: border-box;
+}
+
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
 }
 
 html {
@@ -194,7 +274,7 @@ code {
   background: var(--kc-surface-subtle);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
-  color: var(--kc-accent);
+  color: var(--kc-accent-text);
   border: 1px solid var(--kc-border-subtle);
 }
 
@@ -240,7 +320,7 @@ pre code {
 
 .prose-dark code {
   background: var(--kc-surface-subtle);
-  color: var(--kc-accent);
+  color: var(--kc-accent-text);
   border-radius: 4px;
   padding: 2px 6px;
   border: 1px solid var(--kc-border-subtle);
@@ -270,7 +350,13 @@ select option {
 /* Tab styles */
 .tab-active {
   border-bottom: 2px solid var(--kc-accent);
-  color: var(--kc-accent);
+  color: var(--kc-accent-text);
+}
+
+/* Keyboard focus indicators (WCAG AA accessible) */
+:focus-visible {
+  outline: 2px solid var(--kc-focus-ring);
+  outline-offset: 2px;
 }
 
 /* Status badge colors - theme adaptive, WCAG AA compliant */

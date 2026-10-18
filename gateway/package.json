@@ -9,7 +9,9 @@
     "test": "jest --coverage",
     "lint": "eslint src/",
     "generate-missing-testcases": "node src/scripts/generate-missing-testcases.js",
-    "generate-missing-testcases:dry": "node src/scripts/generate-missing-testcases.js --dry-run"
+    "generate-missing-testcases:dry": "node src/scripts/generate-missing-testcases.js --dry-run",
+    "import:aptitude": "node src/scripts/import_aptitude.js",
+    "import:aptitude:dry": "node src/scripts/import_aptitude.js --dry-run"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

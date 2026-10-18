@@ -62,6 +62,7 @@ app.use('/api/submissions', require('./routes/submissions'));
 app.use('/api/contests',    require('./routes/contests'));
 app.use('/api/leaderboard', require('./routes/leaderboard'));
 app.use('/api/chirps',      require('./routes/chirps'));
+app.use('/api/assessments', require('./routes/assessments'));
 app.use('/api/admin',       require('./routes/admin'));
 app.use('/health',          require('./routes/health'));
 app.use('/monitoring',      require('./routes/monitoring'));

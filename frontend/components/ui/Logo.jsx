@@ -66,9 +66,9 @@ export function Logo({
           className={`font-bold font-sans tracking-tight text-[var(--kc-text-primary)] leading-none inline-flex items-center ${sizeConfig.textClass} ${textClassName}`}
         >
           <span>Kode</span>
-          <span className="text-[var(--kc-accent)]">Chirp</span>
+          <span className="text-[var(--kc-accent-text)]">Chirp</span>
           {badge && (
-            <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider bg-[var(--kc-accent-subtle)] text-[var(--kc-accent-hover)] border border-[rgba(59,130,246,0.25)]">
+            <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider bg-[var(--kc-accent-subtle)] text-[var(--kc-accent-text)] border border-[var(--kc-accent-border)]">
               {badge}
             </span>
           )}
@@ -81,7 +81,7 @@ export function Logo({
     return (
       <Link
         href={href || '/'}
-        className={`inline-flex items-center no-underline hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kc-accent)] rounded ${className}`}
+        className={`inline-flex items-center no-underline hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kc-focus-ring)] rounded ${className}`}
         aria-label={ariaLabel}
       >
         {innerContent}

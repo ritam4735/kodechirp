@@ -270,9 +270,9 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-[var(--kc-accent)] hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-md transition-opacity shadow-xs mt-3 flex items-center justify-center gap-2 text-sm"
+            className="w-full bg-[var(--kc-accent)] hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed text-[var(--kc-on-primary)] font-medium py-2.5 rounded-md transition-opacity shadow-xs mt-3 flex items-center justify-center gap-2 text-sm"
           >
-            {submitting && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+            {submitting && <div className="w-4 h-4 border-2 border-[var(--kc-on-primary)] border-t-transparent rounded-full animate-spin" />}
             <span>
               {submitting
                 ? isLogin

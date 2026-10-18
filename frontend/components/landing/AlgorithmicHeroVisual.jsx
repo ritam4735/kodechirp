@@ -221,11 +221,11 @@ function GraphVisual({ step }) {
       <svg viewBox="0 0 400 250" className="kc-graph-svg" aria-label="Graph shortest path network">
         <defs>
           <linearGradient id="edgeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#60A5FA" stopOpacity="0.8" />
+            <stop offset="0%" stopColor="var(--kc-accent)" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="var(--kc-accent-hover)" stopOpacity="0.8" />
           </linearGradient>
           <filter id="nodeGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#3B82F6" floodOpacity="0.6" />
+            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="var(--kc-accent)" floodOpacity="0.6" />
           </filter>
         </defs>
 
@@ -249,7 +249,7 @@ function GraphVisual({ step }) {
               />
               {/* Animated pulse dot along the active edge */}
               {isTraversed && (
-                <circle r="3" fill="#60A5FA" className="kc-edge-pulse-dot">
+                <circle r="3" fill="var(--kc-accent-text)" className="kc-edge-pulse-dot">
                   <animateMotion
                     path={`M ${u.x} ${u.y} L ${v.x} ${v.y}`}
                     dur="1.4s"

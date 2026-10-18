@@ -272,12 +272,13 @@
 
 .admin-btn-primary {
   background: var(--kc-accent);
-  color: #FFFFFF;
+  color: var(--kc-on-primary);
 }
 
 .admin-btn-primary:hover {
   background: var(--kc-accent-hover);
-  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.25);
+  color: var(--kc-on-primary);
+  box-shadow: 0 2px 10px var(--kc-accent-glow);
 }
 
 .admin-btn-success {
@@ -423,7 +424,7 @@
 .badge-published { background: rgba(16, 185, 129, 0.1); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.25); }
 .badge-draft { background: rgba(255, 255, 255, 0.04); color: var(--kc-text-muted); border: 1px solid var(--kc-border); }
 
-.badge-admin { background: var(--kc-accent-subtle); color: var(--kc-accent-hover); border: 1px solid rgba(59, 130, 246, 0.25); }
+.badge-admin { background: var(--kc-accent-subtle); color: var(--kc-accent-text); border: 1px solid var(--kc-accent-border); }
 .badge-user { background: rgba(255, 255, 255, 0.04); color: var(--kc-text-secondary); border: 1px solid var(--kc-border); }
 .badge-moderator { background: rgba(245, 158, 11, 0.1); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.25); }
 
@@ -759,8 +760,8 @@
   align-items: center;
   gap: 4px;
   background: var(--kc-accent-subtle);
-  border: 1px solid rgba(59, 130, 246, 0.25);
-  color: var(--kc-accent-hover);
+  border: 1px solid var(--kc-accent-border);
+  color: var(--kc-accent-text);
   padding: 1px 6px;
   border-radius: 4px;
   font-family: var(--kc-font-code, monospace);
@@ -843,12 +844,12 @@
 /* ── Review Status Badges ───────────────────── */
 .badge-pending { background: rgba(255, 255, 255, 0.04); color: var(--kc-text-muted); border: 1px solid var(--kc-border-subtle); }
 .badge-imported { background: rgba(255, 255, 255, 0.04); color: var(--kc-text-muted); border: 1px solid var(--kc-border-subtle); }
-.badge-parsed { background: var(--kc-accent-subtle); color: var(--kc-accent); border: 1px solid rgba(59, 130, 246, 0.25); }
+.badge-parsed { background: var(--kc-accent-subtle); color: var(--kc-accent-text); border: 1px solid var(--kc-accent-border); }
 .badge-ai_normalized { background: rgba(139, 92, 246, 0.1); color: #8B5CF6; border: 1px solid rgba(139, 92, 246, 0.25); }
 .badge-review_required { background: rgba(245, 158, 11, 0.1); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.25); }
 .badge-approved { background: rgba(16, 185, 129, 0.1); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.25); }
-.badge-ready { background: var(--kc-accent-subtle); color: var(--kc-accent); border: 1px solid rgba(59, 130, 246, 0.25); }
-.badge-ready_for_publication { background: var(--kc-accent-subtle); color: var(--kc-accent); border: 1px solid rgba(59, 130, 246, 0.25); }
+.badge-ready { background: var(--kc-accent-subtle); color: var(--kc-accent-text); border: 1px solid var(--kc-accent-border); }
+.badge-ready_for_publication { background: var(--kc-accent-subtle); color: var(--kc-accent-text); border: 1px solid var(--kc-accent-border); }
 .badge-review { background: rgba(245, 158, 11, 0.1); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.25); }
 .badge-archived { background: rgba(255, 255, 255, 0.04); color: var(--kc-text-muted); border: 1px solid var(--kc-border-subtle); }
 
@@ -1312,47 +1313,47 @@
 }
 
 [data-theme="light"] .admin-stat-card {
-  background: #FFFFFF;
+  background: var(--kc-surface);
   border-color: var(--kc-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(1, 75, 170, 0.05);
 }
 
 [data-theme="light"] .admin-stat-card:hover {
-  background: #FAFAF9;
+  background: var(--kc-surface-elevated);
   border-color: var(--kc-border-hover);
 }
 
 [data-theme="light"] .admin-section-card {
-  background: #FFFFFF;
+  background: var(--kc-surface);
   border-color: var(--kc-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(1, 75, 170, 0.05);
 }
 
 [data-theme="light"] .admin-table-wrap {
-  background: #FFFFFF;
+  background: var(--kc-surface);
   border-color: var(--kc-border);
 }
 
 [data-theme="light"] .admin-table thead {
-  background: #F2F2F0;
+  background: var(--kc-surface-subtle);
 }
 
 [data-theme="light"] .admin-table tr:hover td {
-  background: #F7F7F6;
+  background: #FAF6F3;
 }
 
 [data-theme="light"] .admin-modal {
-  background: #FFFFFF;
+  background: var(--kc-surface);
   border-color: var(--kc-border-hover);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 20px 40px rgba(1, 75, 170, 0.12);
 }
 
 [data-theme="light"] .norm-stat-chip {
-  background: #FFFFFF;
+  background: var(--kc-surface);
   border-color: var(--kc-border);
 }
 
 [data-theme="light"] .norm-stat-chip:hover,
 [data-theme="light"] .norm-stat-chip.active {
-  background: #F2F2F0;
+  background: var(--kc-surface-subtle);
 }

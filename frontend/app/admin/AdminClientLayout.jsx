@@ -12,13 +12,19 @@ import {
   SlidersHorizontal, 
   Users, 
   CheckSquare,
-  ShieldAlert
+  ShieldAlert,
+  HelpCircle,
+  Award
 } from 'lucide-react';
 
 const ADMIN_NAV = [
   { section: 'Overview', items: [
     { label: 'Dashboard',   href: '/admin',              icon: LayoutDashboard },
     { label: 'Analytics',   href: '/admin/analytics',    icon: BarChart3 },
+  ]},
+  { section: 'Assessment Engine', items: [
+    { label: 'Question Bank', href: '/admin/question-bank', icon: HelpCircle },
+    { label: 'Assessments',   href: '/admin/assessments',   icon: Award },
   ]},
   { section: 'Content', items: [
     { label: 'Problems',    href: '/admin/problems',     icon: FileCode2 },
@@ -94,9 +100,9 @@ export default function AdminClientLayout({ children }) {
         ))}
       </aside>
 
-      <main className="admin-main">
+      <div className="admin-main">
         {children}
-      </main>
+      </div>
     </div>
   );
 }

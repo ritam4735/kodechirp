@@ -17,7 +17,7 @@ export default function TermsPage() {
       content: (
         <div className="space-y-3 text-sm text-[#8b949e] leading-relaxed">
           <p>
-            By accessing or using <strong className="text-white">KodeChirp</strong> (&ldquo;the platform&rdquo;), you agree to be bound by these Terms and Conditions. If you disagree with any part of these terms, you should discontinue using the platform.
+            By accessing or using <strong className="text-[var(--kc-text-primary)]">KodeChirp</strong> (&ldquo;the platform&rdquo;), you agree to be bound by these Terms and Conditions. If you disagree with any part of these terms, you should discontinue using the platform.
           </p>
           <p>
             KodeChirp is an open-source, engineering-first online judge and learning platform built for algorithmic practice, technical interview preparation, and peer collaboration.
@@ -110,7 +110,7 @@ export default function TermsPage() {
         <div className="mb-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-[var(--kc-text-muted)] hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] transition-colors"
           >
             <ArrowLeft size={13} />
             <span>Back to Home</span>
@@ -125,7 +125,7 @@ export default function TermsPage() {
             </div>
             <span className="text-[11px] font-bold text-[var(--kc-accent)] uppercase tracking-wider">Legal</span>
           </div>
-          <h1 className="text-3xl font-display font-bold text-white mb-2">
+          <h1 className="text-3xl font-display font-bold text-[var(--kc-text-primary)] mb-2">
             Terms & Conditions
           </h1>
           <p className="text-sm text-[var(--kc-text-muted)]">
@@ -144,7 +144,7 @@ export default function TermsPage() {
               >
                 <div className="flex items-center gap-2.5 mb-3">
                   <Icon size={16} className="text-[var(--kc-accent)] shrink-0" />
-                  <h2 className="text-base font-display font-semibold text-white">
+                  <h2 className="text-base font-display font-semibold text-[var(--kc-text-primary)]">
                     {section.title}
                   </h2>
                 </div>
@@ -157,7 +157,7 @@ export default function TermsPage() {
           <div className="pt-6 border-t border-[var(--kc-border)] bg-[var(--kc-surface-subtle)]/50 -mx-6 sm:-mx-8 -mb-6 sm:-mb-8 p-6 sm:p-8 rounded-b-lg">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-sm font-medium text-white">Need clarification or support?</h3>
+                <h3 className="text-sm font-medium text-[var(--kc-text-primary)]">Need clarification or support?</h3>
                 <p className="text-xs text-[var(--kc-text-muted)] mt-0.5">
                   Have questions about acceptable use or our sandbox environment?
                 </p>
@@ -165,13 +165,13 @@ export default function TermsPage() {
               <div className="flex items-center gap-2.5">
                 <Link
                   href="/contact"
-                  className="px-3.5 py-2 text-xs font-medium text-white bg-[var(--kc-accent)] hover:opacity-90 rounded-md transition-opacity"
+                  className="px-3.5 py-2 text-xs font-medium text-[var(--kc-on-primary)] bg-[var(--kc-accent)] hover:opacity-90 rounded-md transition-opacity"
                 >
                   Contact Support
                 </Link>
                 <Link
                   href="/privacy"
-                  className="px-3.5 py-2 text-xs font-medium text-[var(--kc-text-muted)] hover:text-white bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] border border-[var(--kc-border)] rounded-md transition-colors"
+                  className="px-3.5 py-2 text-xs font-medium text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] bg-[var(--kc-surface-subtle)] hover:bg-[var(--kc-surface-hover)] border border-[var(--kc-border)] rounded-md transition-colors"
                 >
                   Privacy Policy
                 </Link>

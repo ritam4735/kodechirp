@@ -5,7 +5,7 @@ export const Sidebar = () => {
         <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--kc-text-muted)]">Navigation</span>
         <ul className="mt-4 space-y-1">
           <li>
-            <a href="/questions" className="block px-3 py-2 rounded-md text-sm text-white hover:bg-[var(--kc-surface-subtle)] hover:text-[var(--kc-accent)] transition-colors">Questions</a>
+            <a href="/questions" className="block px-3 py-2 rounded-md text-sm text-[var(--kc-text-primary)] hover:bg-[var(--kc-surface-subtle)] hover:text-[var(--kc-accent-text)] transition-colors">Questions</a>
           </li>
           <li>
             <span className="block px-3 py-2 rounded-md text-sm text-[var(--kc-text-muted)] opacity-50 cursor-not-allowed">Battles (Coming Soon)</span>

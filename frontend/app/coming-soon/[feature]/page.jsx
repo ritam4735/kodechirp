@@ -84,7 +84,7 @@ export default function ComingSoonPage({ params }) {
             <span>Coming Soon</span>
           </div>
 
-          <h1 className="text-3xl font-display font-bold text-white mb-2">
+          <h1 className="text-3xl font-display font-bold text-[var(--kc-text-primary)] mb-2">
             {title}
           </h1>
 
@@ -103,14 +103,14 @@ export default function ComingSoonPage({ params }) {
           <div className="flex gap-2.5 justify-center flex-wrap">
             <Link
               href="/"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-md text-xs sm:text-sm font-medium text-white bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-md text-xs sm:text-sm font-medium text-[var(--kc-text-primary)] bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] hover:bg-[var(--kc-surface-hover)] transition-colors"
             >
               <Home size={14} />
               <span>Go Home</span>
             </Link>
             <Link
               href="/questions"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-md text-xs sm:text-sm font-medium text-white bg-[var(--kc-accent)] hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-md text-xs sm:text-sm font-medium text-[var(--kc-on-primary)] bg-[var(--kc-accent)] hover:opacity-90 transition-opacity"
             >
               <span>Explore Questions</span>
               <ChevronRight size={14} />

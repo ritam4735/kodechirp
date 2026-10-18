@@ -27,6 +27,12 @@ module.exports = {
           accent: 'var(--kc-accent)',
           'accent-hover': 'var(--kc-accent-hover)',
           'accent-subtle': 'var(--kc-accent-subtle)',
+          'accent-glow': 'var(--kc-accent-glow)',
+          'accent-border': 'var(--kc-accent-border)',
+          'accent-text': 'var(--kc-accent-text)',
+          'on-primary': 'var(--kc-on-primary)',
+          primary: 'var(--kc-accent)',
+          focus: 'var(--kc-focus-ring)',
         },
         // KodeChirp custom palette
         chirp: {

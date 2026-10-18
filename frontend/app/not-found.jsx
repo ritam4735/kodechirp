@@ -70,7 +70,7 @@ export default function NotFound() {
           transition={{ duration: 0.4, delay: 0.1, ease: 'easeOut' }}
           className="relative mb-3"
         >
-          <div className="text-7xl sm:text-8xl md:text-9xl font-display font-bold tracking-tight text-white select-none">
+          <div className="text-7xl sm:text-8xl md:text-9xl font-display font-bold tracking-tight text-[var(--kc-text-primary)] select-none">
             404
           </div>
         </motion.div>
@@ -82,7 +82,7 @@ export default function NotFound() {
           transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' }}
           className="space-y-2 mb-8 max-w-lg"
         >
-          <h1 className="text-2xl sm:text-3xl font-display font-semibold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-display font-semibold text-[var(--kc-text-primary)] tracking-tight">
             Lost in Algorithmic Space
           </h1>
           <p className="text-sm sm:text-base text-[var(--kc-text-muted)] leading-relaxed">
@@ -103,15 +103,15 @@ export default function NotFound() {
               <span className="text-[11px] font-mono text-[var(--kc-text-muted)]">topology_resolver.ts</span>
             </div>
             <div className="flex items-center gap-1.5" aria-hidden="true">
-              <span className="w-2 h-2 rounded-full bg-white/20" />
-              <span className="w-2 h-2 rounded-full bg-white/20" />
-              <span className="w-2 h-2 rounded-full bg-white/20" />
+              <span className="w-2 h-2 rounded-full bg-[var(--kc-border)]" />
+              <span className="w-2 h-2 rounded-full bg-[var(--kc-border)]" />
+              <span className="w-2 h-2 rounded-full bg-[var(--kc-border)]" />
             </div>
           </div>
           <pre className="text-[12px] font-mono leading-relaxed text-[var(--kc-text)] overflow-x-auto">
             <code>
               <span className="text-[var(--kc-text-muted)]">{'// Invariant violation: AST traversal failed'}</span>{'\n'}
-              <span className="text-rose-400">const</span> <span className="text-[var(--kc-accent)]">target</span> = router.<span className="text-white">resolve</span>(location.pathname);{'\n'}
+              <span className="text-rose-400">const</span> <span className="text-[var(--kc-accent)]">target</span> = router.<span className="text-[var(--kc-text-primary)]">resolve</span>(location.pathname);{'\n'}
               <span className="text-rose-400">if</span> (!target) {'{'}{'\n'}
               {'  '}<span className="text-rose-400">return</span> {'{'} status: <span className="text-[var(--kc-accent)]">404</span>, verdict: <span className="text-emerald-400">&apos;PATH_UNREACHABLE&apos;</span> {'}'};{'\n'}
               {'}'}
@@ -128,7 +128,7 @@ export default function NotFound() {
         >
           <Link
             href="/questions"
-            className="flex-1 min-w-[150px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-[var(--kc-accent)] hover:opacity-90 text-white text-sm font-medium transition-opacity"
+            className="flex-1 min-w-[150px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-[var(--kc-accent)] hover:opacity-90 text-[var(--kc-on-primary)] text-sm font-medium transition-opacity"
           >
             <Code2 size={15} aria-hidden="true" />
             <span>Explore Questions</span>
@@ -137,7 +137,7 @@ export default function NotFound() {
 
           <Link
             href="/"
-            className="flex-1 min-w-[130px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md border border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] text-white text-sm font-medium transition-colors"
+            className="flex-1 min-w-[130px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md border border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] hover:bg-[var(--kc-surface-hover)] text-[var(--kc-text-primary)] text-sm font-medium transition-colors"
           >
             <Home size={14} aria-hidden="true" />
             <span>Return Home</span>
@@ -146,7 +146,7 @@ export default function NotFound() {
           <button
             type="button"
             onClick={handleGoBack}
-            className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-md text-[var(--kc-text-muted)] hover:text-white text-sm font-medium transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-md text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] text-sm font-medium transition-colors"
             title="Navigate to previous page"
             aria-label="Go back to previous page"
           >
@@ -174,7 +174,7 @@ export default function NotFound() {
                   href={item.href}
                   className="group flex flex-col items-start p-3 rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] hover:border-[var(--kc-accent)]/50 text-left transition-colors"
                 >
-                  <div className="flex items-center gap-2 text-xs font-medium text-white group-hover:text-[var(--kc-accent)] transition-colors mb-0.5">
+                  <div className="flex items-center gap-2 text-xs font-medium text-[var(--kc-text-primary)] group-hover:text-[var(--kc-accent)] transition-colors mb-0.5">
                     <Icon size={13} className="text-[var(--kc-accent)]" aria-hidden="true" />
                     <span>{item.label}</span>
                   </div>

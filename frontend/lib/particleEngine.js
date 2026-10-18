@@ -222,15 +222,15 @@ export const FORMATION_NAMES = ['unsolved', 'think', 'code', 'submit', 'improve'
 // Crisp, unmistakably visible points without gaudy glow or neon
 const THEMES = {
   light: {
-    particle:       { r: 35,  g: 38,  b: 44 },     // refined deep charcoal
-    particleAlpha:  0.58,                          // clearly visible on warm white
-    accent:         { r: 37,  g: 99,  b: 235 },    // KodeChirp royal blue
+    particle:       { r: 32,  g: 39,  b: 53 },     // deep slate (#202735)
+    particleAlpha:  0.55,                          // clearly visible on light cream
+    accent:         { r: 1,   g: 75,  b: 170 },    // Royal blue (#014BAA)
     accentAlpha:    0.85,
   },
   dark: {
-    particle:       { r: 230, g: 232, b: 236 },    // refined off-white
-    particleAlpha:  0.52,                          // clearly visible on near-black
-    accent:         { r: 96,  g: 165, b: 250 },    // luminous cyan-blue
+    particle:       { r: 245, g: 235, b: 208 },    // Light sand (#F5EBD0)
+    particleAlpha:  0.52,                          // clearly visible on burgundy black
+    accent:         { r: 226, g: 82,  b: 114 },    // wine rose accent (#E25272)
     accentAlpha:    0.85,
   },
 };

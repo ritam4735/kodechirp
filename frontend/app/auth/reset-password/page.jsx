@@ -66,14 +66,14 @@ function ResetPasswordForm() {
           <CheckCircle size={24} className="text-emerald-400" />
         </div>
         <div>
-          <p className="text-white font-medium text-base">Password Reset Successfully</p>
+          <p className="text-[var(--kc-text-primary)] font-medium text-base">Password Reset Successfully</p>
           <p className="text-[var(--kc-text-muted)] text-sm mt-1.5">
             Your password has been securely updated. You can now sign in with your new password.
           </p>
         </div>
         <button 
           onClick={() => router.push('/auth')}
-          className="mt-4 w-full py-2.5 px-4 text-sm font-medium rounded-md text-white bg-[var(--kc-accent)] hover:opacity-90 transition-opacity"
+          className="mt-4 w-full py-2.5 px-4 text-sm font-medium rounded-md text-[var(--kc-on-primary)] bg-[var(--kc-accent)] hover:opacity-90 transition-opacity"
         >
           Go to Sign In
         </button>
@@ -113,7 +113,7 @@ function ResetPasswordForm() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="appearance-none rounded-md relative block w-full px-3 py-2.5 pl-9 border border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] text-white placeholder-[var(--kc-text-muted)] focus:outline-none focus:border-[var(--kc-accent)] sm:text-sm transition-colors"
+            className="appearance-none rounded-md relative block w-full px-3 py-2.5 pl-9 border border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] text-[var(--kc-text-primary)] placeholder-[var(--kc-text-muted)] focus:outline-none focus:border-[var(--kc-accent)] sm:text-sm transition-colors"
             placeholder="New password"
           />
         </div>
@@ -124,10 +124,10 @@ function ResetPasswordForm() {
         <button
           type="submit"
           disabled={loading}
-          className="group relative w-full flex justify-center py-2.5 px-4 text-sm font-medium rounded-md text-white bg-[var(--kc-accent)] hover:opacity-90 focus:outline-none transition-opacity disabled:opacity-50"
+          className="group relative w-full flex justify-center py-2.5 px-4 text-sm font-medium rounded-md text-[var(--kc-on-primary)] bg-[var(--kc-accent)] hover:opacity-90 focus:outline-none transition-opacity disabled:opacity-50"
         >
           {loading ? (
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            <div className="w-4 h-4 border-2 border-[var(--kc-on-primary)]/30 border-t-[var(--kc-on-primary)] rounded-full animate-spin"></div>
           ) : (
             'Reset Password'
           )}
@@ -135,7 +135,7 @@ function ResetPasswordForm() {
       </div>
       
       <div className="text-center">
-        <Link href="/auth" className="inline-flex items-center justify-center gap-1.5 text-[var(--kc-text-muted)] hover:text-white transition-colors text-xs font-medium">
+        <Link href="/auth" className="inline-flex items-center justify-center gap-1.5 text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] transition-colors text-xs font-medium">
           <ArrowLeft size={14} /> Back to Sign In
         </Link>
       </div>
@@ -155,7 +155,7 @@ export default function ResetPasswordPage() {
           <Logo asLink href="/" size="md" variant="full" ariaLabel="KodeChirp Home" />
         </div>
         <div>
-          <h2 className="text-center text-2xl font-display font-semibold text-white">
+          <h2 className="text-center text-2xl font-display font-semibold text-[var(--kc-text-primary)]">
             Set new password
           </h2>
           <p className="text-center text-xs text-[var(--kc-text-muted)] mt-1">

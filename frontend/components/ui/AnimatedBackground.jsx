@@ -22,7 +22,7 @@ export function AnimatedBackground() {
       <div 
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] rounded-full blur-[160px] opacity-40 pointer-events-none"
         style={{
-          background: 'radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, var(--kc-accent-subtle) 0%, transparent 70%)',
         }}
       />
     </div>

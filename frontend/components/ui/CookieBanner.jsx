@@ -55,13 +55,13 @@ export function CookieBanner() {
           aria-label="Cookie preferences"
           className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-md z-50 pointer-events-auto"
         >
-          <div className="bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg p-5 shadow-xl text-white relative">
+          <div className="bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg p-5 shadow-xl text-[var(--kc-text-primary)] relative">
             <div className="flex items-start gap-3.5 mb-3">
               <div className="w-8 h-8 rounded-md bg-[var(--kc-accent)]/10 border border-[var(--kc-accent)]/20 flex items-center justify-center shrink-0 text-[var(--kc-accent)]">
                 <Cookie size={16} aria-hidden="true" />
               </div>
               <div className="flex-1 pr-6">
-                <h3 className="text-sm font-display font-semibold tracking-tight text-white mb-1">
+                <h3 className="text-sm font-display font-semibold tracking-tight text-[var(--kc-text-primary)] mb-1">
                   Cookie & Privacy Preferences
                 </h3>
                 <p className="text-xs text-[var(--kc-text-muted)] leading-relaxed">
@@ -72,7 +72,7 @@ export function CookieBanner() {
                 type="button"
                 onClick={handleEssentialOnly}
                 aria-label="Dismiss and use essential cookies only"
-                className="absolute top-4 right-4 text-[var(--kc-text-muted)] hover:text-white p-1 rounded-md hover:bg-[var(--kc-surface-subtle)] transition-colors"
+                className="absolute top-4 right-4 text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] p-1 rounded-md hover:bg-[var(--kc-surface-subtle)] transition-colors"
               >
                 <X size={14} aria-hidden="true" />
               </button>
@@ -95,7 +95,7 @@ export function CookieBanner() {
               <button
                 type="button"
                 onClick={handleAcceptAll}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md bg-[var(--kc-accent)] hover:opacity-90 text-white text-xs font-medium transition-opacity"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md bg-[var(--kc-accent)] hover:opacity-90 text-[var(--kc-on-primary)] text-xs font-medium transition-opacity"
               >
                 <Check size={13} aria-hidden="true" />
                 <span>Accept All</span>
@@ -103,7 +103,7 @@ export function CookieBanner() {
               <button
                 type="button"
                 onClick={handleEssentialOnly}
-                className="inline-flex items-center justify-center px-3.5 py-2 rounded-md border border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] text-[var(--kc-text)] hover:text-white text-xs font-medium transition-colors"
+                className="inline-flex items-center justify-center px-3.5 py-2 rounded-md border border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] hover:bg-[var(--kc-surface-hover)] text-[var(--kc-text)] hover:text-[var(--kc-text-primary)] text-xs font-medium transition-colors"
               >
                 <span>Essential Only</span>
               </button>

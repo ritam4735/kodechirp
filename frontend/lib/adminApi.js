@@ -7,9 +7,48 @@ const requestAdmin = async (path, options = {}) => {
   const headers = { 'Content-Type': 'application/json', ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}/api/admin${path}`, { headers, ...options });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Admin request failed');
+  let res = await fetch(`${API_BASE}/api/admin${path}`, { headers, ...options });
+  let data = await res.json().catch(() => ({}));
+
+  if (res.status === 401 && (data.code === 'TOKEN_EXPIRED' || data.error?.toLowerCase().includes('token'))) {
+    try {
+      const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        const newToken = refreshData.accessToken;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('kc_token', newToken);
+          if (refreshData.user) {
+            localStorage.setItem('kc_user', JSON.stringify(refreshData.user));
+          }
+        }
+
+        // Retry original request with refreshed token
+        headers['Authorization'] = `Bearer ${newToken}`;
+        res = await fetch(`${API_BASE}/api/admin${path}`, {
+          headers,
+          ...options,
+        });
+        data = await res.json().catch(() => ({}));
+      }
+    } catch (e) {
+      console.error('Failed to refresh token in adminApi', e);
+    }
+  }
+
+  if (!res.ok) {
+    let errorMessage = data.error || `Admin request failed (HTTP ${res.status})`;
+    if (data.details && Array.isArray(data.details)) {
+      const detailsStr = data.details.map(d => `${d.field || d.path || d.param}: ${d.message || d.msg}`).join(', ');
+      errorMessage += ` - ${detailsStr}`;
+    }
+    throw new Error(errorMessage);
+  }
   return data;
 };
 
@@ -19,7 +58,7 @@ export const adminApi = {
   getAnalytics: () => requestAdmin('/stats/analytics'),
 
   // ── Problems ──────────────────────────────────────────────────────────────
-  getProblems: (params = {}) => {
+  getProblems: async (params = {}) => {
     const qs = new URLSearchParams();
     if (params.offset) qs.set('offset', params.offset);
     if (params.limit) qs.set('limit', params.limit);
@@ -30,7 +69,12 @@ export const adminApi = {
     if (params.sortBy) qs.set('sortBy', params.sortBy);
     if (params.sortOrder) qs.set('sortOrder', params.sortOrder);
     if (params.tags) qs.set('tags', params.tags);
-    return requestAdmin(`/problems?${qs.toString()}`);
+    const res = await requestAdmin(`/problems?${qs.toString()}`);
+    return {
+      ...res,
+      problems: res.data || [],
+      data: res.data || [],
+    };
   },
 
   getProblem: (id) => requestAdmin(`/problems/${id}`),
@@ -157,4 +201,65 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify(options),
     }),
+
+  // ── Unified Question Bank ─────────────────────────────────────────────────
+  getAssessmentQuestions: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.offset !== undefined) qs.set('offset', params.offset);
+    if (params.limit !== undefined) qs.set('limit', params.limit);
+    if (params.search) qs.set('search', params.search);
+    if (params.category) qs.set('category', params.category);
+    if (params.topic) qs.set('topic', params.topic);
+    if (params.difficulty) qs.set('difficulty', params.difficulty);
+    if (params.question_type) qs.set('question_type', params.question_type);
+    if (params.is_active !== undefined) qs.set('is_active', params.is_active);
+    if (params.sortBy) qs.set('sortBy', params.sortBy);
+    if (params.sortOrder) qs.set('sortOrder', params.sortOrder);
+    return requestAdmin(`/assessment-questions?${qs.toString()}`);
+  },
+  getAssessmentQuestion: (id) => requestAdmin(`/assessment-questions/${id}`),
+  createAssessmentQuestion: (data) =>
+    requestAdmin('/assessment-questions', { method: 'POST', body: JSON.stringify(data) }),
+  updateAssessmentQuestion: (id, data) =>
+    requestAdmin(`/assessment-questions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteAssessmentQuestion: (id) =>
+    requestAdmin(`/assessment-questions/${id}`, { method: 'DELETE' }),
+  toggleAssessmentQuestionStatus: (id) =>
+    requestAdmin(`/assessment-questions/${id}/toggle-status`, { method: 'POST' }),
+  getImportBatches: () => requestAdmin('/assessment-questions/batches'),
+
+  // ── Assessment & Test Builder ─────────────────────────────────────────────
+  getAssessments: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.offset !== undefined) qs.set('offset', params.offset);
+    if (params.limit !== undefined) qs.set('limit', params.limit);
+    if (params.status) qs.set('status', params.status);
+    if (params.category) qs.set('category', params.category);
+    if (params.search) qs.set('search', params.search);
+    return requestAdmin(`/assessments?${qs.toString()}`);
+  },
+  getAssessment: (id) => requestAdmin(`/assessments/${id}`),
+  createAssessment: (data) =>
+    requestAdmin('/assessments', { method: 'POST', body: JSON.stringify(data) }),
+  updateAssessment: (id, data) =>
+    requestAdmin(`/assessments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteAssessment: (id) =>
+    requestAdmin(`/assessments/${id}`, { method: 'DELETE' }),
+  toggleAssessmentStatus: (id, status) =>
+    requestAdmin(`/assessments/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
+  getAssessmentAttempts: (id) => requestAdmin(`/assessments/${id}/attempts`),
+
+  // Section Management
+  createAssessmentSection: (assessmentId, data) =>
+    requestAdmin(`/assessments/${assessmentId}/sections`, { method: 'POST', body: JSON.stringify(data) }),
+  updateAssessmentSection: (sectionId, data) =>
+    requestAdmin(`/assessments/sections/${sectionId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteAssessmentSection: (sectionId) =>
+    requestAdmin(`/assessments/sections/${sectionId}`, { method: 'DELETE' }),
+  addQuestionToSection: (sectionId, data) =>
+    requestAdmin(`/assessments/sections/${sectionId}/questions`, { method: 'POST', body: JSON.stringify(data) }),
+  removeQuestionFromSection: (mappingId) =>
+    requestAdmin(`/assessments/sections/questions/${mappingId}`, { method: 'DELETE' }),
+  populateRandomQuestions: (sectionId, data) =>
+    requestAdmin(`/assessments/sections/${sectionId}/populate-random`, { method: 'POST', body: JSON.stringify(data) }),
 };

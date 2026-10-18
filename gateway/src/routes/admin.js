@@ -1,6 +1,8 @@
 const express = require('express');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const adminController = require('../controllers/adminController');
+const assessmentQuestionController = require('../controllers/assessmentQuestionController');
+const assessmentAdminController = require('../controllers/assessmentAdminController');
 
 const router = express.Router();
 
@@ -64,5 +66,32 @@ router.delete('/users/:id', adminController.deleteUser);
 
 // Submission monitoring
 router.get('/submissions', adminController.getSubmissions);
+
+// ── Assessment Engine — Question Bank Management ────────────────────────────
+router.get('/assessment-questions', assessmentQuestionController.getQuestions);
+router.get('/assessment-questions/batches', assessmentQuestionController.getBatches);
+router.get('/assessment-questions/:id', assessmentQuestionController.getQuestion);
+router.post('/assessment-questions', assessmentQuestionController.createQuestion);
+router.put('/assessment-questions/:id', assessmentQuestionController.updateQuestion);
+router.delete('/assessment-questions/:id', assessmentQuestionController.deleteQuestion);
+router.post('/assessment-questions/:id/toggle-status', assessmentQuestionController.toggleStatus);
+
+// ── Assessment Engine — Assessments & Builder Management ────────────────────
+router.get('/assessments', assessmentAdminController.getAssessments);
+router.post('/assessments', assessmentAdminController.createAssessment);
+router.get('/assessments/:id', assessmentAdminController.getAssessment);
+router.put('/assessments/:id', assessmentAdminController.updateAssessment);
+router.delete('/assessments/:id', assessmentAdminController.deleteAssessment);
+router.post('/assessments/:id/status', assessmentAdminController.toggleStatus);
+router.get('/assessments/:id/attempts', assessmentAdminController.getAssessmentAttempts);
+
+// Assessment Sections & Question Population
+router.post('/assessments/:id/sections', assessmentAdminController.createSection);
+router.put('/assessments/sections/:sectionId', assessmentAdminController.updateSection);
+router.delete('/assessments/sections/:sectionId', assessmentAdminController.deleteSection);
+router.post('/assessments/sections/:sectionId/questions', assessmentAdminController.addQuestionToSection);
+router.delete('/assessments/sections/:sectionId/questions/:mappingId', assessmentAdminController.removeQuestionFromSection);
+router.delete('/assessments/sections/questions/:mappingId', assessmentAdminController.removeQuestionFromSection);
+router.post('/assessments/sections/:sectionId/populate-random', assessmentAdminController.populateRandomQuestions);
 
 module.exports = router;

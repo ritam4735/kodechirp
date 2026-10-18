@@ -239,7 +239,7 @@ export default function ProblemPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('editor')}
-                  className="w-full py-2.5 px-4 bg-[var(--kc-accent)] hover:bg-[var(--kc-accent-hover)] text-white font-semibold rounded-lg shadow-md flex items-center justify-center gap-2 text-xs transition-colors"
+                  className="w-full py-2.5 px-4 bg-[var(--kc-accent)] hover:bg-[var(--kc-accent-hover)] text-[var(--kc-on-primary)] font-semibold rounded-lg shadow-md flex items-center justify-center gap-2 text-xs transition-colors"
                 >
                   <Code2 size={14} aria-hidden="true" />
                   <span>Open Code Workspace</span>

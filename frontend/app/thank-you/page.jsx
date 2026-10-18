@@ -32,7 +32,7 @@ function ThankYouContent() {
         <CheckCircle2 size={24} className="text-emerald-400" />
       </div>
 
-      <h1 className="text-2xl font-display font-semibold text-white mb-2">
+      <h1 className="text-2xl font-display font-semibold text-[var(--kc-text-primary)] mb-2">
         {title}
       </h1>
 
@@ -44,7 +44,7 @@ function ThankYouContent() {
       <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5">
         <Link
           href="/questions"
-          className="w-full sm:w-auto px-4 py-2.5 rounded-md bg-[var(--kc-accent)] hover:opacity-90 text-white text-xs sm:text-sm font-medium transition-opacity flex items-center justify-center gap-2"
+          className="w-full sm:w-auto px-4 py-2.5 rounded-md bg-[var(--kc-accent)] hover:opacity-90 text-[var(--kc-on-primary)] text-xs sm:text-sm font-medium transition-opacity flex items-center justify-center gap-2"
         >
           <Code2 size={15} />
           <span>Solve Problems</span>
@@ -53,7 +53,7 @@ function ThankYouContent() {
 
         <Link
           href="/"
-          className="w-full sm:w-auto px-4 py-2.5 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[rgba(255,255,255,0.06)] border border-[var(--kc-border)] text-white text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-2"
+          className="w-full sm:w-auto px-4 py-2.5 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[var(--kc-surface-hover)] border border-[var(--kc-border)] text-[var(--kc-text-primary)] text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-2"
         >
           <Home size={14} />
           <span>Back to Home</span>
