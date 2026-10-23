@@ -6,13 +6,14 @@
 
 const db = require('../config/database');
 const logger = require('../utils/logger');
+const { normalizeOptions, normalizeCorrectAnswer } = require('../utils/helpers');
 
 /**
  * List published assessments available for students
  */
 async function getPublishedAssessments(req, res) {
   try {
-    const { category, search } = req.query;
+    const { category, search, scope } = req.query;
     const conditions = ["a.status = 'Published'"];
     const params = [];
 
@@ -26,10 +27,31 @@ async function getPublishedAssessments(req, res) {
       conditions.push(`(a.title ILIKE $${params.length} OR a.description ILIKE $${params.length})`);
     }
 
-    const whereClause = `WHERE ${conditions.join(' AND ')}`;
-
-    // If student is authenticated, check their past attempt status
     const userId = req.user?.id || null;
+    const { isSuperAdmin } = require('../middleware/rbac');
+    const isSuper = req.user ? isSuperAdmin(req.user) : false;
+
+    // Organization visibility rule
+    if (!isSuper) {
+      if (userId) {
+        params.push(userId);
+        const uIdx = params.length;
+        conditions.push(`(
+          a.is_public = TRUE OR 
+          a.target_audience = 'public' OR
+          a.organization_id IS NULL OR 
+          a.organization_id IN (
+            SELECT organization_id FROM organization_members WHERE user_id = $${uIdx}
+            UNION
+            SELECT organization_id FROM student_rosters WHERE (matched_user_id = $${uIdx} OR LOWER(college_email) = (SELECT LOWER(email) FROM users WHERE id = $${uIdx})) AND is_active = TRUE
+          )
+        )`);
+      } else {
+        conditions.push(`(a.is_public = TRUE OR a.target_audience = 'public' OR a.organization_id IS NULL)`);
+      }
+    }
+
+    const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
     const sql = `
       SELECT
@@ -47,6 +69,14 @@ async function getPublishedAssessments(req, res) {
         a.pass_percentage,
         a.show_results_immediately,
         a.created_at,
+        a.organization_id,
+        a.is_public,
+        a.target_audience,
+        o.name AS organization_name,
+        o.code AS organization_code,
+        o.slug AS organization_slug,
+        u_author.username AS author_username,
+        u_author.display_name AS author_display_name,
         (SELECT count(*)::int FROM assessment_sections s WHERE s.assessment_id = a.id) AS section_count,
         (
           SELECT count(*)::int
@@ -66,6 +96,8 @@ async function getPublishedAssessments(req, res) {
           WHERE assessment_id = a.id AND user_id = $${params.length + 1}
         )` : `'{}'::jsonb`} AS user_status
       FROM assessments a
+      LEFT JOIN organizations o ON o.id = a.organization_id
+      LEFT JOIN users u_author ON u_author.id = a.created_by
       ${whereClause}
       ORDER BY a.created_at DESC;
     `;
@@ -104,8 +136,18 @@ async function getAssessmentOverview(req, res) {
         a.max_attempts,
         a.total_marks,
         a.pass_percentage,
-        a.show_results_immediately
+        a.show_results_immediately,
+        a.organization_id,
+        a.is_public,
+        a.target_audience,
+        o.name AS organization_name,
+        o.code AS organization_code,
+        o.slug AS organization_slug,
+        u_author.username AS author_username,
+        u_author.display_name AS author_display_name
       FROM assessments a
+      LEFT JOIN organizations o ON o.id = a.organization_id
+      LEFT JOIN users u_author ON u_author.id = a.created_by
       WHERE (a.id::text = $1 OR a.slug = $1);
     `,
       [id]
@@ -116,9 +158,23 @@ async function getAssessmentOverview(req, res) {
     }
     const assessment = assessRes.rows[0];
 
-    if (assessment.status !== 'Published' && req.user?.role !== 'admin') {
+    const { isSuperAdmin } = require('../middleware/rbac');
+    const isSuper = req.user ? isSuperAdmin(req.user) : false;
+
+    if (assessment.status !== 'Published' && !isSuper) {
       return res.status(403).json({ success: false, error: 'Assessment is not currently published' });
     }
+
+    let eligibility = { eligible: true };
+    if (userId) {
+      const eligibilityService = require('../services/assessmentEligibilityService');
+      eligibility = await eligibilityService.checkStudentEligibility({
+        assessment,
+        userId,
+        userRole: req.user?.role || 'student',
+      });
+    }
+    assessment.eligibility = eligibility;
 
     // Get section summaries
     const secRes = await db.query(
@@ -182,9 +238,29 @@ async function startAttempt(req, res) {
     }
     const assessment = assessRes.rows[0];
 
-    if (assessment.status !== 'Published' && req.user.role !== 'admin') {
+    const { isSuperAdmin } = require('../middleware/rbac');
+    const isSuper = isSuperAdmin(req.user);
+
+    if (assessment.status !== 'Published' && !isSuper) {
       return res.status(403).json({ success: false, error: 'Assessment is not available' });
     }
+
+    // Verify student eligibility
+    const eligibilityService = require('../services/assessmentEligibilityService');
+    const elig = await eligibilityService.checkStudentEligibility({
+      assessment,
+      userId,
+      userRole: req.user.role,
+    });
+
+    if (!elig.eligible) {
+      return res.status(403).json({
+        success: false,
+        error: elig.reason || 'You are not eligible to take this assessment.',
+      });
+    }
+
+    const effectiveMaxAttempts = elig.maxAttempts || assessment.max_attempts;
 
     // Check time windows if configured
     const now = new Date();
@@ -226,10 +302,10 @@ async function startAttempt(req, res) {
         [assessment.id, userId]
       );
       const attemptCount = countRes.rows[0]?.count || 0;
-      if (attemptCount >= assessment.max_attempts) {
+      if (attemptCount >= effectiveMaxAttempts) {
         return res.status(403).json({
           success: false,
-          error: `You have reached the maximum allowed attempts (${assessment.max_attempts}) for this assessment.`,
+          error: `You have reached the maximum allowed attempts (${effectiveMaxAttempts}) for this assessment.`,
         });
       }
 
@@ -426,7 +502,7 @@ async function getAttemptData(req, res) {
           judge_mode: q.judge_mode || 'STDIN_STDOUT',
           signature_metadata: q.signature_metadata || null,
           sample_test_cases: q.sample_test_cases || [],
-          options: q.options || [],
+          options: normalizeOptions(q.options),
           // Current student response state
           saved_response: savedResp
             ? {
@@ -843,6 +919,10 @@ async function finalizeAndScoreAttempt(attemptId) {
             if (sub.status === 'Accepted' && sub.test_cases_passed === sub.test_cases_total && sub.test_cases_total > 0) {
               isCorrect = true;
               scoreAwarded = marks;
+            } else if (sub.test_cases_passed > 0 && sub.test_cases_total > 0) {
+              const fraction = sub.test_cases_passed / sub.test_cases_total;
+              scoreAwarded = parseFloat((fraction * marks).toFixed(2));
+              isCorrect = fraction >= 0.5;
             } else {
               isCorrect = false;
               scoreAwarded = 0;
@@ -945,7 +1025,9 @@ async function getAttemptResult(req, res) {
         a.show_results_immediately,
         a.show_answers_mode,
         a.ends_at AS assessment_ends_at,
-        a.pass_percentage
+        a.pass_percentage,
+        a.organization_id,
+        a.results_released_at
       FROM assessment_attempts att
       JOIN assessments a ON att.assessment_id = a.id
       WHERE att.id = $1;
@@ -958,8 +1040,14 @@ async function getAttemptResult(req, res) {
     }
     const attempt = attRes.rows[0];
 
-    if (attempt.user_id !== userId && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Access denied' });
+    const { isSuperAdmin, isCollegeAdmin } = require('../middleware/rbac');
+    const isSuper = isSuperAdmin(req.user);
+    const isCollegeAdm = isCollegeAdmin(req.user);
+    const isOwner = attempt.user_id === userId;
+    const canManageOrg = isSuper || (isCollegeAdm && req.user.organizationId && req.user.organizationId === attempt.organization_id);
+
+    if (!isOwner && !canManageOrg) {
+      return res.status(403).json({ success: false, error: 'Access denied: You can only view your own assessment results' });
     }
 
     // Check if review is permitted by assessment settings
@@ -967,7 +1055,25 @@ async function getAttemptResult(req, res) {
     const mode = attempt.show_answers_mode;
     const now = new Date();
 
-    if (req.user.role === 'admin') {
+    const resultsReleased = attempt.show_results_immediately || (attempt.assessment_ends_at && new Date(attempt.assessment_ends_at) < now) || (attempt.results_released_at && new Date(attempt.results_released_at) <= now);
+
+    if (!resultsReleased && !canManageOrg) {
+      return res.json({
+        success: true,
+        result: {
+          id: attempt.id,
+          assessment_id: attempt.assessment_id,
+          assessment_title: attempt.assessment_title,
+          assessment_category: attempt.assessment_category,
+          status: attempt.status,
+          is_finalized: attempt.is_finalized,
+          results_withheld: true,
+          message: 'Your assessment attempt has been successfully recorded. Detailed scores and performance analytics will be released once published by your institution.',
+        }
+      });
+    }
+
+    if (isSuper || canManageOrg) {
       canViewAnswers = true;
     } else if (mode === 'immediate' || mode === 'after_submission') {
       canViewAnswers = true;
@@ -1013,7 +1119,14 @@ async function getAttemptResult(req, res) {
       `,
         [attemptId, attempt.assessment_id]
       );
-      questionsReview = qRevRes.rows;
+      questionsReview = qRevRes.rows.map((q) => {
+        const opts = normalizeOptions(q.options);
+        return {
+          ...q,
+          options: opts,
+          correct_answer: normalizeCorrectAnswer(q.correct_answer, opts),
+        };
+      });
     }
 
     // Calculate time taken

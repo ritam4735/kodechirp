@@ -24,6 +24,20 @@ router.post(
   authController.signup
 );
 
+// ── College Self-Registration & Onboarding ───────────────────────────────────
+const collegeOnboardingController = require('../controllers/collegeOnboardingController');
+
+router.post(
+  '/register-college',
+  authSignupLimiter,
+  collegeOnboardingController.registerCollege
+);
+
+router.get(
+  '/register-college/verify-email',
+  collegeOnboardingController.verifyEmail
+);
+
 router.post(
   '/login',
   authLoginLimiter,

@@ -159,15 +159,21 @@ function validateOutput(rawOutput, problem) {
   const lines = trimmed.split('\n');
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i].trim();
-    if ((line.startsWith('{') && line.endsWith('}')) || (line.startsWith('[') && line.endsWith(']')) || line === 'true' || line === 'false' || line === 'null' || !isNaN(Number(line))) {
+    const isQuotedString = line.startsWith('"') && line.endsWith('"') && line.length >= 2;
+    const isNumeric = returnType !== 'String' && !isNaN(Number(line));
+    if ((line.startsWith('{') && line.endsWith('}')) || (line.startsWith('[') && line.endsWith(']')) || isQuotedString || line === 'true' || line === 'false' || line === 'null' || isNumeric) {
       try {
         const candidateParsed = JSON.parse(line);
         if (candidateParsed && typeof candidateParsed === 'object' && 'result' in candidateParsed) {
-          parsed = candidateParsed.result;
+          parsed = returnType === 'String' && typeof candidateParsed.result !== 'string'
+            ? String(candidateParsed.result)
+            : candidateParsed.result;
           jsonExtracted = true;
           break;
         } else {
-          parsed = candidateParsed;
+          parsed = returnType === 'String' && typeof candidateParsed !== 'string'
+            ? String(candidateParsed)
+            : candidateParsed;
           jsonExtracted = true;
           break;
         }
@@ -176,11 +182,16 @@ function validateOutput(rawOutput, problem) {
   }
 
   if (!jsonExtracted) {
-    try {
-      parsed = JSON.parse(trimmed);
-      jsonExtracted = true;
-    } catch (_) {
+    if (returnType === 'String') {
       parsed = trimmed;
+      jsonExtracted = true;
+    } else {
+      try {
+        parsed = JSON.parse(trimmed);
+        jsonExtracted = true;
+      } catch (_) {
+        parsed = trimmed;
+      }
     }
   }
 

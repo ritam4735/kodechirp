@@ -32,11 +32,32 @@ app.use(helmet({
 }));
 
 // CORS
+const allowedOrigins = [
+  config.cors.origin,
+  'http://localhost:3000',
+  'http://localhost',
+  'http://localhost:80',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1',
+  'http://127.0.0.1:80',
+].filter(Boolean);
+
 app.use(cors({
-  origin: config.cors.origin,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.startsWith('http://localhost:') ||
+      origin.startsWith('http://127.0.0.1:') ||
+      config.env === 'development'
+    ) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-organization-id', 'X-Requested-With'],
 }));
 
 // Body parsing — keep the global limit tight; avatar uploads get their own higher limit
@@ -151,4 +172,10 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-start();
+if (require.main === module) {
+  start();
+}
+
+module.exports = app;
+module.exports.app = app;
+module.exports.server = server;

@@ -35,7 +35,12 @@ function validateSignature(metadata) {
   if (!metadata.name || typeof metadata.name !== 'string') return false;
   
   if (!Array.isArray(metadata.params)) return false;
-  const validTypes = Object.values(DATA_TYPES);
+  const validTypes = [
+    ...Object.values(DATA_TYPES),
+    'Int',
+    'Array<Int>',
+    'Matrix<Int>',
+  ];
 
   for (const param of metadata.params) {
     if (!param.name || typeof param.name !== 'string') return false;

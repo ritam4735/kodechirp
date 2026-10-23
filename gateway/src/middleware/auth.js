@@ -51,14 +51,25 @@ function optionalAuth(req, _res, next) {
 
 /**
  * Role-based access control.
- * Usage: requireRole('admin') or requireRole('admin', 'moderator')
+ * Usage: requireRole('admin') or requireRole('super_admin', 'college_admin')
  */
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ success: false, error: 'Authentication required' });
     }
-    if (!roles.includes(req.user.role)) {
+
+    const { normalizeRole, isSuperAdmin } = require('./rbac');
+    const userRoleNorm = normalizeRole(req.user.role);
+    const normalizedTargetRoles = roles.map(r => normalizeRole(r));
+
+    // Super Admin has authority for admin and college_admin operations
+    const allowed =
+      roles.includes(req.user.role) ||
+      normalizedTargetRoles.includes(userRoleNorm) ||
+      (isSuperAdmin(req.user) && (normalizedTargetRoles.includes('super_admin') || normalizedTargetRoles.includes('college_admin')));
+
+    if (!allowed) {
       logger.warn({ userId: req.user.id, role: req.user.role, required: roles },
         '[Auth] Insufficient role');
       return res.status(403).json({ success: false, error: 'Insufficient permissions' });

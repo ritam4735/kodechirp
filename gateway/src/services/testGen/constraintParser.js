@@ -62,6 +62,11 @@ function parseConstraintsBounds(constraintsJson, constraintsStr) {
     bounds.maxVal = 1;
   }
 
+  // Detect binary strings: e.g. consist only of '0' or '1' characters, only '0' and '1', binary string
+  if (/(?:consist\s+only\s+of.*?[01].*(?:or|and).*[01]|only\s+['"`]*0['"`]*\s*(?:or|and)\s*['"`]*1['"`]*|binary\s+string)/i.test(text)) {
+    bounds.allowedChars = ['0', '1'];
+  }
+
   const parseNumber = (s) => {
     if (!s) return NaN;
     const str = s.trim().replace(/,/g, '');

@@ -148,6 +148,26 @@ function generateString(category, idx, rng, bounds) {
   const minL = Math.max(bounds.minLen ?? 0, 0);
   const rawCat = String(category).toLowerCase();
 
+  if (bounds && Array.isArray(bounds.allowedChars) && bounds.allowedChars.length > 0) {
+    const chars = bounds.allowedChars;
+    if (rawCat === 'min_edge' || rawCat === 'boundary') {
+      const len = idx % 2 === 0 ? Math.max(1, minL) : Math.min(maxL, 10);
+      return idx === 0 ? '0' : (idx === 1 ? '1' : '1' + '0'.repeat(Math.max(0, len - 1)));
+    }
+    if (rawCat === 'corner_case' || rawCat === 'corner') {
+      const presets = ['0', '1', '10', '11', '101', '111', '1000', '1111', '10101'];
+      return presets[idx % presets.length];
+    }
+    if (rawCat === 'stress') {
+      const stressLen = Math.min(maxL, 80);
+      return '1'.repeat(stressLen);
+    }
+    const len = randInt(Math.max(1, minL), Math.min(maxL, 30), rng);
+    let s = '1';
+    for (let i = 1; i < len; i++) s += choice(chars, rng);
+    return s;
+  }
+
   if (rawCat === 'min_edge') return idx === 0 ? (minL === 0 ? '' : 'a'.repeat(minL)) : 'a'.repeat(Math.max(1, minL));
   if (rawCat === 'corner_case') {
     const presets = ['', 'a', '()', '()[]{}', '(]', '((()))', 'a b c', '12345', '!!!', '([)]', 'racecar', 'A man, a plan, a canal: Panama'];

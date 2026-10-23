@@ -83,6 +83,62 @@ describe('KodeChirp Assessment Engine', () => {
         error: 'A question with identical content already exists',
       });
     });
+
+    it('normalizes options and answer key to lowercase and inserts successfully', async () => {
+      mockReq.body = {
+        category: 'Quantitative Aptitude',
+        topic: 'Unit Digit',
+        question_text: 'What is 10 + 20?',
+        options: [
+          { id: 'A', text: '30' },
+          { id: 'B', text: '40' },
+        ],
+        correct_answer: 'A',
+      };
+
+      // Mock duplicate check found 0 rows
+      db.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+      // Mock insert returning created question
+      db.query.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'q-new',
+            options: [
+              { id: 'a', text: '30' },
+              { id: 'b', text: '40' },
+            ],
+            correct_answer: 'a',
+          },
+        ],
+      });
+
+      await questionController.createQuestion(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+      const inserted = mockRes.json.mock.calls[0][0].question;
+      expect(inserted.options[0].id).toBe('a');
+      expect(inserted.correct_answer).toBe('a');
+    });
+
+    it('rejects deleteQuestion if referenced in an assessment section', async () => {
+      mockReq.params.id = 'q-in-use';
+
+      // Mock check in assessment_section_questions returns referenced assessment
+      db.query.mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: 'a-1', title: 'Midterm Test', status: 'Draft' }],
+      });
+
+      await questionController.deleteQuestion(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          error: expect.stringContaining('referenced in assessment(s): "Midterm Test"'),
+        })
+      );
+    });
   });
 
   // ── 2. ASSESSMENT BUILDER TESTS ───────────────────────────────────────────
@@ -99,10 +155,12 @@ describe('KodeChirp Assessment Engine', () => {
       await adminController.toggleStatus(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Cannot publish an assessment with zero sections',
-      });
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          error: 'Cannot publish an assessment with zero sections',
+        })
+      );
     });
 
     it('validates candidate pool before populating random questions', async () => {
@@ -263,6 +321,67 @@ describe('KodeChirp Assessment Engine', () => {
         success: false,
         error: 'Cannot modify responses on a submitted attempt',
       });
+    });
+
+    it('withholds detailed attempt results when results have not been released', async () => {
+      mockReq.params.attemptId = 'att-submitted-withheld';
+      mockReq.user = { id: 'student-1', role: 'user' };
+
+      // Mock attempt query where show_results_immediately is false and results_released_at is null
+      db.query.mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [
+          {
+            id: 'att-submitted-withheld',
+            user_id: 'student-1',
+            status: 'evaluated',
+            show_results_immediately: false,
+            results_released_at: null,
+            assessment_title: 'Midterm Test',
+          },
+        ],
+      });
+
+      await studentController.getAttemptResult(mockReq, mockRes);
+
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          result: expect.objectContaining({
+            results_withheld: true,
+            message: expect.stringContaining('released once published by your institution'),
+          }),
+        })
+      );
+    });
+  });
+
+  describe('Assessment Administration - Result Release', () => {
+    it('releases assessment results and sets results_released_at', async () => {
+      mockReq.params.id = 'assess-1';
+      mockReq.user = { id: 'admin-1', role: 'admin', email: 'admin@kodechirp.com' };
+
+      // Mock assessment query
+      db.query.mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: 'assess-1', title: 'Placement Test 1', organization_id: 'org-1' }],
+      });
+      // Mock UPDATE query
+      db.query.mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: 'assess-1', show_results_immediately: true, results_released_at: new Date() }],
+      });
+      // Mock audit log INSERT
+      db.query.mockResolvedValueOnce({ rowCount: 1 });
+
+      await adminController.releaseResults(mockReq, mockRes);
+
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: 'Assessment results have been successfully released to all participating students',
+        })
+      );
     });
   });
 });

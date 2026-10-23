@@ -6,6 +6,7 @@
 const crypto = require('crypto');
 const db = require('../config/database');
 const logger = require('../utils/logger');
+const { normalizeOptions, normalizeCorrectAnswer, validateObjectiveQuestion } = require('../utils/helpers');
 
 function generateHash(category, topic, text) {
   const normalized = `${(category || '').trim().toLowerCase()}:${(topic || '').trim().toLowerCase()}:${(text || '').replace(/\s+/g, ' ').trim().toLowerCase()}`;
@@ -110,13 +111,23 @@ async function getQuestions(req, res) {
     `;
     const dataRes = await db.query(dataSql, dataParams);
 
+    // Normalize options and correct_answer defensively for API consumers
+    const normalizedQuestions = dataRes.rows.map((q) => {
+      const opts = normalizeOptions(q.options);
+      return {
+        ...q,
+        options: opts,
+        correct_answer: normalizeCorrectAnswer(q.correct_answer, opts),
+      };
+    });
+
     // Fetch distinct categories and topics for filter dropdowns
     const catsRes = await db.query(`SELECT DISTINCT category FROM assessment_questions ORDER BY category;`);
     const topicsRes = await db.query(`SELECT DISTINCT topic, category FROM assessment_questions ORDER BY category, topic;`);
 
     res.json({
       success: true,
-      questions: dataRes.rows,
+      questions: normalizedQuestions,
       total,
       totalAll,
       limit: parsedLimit,
@@ -145,7 +156,15 @@ async function getQuestion(req, res) {
       return res.status(404).json({ success: false, error: 'Question not found' });
     }
 
-    res.json({ success: true, question: result.rows[0] });
+    const q = result.rows[0];
+    const opts = normalizeOptions(q.options);
+    const normalizedQ = {
+      ...q,
+      options: opts,
+      correct_answer: normalizeCorrectAnswer(q.correct_answer, opts),
+    };
+
+    res.json({ success: true, question: normalizedQ });
   } catch (err) {
     logger.error({ err, id: req.params.id }, '[AssessmentQuestion] getQuestion failed');
     res.status(500).json({ success: false, error: 'Failed to retrieve question' });
@@ -194,6 +213,14 @@ async function createQuestion(req, res) {
       });
     }
 
+    const normalizedOpts = normalizeOptions(options);
+    const normalizedAns = normalizeCorrectAnswer(correct_answer, normalizedOpts);
+
+    const validationErr = validateObjectiveQuestion(question_type, normalizedOpts, normalizedAns);
+    if (validationErr) {
+      return res.status(400).json({ success: false, error: validationErr });
+    }
+
     const insertSql = `
       INSERT INTO assessment_questions (
         category, topic, subtopic, difficulty, question_type,
@@ -215,8 +242,8 @@ async function createQuestion(req, res) {
       ['Easy', 'Medium', 'Hard'].includes(difficulty) ? difficulty : 'Medium',
       question_type,
       question_text.trim(),
-      JSON.stringify(options),
-      correct_answer !== undefined && correct_answer !== null ? JSON.stringify(correct_answer) : null,
+      JSON.stringify(normalizedOpts),
+      normalizedAns !== null ? JSON.stringify(normalizedAns) : null,
       explanation ? explanation.trim() : null,
       parseFloat(default_marks) || 1.0,
       parseFloat(default_negative_marks) || 0.0,
@@ -228,7 +255,11 @@ async function createQuestion(req, res) {
       req.user?.id || null,
     ]);
 
-    res.status(201).json({ success: true, question: result.rows[0] });
+    const created = result.rows[0];
+    created.options = normalizeOptions(created.options);
+    created.correct_answer = normalizeCorrectAnswer(created.correct_answer, created.options);
+
+    res.status(201).json({ success: true, question: created });
   } catch (err) {
     logger.error({ err }, '[AssessmentQuestion] createQuestion failed');
     res.status(500).json({ success: false, error: 'Failed to create question' });
@@ -266,7 +297,28 @@ async function updateQuestion(req, res) {
     const newCategory = category !== undefined ? category.trim() : current.category;
     const newTopic = topic !== undefined ? topic.trim() : current.topic;
     const newText = question_text !== undefined ? question_text.trim() : current.question_text;
+    const newType = question_type !== undefined ? question_type : current.question_type;
     const contentHash = generateHash(newCategory, newTopic, newText);
+
+    // Normalize options & answer if provided
+    let finalOpts = current.options;
+    if (options !== undefined) {
+      finalOpts = normalizeOptions(options);
+    } else {
+      finalOpts = normalizeOptions(finalOpts);
+    }
+
+    let finalAns = current.correct_answer;
+    if (correct_answer !== undefined) {
+      finalAns = normalizeCorrectAnswer(correct_answer, finalOpts);
+    } else {
+      finalAns = normalizeCorrectAnswer(finalAns, finalOpts);
+    }
+
+    const validationErr = validateObjectiveQuestion(newType, finalOpts, finalAns);
+    if (validationErr) {
+      return res.status(400).json({ success: false, error: validationErr });
+    }
 
     const updateSql = `
       UPDATE assessment_questions
@@ -295,10 +347,10 @@ async function updateQuestion(req, res) {
       newTopic,
       subtopic !== undefined ? subtopic : current.subtopic,
       difficulty !== undefined ? difficulty : current.difficulty,
-      question_type !== undefined ? question_type : current.question_type,
+      newType,
       newText,
-      options !== undefined ? JSON.stringify(options) : current.options,
-      correct_answer !== undefined ? (correct_answer !== null ? JSON.stringify(correct_answer) : null) : current.correct_answer,
+      JSON.stringify(finalOpts),
+      finalAns !== null ? JSON.stringify(finalAns) : null,
       explanation !== undefined ? explanation : current.explanation,
       default_marks !== undefined ? parseFloat(default_marks) : current.default_marks,
       default_negative_marks !== undefined ? parseFloat(default_negative_marks) : current.default_negative_marks,
@@ -308,7 +360,11 @@ async function updateQuestion(req, res) {
       id,
     ]);
 
-    res.json({ success: true, question: result.rows[0] });
+    const updated = result.rows[0];
+    updated.options = normalizeOptions(updated.options);
+    updated.correct_answer = normalizeCorrectAnswer(updated.correct_answer, updated.options);
+
+    res.json({ success: true, question: updated });
   } catch (err) {
     logger.error({ err, id: req.params.id }, '[AssessmentQuestion] updateQuestion failed');
     res.status(500).json({ success: false, error: 'Failed to update question' });
@@ -338,11 +394,42 @@ async function toggleStatus(req, res) {
 }
 
 /**
- * Delete a question
+ * Delete a question safely: protects active assessment references and historical attempts.
  */
 async function deleteQuestion(req, res) {
   try {
     const { id } = req.params;
+
+    // Check if question is used in any assessment sections
+    const refAssessRes = await db.query(
+      `SELECT DISTINCT a.id, a.title, a.status 
+       FROM assessment_section_questions asq
+       JOIN assessment_sections s ON asq.section_id = s.id
+       JOIN assessments a ON s.assessment_id = a.id
+       WHERE asq.question_id = $1;`,
+      [id]
+    );
+
+    if ((refAssessRes?.rowCount || refAssessRes?.rows?.length || 0) > 0) {
+      const titles = (refAssessRes.rows || []).map(r => `"${r.title}"`).join(', ');
+      return res.status(400).json({
+        success: false,
+        error: `Cannot delete question: it is currently referenced in assessment(s): ${titles}. Remove it from the assessment section(s) or toggle its status to Inactive instead.`
+      });
+    }
+
+    // Check if question has student attempts/responses
+    const respRes = await db.query(
+      `SELECT count(*)::int AS count FROM assessment_responses WHERE question_id = $1;`,
+      [id]
+    );
+    if (Number(respRes?.rows?.[0]?.count || 0) > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot delete question: student attempt responses reference this record. Deactivate the question instead to preserve historical candidate records.'
+      });
+    }
+
     const result = await db.query(`DELETE FROM assessment_questions WHERE id = $1 RETURNING id;`, [id]);
 
     if (result.rowCount === 0) {
@@ -353,6 +440,185 @@ async function deleteQuestion(req, res) {
   } catch (err) {
     logger.error({ err, id: req.params.id }, '[AssessmentQuestion] deleteQuestion failed');
     res.status(500).json({ success: false, error: 'Failed to delete question' });
+  }
+}
+
+/**
+ * Batch import questions from JSON or CSV with validation and audit logging.
+ */
+async function importQuestions(req, res) {
+  try {
+    let rawItems = [];
+    let filename = 'manual_import.json';
+    let fileFormat = 'json';
+
+    if (req.file) {
+      filename = req.file.originalname || 'upload.json';
+      const fileExt = (filename.split('.').pop() || '').toLowerCase();
+      fileFormat = fileExt;
+
+      if (fileExt === 'json') {
+        const text = req.file.buffer.toString('utf-8');
+        try {
+          const parsed = JSON.parse(text);
+          rawItems = Array.isArray(parsed) ? parsed : (parsed.questions || []);
+        } catch {
+          return res.status(400).json({ success: false, error: 'Invalid JSON file format' });
+        }
+      } else if (fileExt === 'csv') {
+        // Simple CSV parse
+        const text = req.file.buffer.toString('utf-8');
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length < 2) {
+          return res.status(400).json({ success: false, error: 'CSV file contains no data rows' });
+        }
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
+          const item = {};
+          headers.forEach((h, idx) => { item[h] = cols[idx] || ''; });
+          // Format options from option_a, option_b, ...
+          if (!item.options && (item.option_a || item.a)) {
+            item.options = [
+              { id: 'a', text: item.option_a || item.a },
+              { id: 'b', text: item.option_b || item.b },
+              { id: 'c', text: item.option_c || item.c },
+              { id: 'd', text: item.option_d || item.d },
+            ].filter(o => o.text);
+          }
+          rawItems.push(item);
+        }
+      } else {
+        return res.status(400).json({ success: false, error: 'Unsupported file type. Please upload a .json or .csv file.' });
+      }
+    } else if (req.body.questions && Array.isArray(req.body.questions)) {
+      rawItems = req.body.questions;
+    } else {
+      return res.status(400).json({ success: false, error: 'No file or questions array provided for import' });
+    }
+
+    const batchId = `batch_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    let totalInserted = 0;
+    let totalSkipped = 0;
+    let totalFailed = 0;
+    const errors = [];
+
+    for (let idx = 0; idx < rawItems.length; idx++) {
+      const item = rawItems[idx];
+      const category = (item.category || '').trim();
+      const topic = (item.topic || '').trim();
+      const questionText = (item.question_text || item.question || '').trim();
+      const difficulty = ['Easy', 'Medium', 'Hard'].includes(item.difficulty) ? item.difficulty : 'Medium';
+      const questionType = item.question_type || 'single_choice';
+
+      if (!category || !topic || !questionText) {
+        totalFailed++;
+        errors.push({
+          row: idx + 1,
+          question: questionText.substring(0, 30) || 'Unknown',
+          reason: 'Missing category, topic, or question text',
+        });
+        continue;
+      }
+
+      const normalizedOpts = normalizeOptions(item.options);
+      const normalizedAns = normalizeCorrectAnswer(item.correct_answer || item.answer, normalizedOpts);
+
+      const validationErr = validateObjectiveQuestion(questionType, normalizedOpts, normalizedAns);
+      if (validationErr) {
+        totalFailed++;
+        errors.push({
+          row: idx + 1,
+          question: questionText.substring(0, 30),
+          reason: validationErr,
+        });
+        continue;
+      }
+
+      const contentHash = generateHash(category, topic, questionText);
+
+      // Check if duplicate
+      const dup = await db.query(`SELECT id FROM assessment_questions WHERE content_hash = $1;`, [contentHash]);
+      if (dup.rowCount > 0) {
+        totalSkipped++;
+        continue;
+      }
+
+      try {
+        await db.query(
+          `INSERT INTO assessment_questions (
+            category, topic, subtopic, difficulty, question_type,
+            question_text, options, correct_answer, explanation,
+            default_marks, default_negative_marks, tags,
+            source_file, import_batch, content_hash, is_active, created_by
+          ) VALUES (
+            $1, $2, $3, $4, $5,
+            $6, $7, $8, $9,
+            $10, $11, $12,
+            $13, $14, $15, $16, $17
+          );`,
+          [
+            category,
+            topic,
+            item.subtopic ? item.subtopic.trim() : null,
+            difficulty,
+            questionType,
+            questionText,
+            JSON.stringify(normalizedOpts),
+            normalizedAns !== null ? JSON.stringify(normalizedAns) : null,
+            item.explanation ? item.explanation.trim() : null,
+            parseFloat(item.default_marks || item.marks) || 1.0,
+            parseFloat(item.default_negative_marks || item.negative_marks) || 0.0,
+            JSON.stringify(Array.isArray(item.tags) ? item.tags : []),
+            filename,
+            batchId,
+            contentHash,
+            item.is_active !== undefined ? Boolean(item.is_active) : true,
+            req.user?.id || null,
+          ]
+        );
+        totalInserted++;
+      } catch (err) {
+        totalFailed++;
+        errors.push({
+          row: idx + 1,
+          question: questionText.substring(0, 30),
+          reason: err.message,
+        });
+      }
+    }
+
+    // Record batch log
+    await db.query(
+      `INSERT INTO import_batches (
+        batch_id, source_file, file_format, total_discovered,
+        total_inserted, total_skipped, total_failed, status, error_report
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`,
+      [
+        batchId,
+        filename,
+        fileFormat,
+        rawItems.length,
+        totalInserted,
+        totalSkipped,
+        totalFailed,
+        totalFailed > 0 ? (totalInserted > 0 ? 'completed' : 'failed') : 'completed',
+        JSON.stringify(errors),
+      ]
+    );
+
+    res.json({
+      success: true,
+      batchId,
+      totalDiscovered: rawItems.length,
+      totalInserted,
+      totalSkipped,
+      totalFailed,
+      errors,
+    });
+  } catch (err) {
+    logger.error({ err }, '[AssessmentQuestion] importQuestions failed');
+    res.status(500).json({ success: false, error: err.message || 'Import failed' });
   }
 }
 
@@ -380,5 +646,6 @@ module.exports = {
   updateQuestion,
   toggleStatus,
   deleteQuestion,
+  importQuestions,
   getBatches,
 };

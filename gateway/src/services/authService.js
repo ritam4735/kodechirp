@@ -98,6 +98,26 @@ async function login({ identifier, password }) {
   // Clean sensitive fields
   delete user.password_hash;
 
+  // Fetch organization membership if available
+  try {
+    const orgRes = await db.query(
+      `SELECT om.organization_id, om.role AS member_role, om.department, om.academic_year, 
+              om.enrollment_status, om.student_id_number,
+              o.name AS organization_name, o.slug AS organization_slug, o.code AS organization_code
+       FROM organization_members om
+       JOIN organizations o ON o.id = om.organization_id
+       WHERE om.user_id = $1 AND o.is_active = TRUE
+       ORDER BY (om.role = 'college_admin') DESC, om.created_at ASC
+       LIMIT 1`,
+      [user.id]
+    );
+    user.organization = orgRes.rows[0] || null;
+    user.organization_id = orgRes.rows[0]?.organization_id || null;
+  } catch {
+    user.organization = null;
+    user.organization_id = null;
+  }
+
   // Generate token pair
   const tokens = await generateTokenPair(user);
 
@@ -168,6 +188,25 @@ async function refreshAccessToken(refreshToken) {
 
   const user = userResult.rows[0];
 
+  try {
+    const orgRes = await db.query(
+      `SELECT om.organization_id, om.role AS member_role, om.department, om.academic_year, 
+              om.enrollment_status, om.student_id_number,
+              o.name AS organization_name, o.slug AS organization_slug, o.code AS organization_code
+       FROM organization_members om
+       JOIN organizations o ON o.id = om.organization_id
+       WHERE om.user_id = $1 AND o.is_active = TRUE
+       ORDER BY (om.role = 'college_admin') DESC, om.created_at ASC
+       LIMIT 1`,
+      [user.id]
+    );
+    user.organization = orgRes.rows[0] || null;
+    user.organization_id = orgRes.rows[0]?.organization_id || null;
+  } catch {
+    user.organization = null;
+    user.organization_id = null;
+  }
+
   // Issue new token pair with same family_id
   const tokens = await generateTokenPair(user, storedToken.family_id);
 
@@ -203,7 +242,24 @@ async function getProfile(userId) {
     throw err;
   }
 
-  return result.rows[0];
+  const user = result.rows[0];
+  try {
+    const orgRes = await db.query(
+      `SELECT om.organization_id, om.role AS member_role, om.department, om.academic_year, 
+              om.enrollment_status, om.student_id_number,
+              o.name AS organization_name, o.slug AS organization_slug, o.code AS organization_code
+       FROM organization_members om
+       JOIN organizations o ON o.id = om.organization_id
+       WHERE om.user_id = $1 AND o.is_active = TRUE
+       LIMIT 1`,
+      [userId]
+    );
+    user.organization = orgRes.rows[0] || null;
+  } catch {
+    user.organization = null;
+  }
+
+  return user;
 }
 
 // ── Internal Helpers ──────────────────────────────────────────────────────────
@@ -215,7 +271,13 @@ async function getProfile(userId) {
 async function generateTokenPair(user, familyId = null) {
   // Access token (short-lived, stateless)
   const accessToken = jwt.sign(
-    { id: user.id, username: user.username, role: user.role || 'user' },
+    { 
+      id: user.id, 
+      username: user.username, 
+      email: user.email,
+      role: user.role || 'user',
+      organizationId: user.organization?.organization_id || user.organization_id || null,
+    },
     config.jwt.secret,
     { expiresIn: config.jwt.accessExpiresIn }
   );

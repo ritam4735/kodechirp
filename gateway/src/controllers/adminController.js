@@ -110,6 +110,131 @@ async function validatePublish(problemId) {
 
 exports.getStats = async (req, res, next) => {
   try {
+    const { isSuperAdmin } = require('../middleware/rbac');
+    const isSuper = isSuperAdmin(req.user);
+
+    if (!isSuper) {
+      const orgId = req.organizationId;
+      if (!orgId) {
+        return res.status(403).json({ success: false, error: 'Organization context required' });
+      }
+
+      const [
+        orgRes,
+        rosterStats,
+        assessmentStats,
+        attemptStats,
+        departmentsRes,
+        recentStudentsRes,
+        recentAssessmentsRes,
+        recentAttemptsRes,
+      ] = await Promise.all([
+        db.query('SELECT id, name, slug, code, domain FROM organizations WHERE id = $1', [orgId]),
+        db.query(`
+          SELECT 
+            COUNT(*)::int as total_students,
+            COUNT(CASE WHEN is_active THEN 1 END)::int as active_students,
+            COUNT(CASE WHEN matched_user_id IS NOT NULL THEN 1 END)::int as registered_students
+          FROM student_rosters
+          WHERE organization_id = $1
+        `, [orgId]),
+        db.query(`
+          SELECT 
+            COUNT(*)::int as total_assessments,
+            COUNT(CASE WHEN status = 'Published' THEN 1 END)::int as published_assessments,
+            COUNT(CASE WHEN status = 'Draft' THEN 1 END)::int as draft_assessments
+          FROM assessments
+          WHERE organization_id = $1
+        `, [orgId]),
+        db.query(`
+          SELECT 
+            COUNT(aa.id)::int as total_attempts,
+            COUNT(CASE WHEN aa.status = 'submitted' THEN 1 END)::int as completed_attempts,
+            COALESCE(AVG(CASE WHEN aa.status = 'submitted' THEN aa.percentage END), 0)::numeric(5,2) as average_score
+          FROM assessment_attempts aa
+          JOIN assessments a ON a.id = aa.assessment_id
+          WHERE a.organization_id = $1
+        `, [orgId]),
+        db.query(`
+          SELECT department, COUNT(*)::int as count
+          FROM student_rosters
+          WHERE organization_id = $1 AND department IS NOT NULL AND department != ''
+          GROUP BY department
+          ORDER BY count DESC
+          LIMIT 6
+        `, [orgId]),
+        db.query(`
+          SELECT sr.id, sr.student_name, sr.student_id_number, sr.college_email, sr.department, sr.academic_year, sr.is_active, sr.created_at,
+                 (sr.matched_user_id IS NOT NULL) as has_account
+          FROM student_rosters sr
+          WHERE sr.organization_id = $1
+          ORDER BY sr.created_at DESC
+          LIMIT 8
+        `, [orgId]),
+        db.query(`
+          SELECT a.id, a.title, a.slug, a.category, a.status, a.duration_minutes, a.created_at,
+                 COUNT(aa.id)::int as attempt_count
+          FROM assessments a
+          LEFT JOIN assessment_attempts aa ON aa.assessment_id = a.id
+          WHERE a.organization_id = $1
+          GROUP BY a.id
+          ORDER BY a.created_at DESC
+          LIMIT 8
+        `, [orgId]),
+        db.query(`
+          SELECT aa.id, aa.status, aa.total_score, aa.percentage, (aa.percentage >= a.pass_percentage) as passed, aa.submitted_at, aa.created_at,
+                 a.title as assessment_title,
+                 COALESCE(sr.student_name, u.username) as student_name,
+                 COALESCE(sr.student_id_number, u.username) as student_id_number
+          FROM assessment_attempts aa
+          JOIN assessments a ON a.id = aa.assessment_id
+          LEFT JOIN users u ON u.id = aa.user_id
+          LEFT JOIN student_rosters sr ON sr.organization_id = a.organization_id AND (sr.matched_user_id = aa.user_id OR sr.college_email = u.email)
+          WHERE a.organization_id = $1
+          ORDER BY aa.created_at DESC
+          LIMIT 8
+        `, [orgId]),
+      ]);
+
+      const org = orgRes.rows[0] || {};
+      const rStats = rosterStats.rows[0] || {};
+      const aStats = assessmentStats.rows[0] || {};
+      const attStats = attemptStats.rows[0] || {};
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          isCollegeAdmin: true,
+          organization: org,
+          totalStudents: rStats.total_students || 0,
+          activeStudents: rStats.active_students || 0,
+          registeredStudents: rStats.registered_students || 0,
+          totalAssessments: aStats.total_assessments || 0,
+          publishedAssessments: aStats.published_assessments || 0,
+          draftAssessments: aStats.draft_assessments || 0,
+          totalAttempts: attStats.total_attempts || 0,
+          completedAttempts: attStats.completed_attempts || 0,
+          averageScore: parseFloat(attStats.average_score) || 0,
+          departmentBreakdown: departmentsRes.rows,
+          recentStudents: recentStudentsRes.rows,
+          recentAssessments: recentAssessmentsRes.rows,
+          recentAttempts: recentAttemptsRes.rows,
+          // Compatibility fields
+          totalUsers: rStats.total_students || 0,
+          totalProblems: aStats.total_assessments || 0,
+          publishedProblems: aStats.published_assessments || 0,
+          totalSubmissions: attStats.total_attempts || 0,
+          acceptedSubmissions: attStats.completed_attempts || 0,
+          successRate: (parseFloat(attStats.average_score) || 0).toFixed(2),
+          problemsByDifficulty: [],
+          recentActivity: [],
+          recentSubmissions: [],
+          newUsersThisWeek: 0,
+          newUsersThisMonth: 0,
+        }
+      });
+    }
+
     const [
       totalUsers,
       totalProblems,
@@ -157,6 +282,7 @@ exports.getStats = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: {
+        isCollegeAdmin: false,
         totalUsers: parseInt(totalUsers.rows[0].count),
         totalProblems: parseInt(totalProblems.rows[0].count),
         publishedProblems: parseInt(publishedProblems.rows[0].count),
@@ -179,6 +305,109 @@ exports.getStats = async (req, res, next) => {
 
 exports.getAnalytics = async (req, res, next) => {
   try {
+    const { isSuperAdmin } = require('../middleware/rbac');
+    const isSuper = isSuperAdmin(req.user);
+
+    if (!isSuper) {
+      const orgId = req.organizationId;
+      if (!orgId) {
+        return res.status(403).json({ success: false, error: 'Organization context required' });
+      }
+
+      const [
+        orgRes,
+        deptRes,
+        yearRes,
+        statusRes,
+        assessmentPerfRes,
+        topStudentsRes,
+        recentAttemptsTrendRes,
+      ] = await Promise.all([
+        db.query('SELECT id, name, slug, code, domain FROM organizations WHERE id = $1', [orgId]),
+        db.query(`
+          SELECT COALESCE(department, 'Unassigned') as department, COUNT(*)::int as count
+          FROM student_rosters
+          WHERE organization_id = $1
+          GROUP BY department
+          ORDER BY count DESC
+        `, [orgId]),
+        db.query(`
+          SELECT COALESCE(academic_year, 'Unassigned') as academic_year, COUNT(*)::int as count
+          FROM student_rosters
+          WHERE organization_id = $1
+          GROUP BY academic_year
+          ORDER BY count DESC
+        `, [orgId]),
+        db.query(`
+          SELECT enrollment_status, COUNT(*)::int as count
+          FROM student_rosters
+          WHERE organization_id = $1
+          GROUP BY enrollment_status
+        `, [orgId]),
+        db.query(`
+          SELECT 
+            a.id, a.title, a.category, a.status,
+            COUNT(aa.id)::int as total_attempts,
+            COUNT(CASE WHEN aa.status = 'submitted' THEN 1 END)::int as completed_attempts,
+            COUNT(CASE WHEN aa.status = 'submitted' AND aa.percentage >= a.pass_percentage THEN 1 END)::int as passed_count,
+            COALESCE(AVG(CASE WHEN aa.status = 'submitted' THEN aa.percentage END), 0)::numeric(5,1) as avg_score
+          FROM assessments a
+          LEFT JOIN assessment_attempts aa ON aa.assessment_id = a.id
+          WHERE a.organization_id = $1
+          GROUP BY a.id, a.title, a.category, a.status
+          ORDER BY total_attempts DESC
+          LIMIT 10
+        `, [orgId]),
+        db.query(`
+          SELECT 
+            COALESCE(sr.student_name, u.username) as student_name,
+            COALESCE(sr.student_id_number, u.username) as student_id_number,
+            sr.department,
+            COUNT(aa.id)::int as tests_taken,
+            COALESCE(AVG(aa.percentage), 0)::numeric(5,1) as avg_score
+          FROM assessment_attempts aa
+          JOIN assessments a ON a.id = aa.assessment_id
+          JOIN users u ON u.id = aa.user_id
+          LEFT JOIN student_rosters sr ON sr.organization_id = a.organization_id AND (sr.matched_user_id = u.id OR sr.college_email = u.email)
+          WHERE a.organization_id = $1 AND aa.status = 'submitted'
+          GROUP BY u.id, u.username, sr.student_name, sr.student_id_number, sr.department
+          ORDER BY avg_score DESC, tests_taken DESC
+          LIMIT 10
+        `, [orgId]),
+        db.query(`
+          SELECT DATE(aa.created_at) as date, COUNT(*)::int as count
+          FROM assessment_attempts aa
+          JOIN assessments a ON a.id = aa.assessment_id
+          WHERE a.organization_id = $1 AND aa.created_at >= NOW() - INTERVAL '30 days'
+          GROUP BY DATE(aa.created_at)
+          ORDER BY date ASC
+        `, [orgId]),
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          isCollegeAdmin: true,
+          organization: orgRes.rows[0] || {},
+          departmentBreakdown: deptRes.rows,
+          academicYearBreakdown: yearRes.rows,
+          statusBreakdown: statusRes.rows,
+          assessmentPerformance: assessmentPerfRes.rows,
+          topStudents: topStudentsRes.rows,
+          recentAttemptsTrend: recentAttemptsTrendRes.rows,
+          // Compatibility fallbacks
+          problemsByDifficulty: [],
+          dailySubmissions: recentAttemptsTrendRes.rows,
+          weeklySubmissions: [],
+          acceptanceByDifficulty: [],
+          mostAttempted: [],
+          mostSolved: [],
+          mostActiveUsers: [],
+          submissionsByStatus: [],
+        }
+      });
+    }
+
     const [
       problemsByDifficulty,
       dailySubmissions,
@@ -252,6 +481,7 @@ exports.getAnalytics = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: {
+        isCollegeAdmin: false,
         problemsByDifficulty: problemsByDifficulty.rows,
         dailySubmissions: dailySubmissions.rows,
         weeklySubmissions: weeklySubmissions.rows,
@@ -348,6 +578,7 @@ exports.getProblems = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: dataRes.rows,
+      problems: dataRes.rows,
       meta: {
         total: parseInt(countRes.rows[0].count),
         limit,
@@ -892,7 +1123,11 @@ exports.getUsers = async (req, res, next) => {
     const dataQuery = `
       SELECT u.id, u.username, u.email, u.role, u.is_active, u.created_at, u.last_login_at,
              COALESCE(sub_stats.total_submissions, 0)::int as total_submissions,
-             COALESCE(sub_stats.total_accepted, 0)::int as total_accepted
+             COALESCE(sub_stats.total_accepted, 0)::int as total_accepted,
+             om.organization_id,
+             om.role AS organization_role,
+             o.name AS organization_name,
+             o.code AS organization_code
       FROM users u
       LEFT JOIN (
         SELECT user_id,
@@ -901,6 +1136,8 @@ exports.getUsers = async (req, res, next) => {
         FROM submissions
         GROUP BY user_id
       ) sub_stats ON sub_stats.user_id = u.id
+      LEFT JOIN organization_members om ON om.user_id = u.id AND om.role = 'college_admin'
+      LEFT JOIN organizations o ON o.id = om.organization_id
       ${whereClause}
       ORDER BY u.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -928,14 +1165,34 @@ exports.getUsers = async (req, res, next) => {
 
 exports.updateUserRole = async (req, res, next) => {
   try {
-    const { role } = req.body;
-    if (!['user', 'admin', 'moderator'].includes(role)) {
+    const { role, organizationId, organization_id } = req.body;
+    const orgId = organizationId || organization_id || null;
+    const validRoles = ['user', 'admin', 'moderator', 'super_admin', 'college_admin', 'student'];
+    if (!validRoles.includes(role)) {
       return res.status(400).json({ success: false, error: 'Invalid role' });
     }
 
+    const { isSuperAdmin, logAdminAction } = require('../middleware/rbac');
+
+    // Only Super Admin can grant super_admin or admin roles
+    if ((role === 'super_admin' || role === 'admin') && !isSuperAdmin(req.user)) {
+      return res.status(403).json({ success: false, error: 'Only Super Admin can assign platform admin privileges' });
+    }
+
     // Prevent self-demotion
-    if (req.params.id === req.user.id && role !== 'admin') {
+    if (req.params.id === req.user.id && (role !== 'admin' && role !== 'super_admin')) {
       return res.status(400).json({ success: false, error: 'Cannot demote yourself' });
+    }
+
+    if (role === 'college_admin' && !orgId) {
+      // Check if user already has an existing assigned organization
+      const existingOrg = await db.query(
+        'SELECT organization_id FROM organization_members WHERE user_id = $1 LIMIT 1',
+        [req.params.id]
+      );
+      if (!existingOrg.rowCount) {
+        return res.status(400).json({ success: false, error: 'Please select an institution / organization for this College Admin' });
+      }
     }
 
     const result = await db.query(
@@ -946,6 +1203,35 @@ exports.updateUserRole = async (req, res, next) => {
     if (result.rowCount === 0) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
+
+    // Manage organization_members association
+    if (role === 'college_admin' && orgId) {
+      await db.query(
+        `INSERT INTO organization_members (organization_id, user_id, role, enrollment_status)
+         VALUES ($1, $2, 'college_admin', 'active')
+         ON CONFLICT (organization_id, user_id)
+         DO UPDATE SET role = 'college_admin', enrollment_status = 'active', updated_at = NOW()`,
+        [orgId, req.params.id]
+      );
+    } else if (role !== 'college_admin' && role !== 'student') {
+      // If demoting/promoting away from college_admin, remove college_admin assignment
+      await db.query(
+        `DELETE FROM organization_members WHERE user_id = $1 AND role = 'college_admin'`,
+        [req.params.id]
+      );
+    }
+
+    // Audit log
+    await logAdminAction({
+      actorId: req.user.id,
+      actorEmail: req.user.email,
+      actorRole: req.user.role,
+      action: 'user.role_update',
+      targetType: 'user',
+      targetId: req.params.id,
+      details: { newRole: role, organizationId: orgId, updatedUser: result.rows[0].email },
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({ success: true, data: result.rows[0] });
   } catch (err) {

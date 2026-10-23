@@ -140,9 +140,14 @@ function parseExampleBlock(lines) {
     }
 
     if (OUTPUT_RE.test(trimmed)) {
-      currentField = 'output';
       const value = trimmed.replace(OUTPUT_RE, '').trim();
-      if (value) output = value;
+      if (output) {
+        currentField = 'explanation';
+        if (value) explanation += (explanation ? '\n' : '') + value;
+      } else {
+        currentField = 'output';
+        if (value) output = value;
+      }
       continue;
     }
 

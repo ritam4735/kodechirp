@@ -10,10 +10,11 @@ const router = express.Router();
 
 router.get(
   '/',
-  query('search').optional().isString(),
-  query('difficulty').optional().isIn(['Easy', 'Medium', 'Hard']),
-  query('page').optional().isInt({ min: 1 }),
-  query('limit').optional().isInt({ min: 1, max: 500 }),
+  query('search').optional({ values: 'falsy' }).isString(),
+  query('difficulty').optional({ values: 'falsy' }).isIn(['Easy', 'Medium', 'Hard']),
+  query('topic').optional({ values: 'falsy' }).isString(),
+  query('page').optional({ values: 'falsy' }).isInt({ min: 1 }),
+  query('limit').optional({ values: 'falsy' }).isInt({ min: 1, max: 500 }),
   validateRequest,
   problemController.getAllProblems
 );

@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const db = require('../config/database');
-const { runCode } = require('./submissionService');
+const submissionService = require('./submissionService');
 const { normaliseOutput } = require('../utils/helpers');
 const { parseAssignmentInput } = require('../utils/assignmentParser');
 const logger = require('../utils/logger');
@@ -138,32 +138,11 @@ async function verify(solutionId) {
     [solution.problem_id]
   );
 
-  if (examples.rowCount === 0) {
-    try {
-      const smokeResult = await runCode({
-        code: solution.source_code,
-        language: solution.language,
-        stdin: '',
-        judgeMode,
-        signatureMetadata,
-      });
-
-      if (hasCompilationError(smokeResult.stderr)) {
-        verification.errors.push(`Compilation failed: ${smokeResult.stderr.substring(0, 500)}`);
-        await updateVerification(solutionId, 'compile_error', verification);
-        return verification;
-      }
-
-      verification.compileOk = true;
-      verification.examplesOk = true;
-      verification.errors.push('No example test cases to verify against');
-      await updateVerification(solutionId, 'verified', verification);
-      return verification;
-    } catch (err) {
-      verification.errors.push(`Compile check failed: ${err.message}`);
-      await updateVerification(solutionId, 'compile_error', verification);
-      return verification;
-    }
+  if (examples.rowCount < 2) {
+    verification.errors.push('At least 2-3 verification test cases are required to verify reference solution');
+    verification.examplesOk = false;
+    await updateVerification(solutionId, 'example_failed', verification);
+    return verification;
   }
 
   let allPassed = true;
@@ -203,7 +182,7 @@ async function verify(solutionId) {
         expectedOutput = typeof tc.expected_json === 'string' ? tc.expected_json : (tc.expected_json != null ? JSON.stringify(tc.expected_json) : tc.expected_output);
       }
 
-      const result = await runCode({
+      const result = await submissionService.runCode({
         code: solution.source_code,
         language: solution.language,
         stdin: inputStr,
@@ -277,6 +256,11 @@ async function verify(solutionId) {
   const status = allPassed ? 'verified' : 'example_failed';
   await updateVerification(solutionId, status, verification);
 
+  const passedIds = verification.exampleResults.filter(r => r.passed).map(r => r.testCaseId);
+  if (passedIds.length > 0) {
+    await db.query('UPDATE test_cases SET verified = TRUE WHERE id = ANY($1)', [passedIds]);
+  }
+
   return verification;
 }
 
@@ -297,7 +281,7 @@ async function runAgainstInput(solutionId, input) {
       ? JSON.parse(problem.signature_metadata || '{}') 
       : (problem ? problem.signature_metadata : null);
 
-  const result = await runCode({
+  const result = await submissionService.runCode({
     code: solution.source_code,
     language: solution.language,
     stdin: input,

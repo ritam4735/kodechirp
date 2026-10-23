@@ -17,6 +17,9 @@ module.exports = {
 
   // User roles
   ROLES: {
+    SUPER_ADMIN: 'super_admin',
+    COLLEGE_ADMIN: 'college_admin',
+    STUDENT: 'student',
     USER: 'user',
     ADMIN: 'admin',
     MODERATOR: 'moderator',
