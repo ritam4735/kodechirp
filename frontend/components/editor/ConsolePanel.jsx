@@ -90,7 +90,7 @@ export const ConsolePanel = () => {
                     <span className="text-[var(--kc-text-secondary)] font-mono font-semibold block mb-1 uppercase tracking-wider text-[11px]">
                       Expected Output
                     </span>
-                    <pre className="text-[12.5px] text-[var(--kc-accent)] dark:text-[var(--kc-accent-hover)] font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto">
+                    <pre className="text-[12.5px] text-emerald-700 dark:text-emerald-300 font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto">
                       {formatOutput(verdict.failedExpected, returnType)}
                     </pre>
                   </div>
@@ -100,7 +100,7 @@ export const ConsolePanel = () => {
                     <span className="text-[var(--kc-text-secondary)] font-mono font-semibold block mb-1 uppercase tracking-wider text-[11px]">
                       Your Output
                     </span>
-                    <pre className="text-[12.5px] text-[var(--kc-error)] font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-error-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto">
+                    <pre className="text-[12.5px] text-rose-700 dark:text-rose-300 font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-error-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto">
                       {formatOutput(verdict.failedActual, returnType)}
                     </pre>
                   </div>
@@ -118,11 +118,11 @@ export const ConsolePanel = () => {
 
         {!isRunning && !verdict && errorMessage && (
           <div className="bg-[var(--kc-surface-subtle)] border border-[var(--kc-error-border)] rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2 text-xs font-mono font-semibold text-[var(--kc-error)]">
-              <XCircle size={14} className="text-[var(--kc-error)] shrink-0" />
+            <div className="flex items-center gap-2 mb-2 text-xs font-mono font-semibold text-rose-700 dark:text-rose-300">
+              <XCircle size={14} className="text-rose-600 dark:text-rose-400 shrink-0" />
               <span>Execution / Diagnostics Log</span>
             </div>
-            <pre className="text-[var(--kc-error)] text-xs font-mono leading-relaxed bg-[var(--kc-surface)] p-3 rounded-md border border-[var(--kc-error-border)] whitespace-pre-wrap overflow-x-auto">
+            <pre className="text-rose-700 dark:text-rose-300 text-xs font-mono leading-relaxed bg-[var(--kc-surface)] p-3 rounded-md border border-[var(--kc-error-border)] whitespace-pre-wrap overflow-x-auto">
               {errorMessage}
             </pre>
           </div>

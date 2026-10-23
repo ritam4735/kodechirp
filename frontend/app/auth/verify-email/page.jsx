@@ -71,7 +71,7 @@ function VerifyEmailContent() {
         className="flex flex-col items-center gap-4 text-center"
       >
         <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center">
-          <CheckCircle size={24} className="text-emerald-400" />
+          <CheckCircle size={24} className="text-emerald-600 dark:text-emerald-400" />
         </div>
         <div>
           <h3 className="text-[var(--kc-text-primary)] font-display font-semibold text-xl mb-1.5">Email Verified</h3>
@@ -95,18 +95,18 @@ function VerifyEmailContent() {
       className="flex flex-col items-center gap-5 text-center"
     >
       <div className="w-12 h-12 bg-rose-500/10 border border-rose-500/20 rounded-full flex items-center justify-center">
-        <AlertCircle size={24} className="text-rose-400" />
+        <AlertCircle size={24} className="text-rose-600 dark:text-rose-400" />
       </div>
       <div>
         <h3 className="text-[var(--kc-text-primary)] font-display font-semibold text-xl mb-1.5">Verification Failed</h3>
-        <p className="text-rose-400 text-sm">
+        <p className="text-rose-700 dark:text-rose-300 font-medium text-sm">
           {errorMsg}
         </p>
       </div>
 
       {resendSuccess ? (
         <div className="w-full p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-md">
-          <p className="text-emerald-400 text-xs font-medium">A new verification link has been sent to your email.</p>
+          <p className="text-emerald-700 dark:text-emerald-300 text-xs font-semibold">A new verification link has been sent to your email.</p>
         </div>
       ) : (
         emailParam && (

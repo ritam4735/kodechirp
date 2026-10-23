@@ -75,9 +75,36 @@ export default function AssessmentResultPage() {
     );
   }
 
+  if (result.results_withheld) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-primary)] p-6 flex items-center justify-center">
+        <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-2xl p-8 max-w-lg w-full text-center space-y-4 shadow-xl">
+          <div className="w-14 h-14 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
+            <Clock size={28} />
+          </div>
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">{result.assessment_title}</h2>
+          <div className="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+            Submission Received — Results Pending Release
+          </div>
+          <p className="text-sm text-[var(--text-secondary)]">
+            {result.message || 'Results for this assessment have not been released yet by your instructor or college administrator. Please check back later.'}
+          </p>
+          <div className="pt-2">
+            <Link
+              href="/assessments"
+              className="inline-block px-5 py-2.5 text-xs font-semibold rounded-xl bg-[var(--kc-accent)] text-[var(--kc-on-primary)] hover:bg-[var(--kc-accent-hover)] transition-colors"
+            >
+              Back to Assessments Portal
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const isPassed = result.is_passed;
-  const timeMins = Math.floor(result.time_taken_seconds / 60);
-  const timeSecs = result.time_taken_seconds % 60;
+  const timeMins = Math.floor((result.time_taken_seconds || 0) / 60);
+  const timeSecs = (result.time_taken_seconds || 0) % 60;
   const sectionScores = Array.isArray(result.section_scores) ? result.section_scores : [];
   const questionsReview = result.questions_review || [];
 
@@ -101,8 +128,8 @@ export default function AssessmentResultPage() {
         <div
           className={`rounded-2xl border p-8 shadow-sm transition-all ${
             isPassed
-              ? 'bg-gradient-to-br from-[var(--bg-secondary)] via-[var(--bg-secondary)] to-emerald-950/20 border-emerald-500/30'
-              : 'bg-gradient-to-br from-[var(--bg-secondary)] via-[var(--bg-secondary)] to-rose-950/20 border-rose-500/30'
+              ? 'bg-[var(--bg-secondary)] border-emerald-500/40'
+              : 'bg-[var(--bg-secondary)] border-rose-500/40'
           }`}
         >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -338,35 +365,46 @@ export default function AssessmentResultPage() {
                     {/* Options Grid */}
                     {opts.length > 0 && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
-                        {opts.map((opt) => {
-                          const isStudentChoice = q.selected_options === opt.id || (Array.isArray(q.selected_options) && q.selected_options.includes(opt.id));
-                          const isRightKey = q.correct_answer === opt.id || (Array.isArray(q.correct_answer) && q.correct_answer.includes(opt.id));
+                        {opts.map((opt, oIdx) => {
+                          const isObj = typeof opt === 'object' && opt !== null;
+                          const optId = String(isObj ? (opt.id || opt.option || String.fromCharCode(97 + oIdx)) : String.fromCharCode(97 + oIdx)).toLowerCase();
+                          const optText = String(isObj ? (opt.text ?? opt.value ?? opt.label ?? '') : String(opt));
+
+                          const studentChoices = Array.isArray(q.selected_options)
+                            ? q.selected_options.map((s) => String(s).toLowerCase())
+                            : [String(q.selected_options || '').toLowerCase()];
+                          const rightKeys = Array.isArray(q.correct_answer)
+                            ? q.correct_answer.map((s) => String(s).toLowerCase())
+                            : [String(q.correct_answer || '').toLowerCase()];
+
+                          const isStudentChoice = studentChoices.includes(optId);
+                          const isRightKey = rightKeys.includes(optId);
 
                           let optBorder = 'border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-secondary)]';
                           if (isRightKey) {
-                            optBorder = 'border-emerald-500 bg-emerald-500/10 text-emerald-400 font-semibold';
+                            optBorder = 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold';
                           } else if (isStudentChoice && !isRightKey) {
-                            optBorder = 'border-rose-500 bg-rose-500/10 text-rose-400 font-semibold';
+                            optBorder = 'border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300 font-semibold';
                           }
 
                           return (
                             <div
-                              key={opt.id}
+                              key={optId || oIdx}
                               className={`p-3 rounded-xl border flex items-center justify-between text-xs ${optBorder}`}
                             >
                               <div className="flex items-center gap-2.5">
                                 <span className="font-mono font-bold uppercase w-5 text-center">
-                                  {opt.id}
+                                  {optId}
                                 </span>
-                                <span>{opt.text}</span>
+                                <span>{optText}</span>
                               </div>
                               {isRightKey && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
                                   Correct Key
                                 </span>
                               )}
                               {isStudentChoice && !isRightKey && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-700 dark:text-rose-300">
                                   Your Choice
                                 </span>
                               )}
@@ -380,7 +418,7 @@ export default function AssessmentResultPage() {
                     {q.explanation && (
                       <div className="p-4 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] text-xs space-y-1">
                         <div className="font-bold text-[var(--text-primary)] flex items-center gap-1.5">
-                          <Sparkles size={13} className="text-amber-400" />
+                          <Sparkles size={13} className="text-amber-600 dark:text-amber-400" />
                           <span>Detailed Solution / Explanation:</span>
                         </div>
                         <p className="text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">

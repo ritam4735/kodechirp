@@ -30,7 +30,7 @@ function HeroSection() {
 
           <h1 className="kc-headline">
             Deep algorithmic <br className="kc-headline-br" />
-            <span className="kc-headline-gradient">understanding.</span><br />
+            <span className="kc-headline-accent">understanding.</span><br />
             Built for engineers.
           </h1>
 
@@ -191,7 +191,7 @@ function ProblemsSection({ problems }) {
             {/* Problem Table */}
             <div className="kc-problems-table" role="table" aria-label="Active Challenges List">
               <div className="kc-table-head" role="row">
-                <span role="columnheader">STATUS</span>
+                <span role="columnheader">SR. NO.</span>
                 <span role="columnheader">CHALLENGE TITLE</span>
                 <span role="columnheader">DIFFICULTY</span>
                 <span role="columnheader">ACCEPTANCE</span>

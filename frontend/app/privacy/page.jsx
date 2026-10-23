@@ -15,22 +15,22 @@ export default function PrivacyPage() {
       icon: UserCheck,
       title: '1. Information We Collect',
       content: (
-        <div className="space-y-3 text-sm text-[#8b949e] leading-relaxed">
+        <div className="space-y-3 text-sm text-[var(--kc-text-secondary)] leading-relaxed">
           <p>
-            When you register and interact with <strong className="text-[var(--kc-text-primary)]">KodeChirp</strong>, we collect only the minimal data required to provide our algorithmic practice platform:
+            When you register and interact with <strong className="text-[var(--kc-text-primary)] font-semibold">KodeChirp</strong>, we collect only the minimal data required to provide our algorithmic practice platform:
           </p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
-              <strong className="text-[#c9d1d9]">Account Information:</strong> Your username, email address, and encrypted (salted and hashed via bcrypt) password.
+              <strong className="text-[var(--kc-text-primary)] font-semibold">Account Information:</strong> Your username, email address, and encrypted (salted and hashed via bcrypt) password.
             </li>
             <li>
-              <strong className="text-[#c9d1d9]">Profile Details:</strong> Optional avatar URL and display name configured in your account settings.
+              <strong className="text-[var(--kc-text-primary)] font-semibold">Profile Details:</strong> Optional avatar URL and display name configured in your account settings.
             </li>
             <li>
-              <strong className="text-[#c9d1d9]">Code Submissions:</strong> Source code submitted to the judge or sandbox, selected programming language, timestamps, execution verdicts, runtime, and memory metrics.
+              <strong className="text-[var(--kc-text-primary)] font-semibold">Code Submissions:</strong> Source code submitted to the judge or sandbox, selected programming language, timestamps, execution verdicts, runtime, and memory metrics.
             </li>
             <li>
-              <strong className="text-[#c9d1d9]">Community Chirps:</strong> Publicly posted problem breakdowns, explanations, and code commentary.
+              <strong className="text-[var(--kc-text-primary)] font-semibold">Community Chirps:</strong> Publicly posted problem breakdowns, explanations, and code commentary.
             </li>
           </ul>
         </div>
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
       icon: Server,
       title: '2. Code Execution & Sandboxing',
       content: (
-        <div className="space-y-3 text-sm text-[#8b949e] leading-relaxed">
+        <div className="space-y-3 text-sm text-[var(--kc-text-secondary)] leading-relaxed">
           <p>
             KodeChirp runs submitted code in ephemeral, isolated Docker containers managed by our execution workers:
           </p>
@@ -56,7 +56,7 @@ export default function PrivacyPage() {
       icon: Database,
       title: '3. How Your Data Is Stored & Used',
       content: (
-        <div className="space-y-3 text-sm text-[#8b949e] leading-relaxed">
+        <div className="space-y-3 text-sm text-[var(--kc-text-secondary)] leading-relaxed">
           <p>We use your information solely to:</p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>Authenticate your sessions and maintain your problem-solving progress.</li>
@@ -74,9 +74,9 @@ export default function PrivacyPage() {
       icon: Lock,
       title: '4. Authentication, Cookies & Telemetry Preferences',
       content: (
-        <div className="space-y-3 text-sm text-[#8b949e] leading-relaxed">
+        <div className="space-y-3 text-sm text-[var(--kc-text-secondary)] leading-relaxed">
           <p>
-            KodeChirp uses JSON Web Tokens (JWT) for secure authentication. These tokens, along with your interface preferences (such as light/dark theme and cookie choices), are stored locally in your browser&apos;s <code className="text-[#58a6ff] bg-black/40 px-1.5 py-0.5 rounded text-xs">localStorage</code>.
+            KodeChirp uses JSON Web Tokens (JWT) for secure authentication. These tokens, along with your interface preferences (such as light/dark theme and cookie choices), are stored locally in your browser&apos;s <code className="text-[var(--kc-accent-text)] bg-[var(--kc-surface-subtle)] border border-[var(--kc-border-subtle)] px-1.5 py-0.5 rounded text-xs font-mono">localStorage</code>.
           </p>
           <p>
             We respect your privacy choices through our Cookie &amp; Privacy Consent banner. With your consent, we collect minimal, anonymized telemetry (page navigation and code execution benchmarks) to improve judge speed and stability. We never deploy invasive third-party ad pixels or sell your data to data brokers. You can adjust your consent choices at any time via the Cookie Preferences link in the footer.
@@ -88,12 +88,12 @@ export default function PrivacyPage() {
       icon: Shield,
       title: '5. Your Rights & Data Control',
       content: (
-        <div className="space-y-3 text-sm text-[#8b949e] leading-relaxed">
+        <div className="space-y-3 text-sm text-[var(--kc-text-secondary)] leading-relaxed">
           <p>
-            You retain control over your data. You may review your submissions, update your profile details, or reset your credentials at any time through your <Link href="/settings" className="text-[#58a6ff] hover:underline">Settings</Link>.
+            You retain control over your data. You may review your submissions, update your profile details, or reset your credentials at any time through your <Link href="/settings" className="text-[var(--kc-accent)] hover:underline font-medium">Settings</Link>.
           </p>
           <p>
-            If you wish to delete your account or have specific privacy inquiries, you can reach out via our <Link href="/contact" className="text-[#58a6ff] hover:underline">Contact page</Link> or through our open-source repository on GitHub.
+            If you wish to delete your account or have specific privacy inquiries, you can reach out via our <Link href="/contact" className="text-[var(--kc-accent)] hover:underline font-medium">Contact page</Link> or through our open-source repository on GitHub.
           </p>
         </div>
       ),

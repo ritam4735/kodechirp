@@ -53,8 +53,8 @@ export default function ComingSoonPage({ params }) {
       <div className="relative flex-1 flex items-center justify-center min-h-[60vh]">
         <AnimatedBackground variant="coming_soon" />
         <div className="relative z-10 text-center">
-          <p className="text-[#8b949e] text-lg">Page not found.</p>
-          <Link href="/" className="mt-4 inline-block text-[#58a6ff] hover:underline text-sm">Go Home</Link>
+          <p className="text-[var(--kc-text-muted)] text-lg">Page not found.</p>
+          <Link href="/" className="mt-4 inline-block text-[var(--kc-accent)] hover:underline text-sm font-medium">Go Home</Link>
         </div>
       </div>
     );

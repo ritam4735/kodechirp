@@ -45,11 +45,11 @@ function ResetPasswordForm() {
   if (!token || !emailParam) {
     return (
       <div className="text-center space-y-6">
-        <div className="w-16 h-16 bg-[#f85149]/20 rounded-full flex items-center justify-center mx-auto">
-          <AlertCircle size={32} className="text-[#ff7b72]" />
+        <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/20 rounded-full flex items-center justify-center mx-auto">
+          <AlertCircle size={32} className="text-rose-600 dark:text-rose-400" />
         </div>
-        <p className="text-[#ff7b72] font-medium">{error || 'Invalid reset link'}</p>
-        <Link href="/auth/forgot-password" className="text-[#58a6ff] hover:underline text-sm font-medium flex items-center justify-center gap-2">
+        <p className="text-rose-700 dark:text-rose-300 font-semibold">{error || 'Invalid reset link'}</p>
+        <Link href="/auth/forgot-password" className="text-[var(--kc-accent)] hover:underline text-sm font-medium flex items-center justify-center gap-2">
           Request a new link
         </Link>
       </div>
@@ -63,7 +63,7 @@ function ResetPasswordForm() {
         className="flex flex-col items-center gap-4 text-center"
       >
         <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center">
-          <CheckCircle size={24} className="text-emerald-400" />
+          <CheckCircle size={24} className="text-emerald-600 dark:text-emerald-400" />
         </div>
         <div>
           <p className="text-[var(--kc-text-primary)] font-medium text-base">Password Reset Successfully</p>
@@ -84,8 +84,8 @@ function ResetPasswordForm() {
   return (
     <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
       {error && (
-        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-md flex items-center gap-2.5 text-rose-400 text-sm">
-          <AlertCircle size={16} className="shrink-0" />
+        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-md flex items-center gap-2.5 text-rose-700 dark:text-rose-300 font-medium text-sm">
+          <AlertCircle size={16} className="shrink-0 text-rose-600 dark:text-rose-400" />
           <p>{error}</p>
         </div>
       )}

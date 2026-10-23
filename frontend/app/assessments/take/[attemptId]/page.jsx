@@ -49,6 +49,22 @@ const CodeEditor = dynamic(
   }
 );
 
+function parseSelectedOptions(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map((x) => String(x).toLowerCase());
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed.map((x) => String(x).toLowerCase());
+      } catch {}
+    }
+    return [trimmed.toLowerCase()];
+  }
+  return [];
+}
+
 export default function AssessmentTakingArena() {
   const params = useParams();
   const router = useRouter();
@@ -214,9 +230,21 @@ export default function AssessmentTakingArena() {
   const handleSelectOption = (optId) => {
     const curQ = currentQuestion;
     if (!curQ) return;
+    const isMulti = curQ.question_type === 'multiple_choice';
+    const normOptId = String(optId || '').toLowerCase();
     const currentSelected = responses[curQ.id]?.selected_options;
-    const nextVal = currentSelected === optId ? null : optId;
-    saveAnswer(curQ.id, { selected_options: nextVal });
+
+    if (isMulti) {
+      const selectedList = parseSelectedOptions(currentSelected);
+      const nextList = selectedList.includes(normOptId)
+        ? selectedList.filter((x) => x !== normOptId)
+        : [...selectedList, normOptId];
+      saveAnswer(curQ.id, { selected_options: nextList.length > 0 ? nextList : null });
+    } else {
+      const isAlreadySelected = String(currentSelected || '').toLowerCase() === normOptId;
+      const nextVal = isAlreadySelected ? null : normOptId;
+      saveAnswer(curQ.id, { selected_options: nextVal });
+    }
   };
 
   const handleClearResponse = () => {
@@ -411,7 +439,7 @@ export default function AssessmentTakingArena() {
             </h1>
             <div className="text-[10px] text-[var(--text-muted)] flex items-center gap-1.5">
               <span>Status:</span>
-              <span className={isSaving ? 'text-amber-400 font-medium' : 'text-emerald-500 font-medium'}>
+              <span className={isSaving ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-emerald-600 dark:text-emerald-400 font-medium'}>
                 {saveStatus}
               </span>
             </div>
@@ -423,9 +451,9 @@ export default function AssessmentTakingArena() {
           <div
             className={`px-4 py-1.5 rounded-xl font-mono text-sm font-extrabold flex items-center gap-2 shadow-inner border transition-colors ${
               isCriticalTime
-                ? 'bg-rose-500/20 text-rose-500 border-rose-500/50 animate-pulse'
+                ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/50 animate-pulse'
                 : isLowTime
-                ? 'bg-amber-500/20 text-amber-500 border-amber-500/50'
+                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/50'
                 : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] border-[var(--border-default)]'
             }`}
           >
@@ -437,10 +465,10 @@ export default function AssessmentTakingArena() {
         {/* Right: Status Counts & Finish Button */}
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-2 text-xs">
-            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-semibold border border-emerald-500/20">
+            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-500/20">
               {answeredCount} Answered
             </span>
-            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 font-semibold border border-amber-500/20">
+            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold border border-amber-500/20">
               {flaggedCount} Review
             </span>
           </div>
@@ -511,16 +539,33 @@ export default function AssessmentTakingArena() {
           {/* MCQ Options (If Objective Question) */}
           {!currentQuestion.is_coding && currentQuestion.options && (
             <div className="space-y-3">
-              <div className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
-                Select One Option:
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
+                  {currentQuestion.question_type === 'multiple_choice'
+                    ? 'Select One or More Options (Multiple Choice):'
+                    : 'Select One Option:'}
+                </span>
+                {currentQuestion.question_type === 'multiple_choice' && (
+                  <span className="text-[11px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+                    Multiple Choice
+                  </span>
+                )}
               </div>
               <div className="grid grid-cols-1 gap-2.5">
-                {currentQuestion.options.map((opt) => {
-                  const isSelected = selectedOpt === opt.id;
+                {currentQuestion.options.map((opt, optIdx) => {
+                  const isObj = typeof opt === 'object' && opt !== null;
+                  const optId = String(isObj ? (opt.id || opt.option || String.fromCharCode(97 + optIdx)) : String.fromCharCode(97 + optIdx)).toLowerCase();
+                  const optText = String(isObj ? (opt.text ?? opt.value ?? opt.label ?? '') : String(opt));
+                  const isMulti = currentQuestion.question_type === 'multiple_choice';
+                  const selectedList = parseSelectedOptions(selectedOpt);
+                  const isSelected = isMulti
+                    ? selectedList.includes(optId)
+                    : String(selectedOpt || '').toLowerCase() === optId;
+                  const uniqueKey = `${optId}-${optIdx}`;
                   return (
                     <div
-                      key={opt.id}
-                      onClick={() => handleSelectOption(opt.id)}
+                      key={uniqueKey}
+                      onClick={() => handleSelectOption(optId)}
                       className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
                         isSelected
                           ? 'border-[var(--kc-accent)] bg-[var(--kc-accent-subtle)] shadow-sm'
@@ -535,15 +580,17 @@ export default function AssessmentTakingArena() {
                               : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
                           }`}
                         >
-                          {opt.id}
+                          {optId}
                         </span>
                         <span className={`text-sm ${isSelected ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
-                          {opt.text}
+                          {optText}
                         </span>
                       </div>
 
                       <div
-                        className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                        className={`w-5 h-5 flex items-center justify-center transition-colors ${
+                          isMulti ? 'rounded-md' : 'rounded-full'
+                        } border ${
                           isSelected
                             ? 'border-[var(--kc-accent)] bg-[var(--kc-accent)] text-[var(--kc-on-primary)]'
                             : 'border-[var(--border-default)]'
@@ -570,10 +617,10 @@ export default function AssessmentTakingArena() {
                     </span>
                     <span className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider ${
                       currentQuestion.difficulty === 'Easy'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
                         : currentQuestion.difficulty === 'Hard'
-                        ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20'
+                        : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20'
                     }`}>
                       {currentQuestion.difficulty || 'Medium'}
                     </span>
@@ -767,7 +814,7 @@ export default function AssessmentTakingArena() {
                     <span>Test Cases</span>
                     {runOutput?.testCaseResults && (
                       <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                        runOutput.allPassed ? 'bg-emerald-500/20 text-emerald-400 font-bold' : 'bg-rose-500/20 text-rose-400 font-bold'
+                        runOutput.allPassed ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold' : 'bg-rose-500/20 text-rose-700 dark:text-rose-300 font-bold'
                       }`}>
                         {runOutput.testCaseResults.filter(tc => (tc.passed ?? tc.status === 'Passed')).length}/{runOutput.testCaseResults.length}
                       </span>
@@ -831,9 +878,9 @@ export default function AssessmentTakingArena() {
                                   }`}
                                 >
                                   {isPassed ? (
-                                    <Check size={12} className="text-emerald-400 stroke-[3]" />
+                                    <Check size={12} className="text-emerald-600 dark:text-emerald-400 stroke-[3]" />
                                   ) : (
-                                    <XCircle size={12} className="text-rose-400" />
+                                    <XCircle size={12} className="text-rose-600 dark:text-rose-400" />
                                   )}
                                   <span>Case {idx + 1}</span>
                                 </button>
@@ -854,8 +901,8 @@ export default function AssessmentTakingArena() {
                                 <div className="flex items-center justify-between">
                                   <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                                     isCurPassed
-                                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                      : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                                      : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/30'
                                   }`}>
                                     {isCurPassed ? 'PASSED' : 'FAILED'}
                                   </span>
@@ -880,7 +927,7 @@ export default function AssessmentTakingArena() {
                                     <span className="text-[10px] uppercase text-[var(--text-muted)] font-bold block mb-1">
                                       Expected Output:
                                     </span>
-                                    <pre className="p-2.5 rounded-lg bg-[var(--bg-tertiary)] text-emerald-400 overflow-x-auto whitespace-pre-wrap">
+                                    <pre className="p-2.5 rounded-lg bg-[var(--bg-tertiary)] text-emerald-700 dark:text-emerald-300 overflow-x-auto whitespace-pre-wrap font-mono">
                                       {expectedOut}
                                     </pre>
                                   </div>
@@ -888,8 +935,8 @@ export default function AssessmentTakingArena() {
                                     <span className="text-[10px] uppercase text-[var(--text-muted)] font-bold block mb-1">
                                       Actual Output:
                                     </span>
-                                    <pre className={`p-2.5 rounded-lg bg-[var(--bg-tertiary)] overflow-x-auto whitespace-pre-wrap ${
-                                      isCurPassed ? 'text-emerald-400' : 'text-rose-400'
+                                    <pre className={`p-2.5 rounded-lg bg-[var(--bg-tertiary)] overflow-x-auto whitespace-pre-wrap font-mono ${
+                                      isCurPassed ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
                                     }`}>
                                       {actualOut}
                                     </pre>
@@ -912,13 +959,13 @@ export default function AssessmentTakingArena() {
                   {activeConsoleTab === 'console' && (
                     <div className="font-mono text-xs">
                       {runOutput?.compileError ? (
-                        <div className="p-3.5 rounded-lg bg-rose-950/40 border border-rose-500/30 text-rose-300 whitespace-pre-wrap">
-                          <div className="text-[10px] uppercase font-bold text-rose-400 mb-1">Compilation / Syntax Error:</div>
+                        <div className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-800 dark:text-rose-200 whitespace-pre-wrap">
+                          <div className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-300 mb-1">Compilation / Syntax Error:</div>
                           {runOutput.compileError}
                         </div>
                       ) : runOutput?.stderr ? (
-                        <div className="p-3.5 rounded-lg bg-rose-950/40 border border-rose-500/30 text-rose-300 whitespace-pre-wrap">
-                          <div className="text-[10px] uppercase font-bold text-rose-400 mb-1">Runtime Stderr:</div>
+                        <div className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-800 dark:text-rose-200 whitespace-pre-wrap">
+                          <div className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-300 mb-1">Runtime Stderr:</div>
                           {runOutput.stderr}
                         </div>
                       ) : runOutput?.stdout || runOutput?.output ? (
@@ -947,14 +994,14 @@ export default function AssessmentTakingArena() {
                         <div className="space-y-4">
                           <div className={`p-4 rounded-xl border flex flex-wrap items-center justify-between gap-3 ${
                             submissionVerdict.verdict === 'Accepted'
-                              ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-400'
-                              : 'bg-rose-950/30 border-rose-500/40 text-rose-400'
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-200'
+                              : 'bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-200'
                           }`}>
                             <div className="flex items-center gap-2.5">
                               {submissionVerdict.verdict === 'Accepted' ? (
-                                <CheckCircle2 size={22} className="text-emerald-400" />
+                                <CheckCircle2 size={22} className="text-emerald-600 dark:text-emerald-400" />
                               ) : (
-                                <XCircle size={22} className="text-rose-400" />
+                                <XCircle size={22} className="text-rose-600 dark:text-rose-400" />
                               )}
                               <div>
                                 <div className="text-base font-bold font-mono">
@@ -977,10 +1024,10 @@ export default function AssessmentTakingArena() {
 
                           <div className="p-3 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-default)] flex items-center justify-between text-xs text-[var(--text-muted)]">
                             <span className="flex items-center gap-1.5">
-                              <CheckCircle2 size={13} className="text-emerald-400" />
+                              <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />
                               <span>Code solution securely recorded in assessment attempt draft</span>
                             </span>
-                            <span className="font-mono text-emerald-400 font-bold">Marked Answered</span>
+                            <span className="font-mono text-emerald-700 dark:text-emerald-300 font-bold">Marked Answered</span>
                           </div>
                         </div>
                       ) : null}
@@ -998,7 +1045,7 @@ export default function AssessmentTakingArena() {
                 onClick={handleToggleFlag}
                 className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-colors ${
                   isCurrentFlagged
-                    ? 'border-amber-500/50 bg-amber-500/20 text-amber-400'
+                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold'
                     : 'border-[var(--border-default)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
                 }`}
               >
@@ -1006,7 +1053,7 @@ export default function AssessmentTakingArena() {
                 <span>{isCurrentFlagged ? 'Marked for Review' : 'Mark for Review'}</span>
               </button>
 
-              {selectedOpt && (
+              {(Array.isArray(selectedOpt) ? selectedOpt.length > 0 : Boolean(selectedOpt)) && (
                 <button
                   onClick={handleClearResponse}
                   className="px-3 py-2 text-xs font-medium rounded-lg text-[var(--text-muted)] hover:text-rose-500 hover:bg-[var(--bg-tertiary)] transition-colors"
@@ -1080,7 +1127,7 @@ export default function AssessmentTakingArena() {
 
                 let btnClass = 'bg-[var(--bg-primary)] border-[var(--border-default)] text-[var(--text-secondary)]';
                 if (isAnswered && isFlagged) {
-                  btnClass = 'bg-amber-500/20 border-amber-500 text-amber-400 font-bold';
+                  btnClass = 'bg-amber-500/10 border-amber-500 text-amber-700 dark:text-amber-300 font-bold';
                 } else if (isAnswered) {
                   btnClass = 'bg-emerald-500 text-white font-bold border-emerald-500';
                 } else if (isFlagged) {

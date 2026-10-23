@@ -15,8 +15,8 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.40.0",
     "lucide-react": "^0.383.0",
-    "monaco-editor": "^0.55.1",
-    "next": "^16.2.6",
+    "monaco-editor": "^0.57.0",
+    "next": "^16.4.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^9.0.1",
@@ -35,5 +35,12 @@
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3"
+  },
+  "overrides": {
+    "glob": "^10.4.6",
+    "minimatch": "^9.0.7",
+    "dompurify": "^3.4.16",
+    "braces": "^3.0.3",
+    "postcss-selector-parser": "^7.1.6"
   }
 }

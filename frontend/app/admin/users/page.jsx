@@ -3,7 +3,19 @@
 import { useEffect, useState, useCallback } from 'react';
 import { adminApi } from '../../../lib/adminApi';
 import { useAuth } from '../../../hooks/useAuth';
-import { Users, ChevronLeft, ChevronRight, Trash2, PauseCircle, PlayCircle, ArrowUpCircle, ArrowDownCircle, AlertTriangle } from 'lucide-react';
+import { 
+  Users, 
+  ChevronLeft, 
+  ChevronRight, 
+  Trash2, 
+  PauseCircle, 
+  PlayCircle, 
+  ArrowUpCircle, 
+  ArrowDownCircle, 
+  AlertTriangle,
+  Shield,
+  Building2,
+} from 'lucide-react';
 
 const PAGE_SIZE = 30;
 
@@ -18,10 +30,15 @@ export default function AdminUsers() {
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(0);
 
+  // Organizations list for college admin assignment
+  const [organizations, setOrganizations] = useState([]);
+  const [selectedRole, setSelectedRole] = useState('user');
+  const [selectedOrgId, setSelectedOrgId] = useState('');
+
   // In-app modal confirmation state
   const [modal, setModal] = useState({
     open: false,
-    type: '', // 'delete' | 'promote' | 'demote' | 'suspend' | 'activate'
+    type: '', // 'delete' | 'role' | 'suspend' | 'activate'
     user: null,
     loading: false,
   });
@@ -56,6 +73,12 @@ export default function AdminUsers() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
+  useEffect(() => {
+    adminApi.getOrganizations({ limit: 100 })
+      .then(res => setOrganizations(res.organizations || res.data || []))
+      .catch(() => {});
+  }, []);
+
   // Action button click handlers (trigger in-app modal or self-protection toast)
   const handleActionClick = (type, targetUser) => {
     const isSelf = Boolean(currentUser?.id && currentUser.id === targetUser.id);
@@ -65,14 +88,19 @@ export default function AdminUsers() {
         showToast('error', 'You cannot delete your own administrator account.');
         return;
       }
-      if (type === 'demote') {
-        showToast('error', 'You cannot demote your own administrator account.');
+      if (type === 'role') {
+        showToast('error', 'You cannot modify your own administrator role.');
         return;
       }
       if (type === 'suspend') {
         showToast('error', 'You cannot suspend your own administrator account.');
         return;
       }
+    }
+
+    if (type === 'role') {
+      setSelectedRole(targetUser.role || 'user');
+      setSelectedOrgId(targetUser.organization_id || '');
     }
 
     setModal({
@@ -94,12 +122,14 @@ export default function AdminUsers() {
         setUsers(prev => prev.filter(u => u.id !== targetUser.id));
         await adminApi.deleteUser(targetUser.id);
         showToast('success', `User "${targetUser.username}" permanently deleted.`);
-      } else if (type === 'promote') {
-        await adminApi.updateUserRole(targetUser.id, 'admin');
-        showToast('success', `User "${targetUser.username}" promoted to Administrator.`);
-      } else if (type === 'demote') {
-        await adminApi.updateUserRole(targetUser.id, 'user');
-        showToast('success', `User "${targetUser.username}" demoted to standard User.`);
+      } else if (type === 'role') {
+        if (selectedRole === 'college_admin' && !selectedOrgId && !targetUser.organization_id) {
+          showToast('error', 'Please select an academic institution for the College Admin.');
+          setModal(prev => ({ ...prev, loading: false }));
+          return;
+        }
+        await adminApi.updateUserRole(targetUser.id, selectedRole, selectedOrgId || undefined);
+        showToast('success', `Role for "${targetUser.username}" updated to ${selectedRole.replace('_', ' ')}.`);
       } else if (type === 'suspend') {
         await adminApi.updateUserStatus(targetUser.id, false);
         showToast('success', `User "${targetUser.username}" has been suspended.`);
@@ -232,34 +262,30 @@ export default function AdminUsers() {
                     )}
                   </td>
                   <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{u.email}</td>
-                  <td><span className={`admin-badge badge-${u.role}`}>{u.role}</span></td>
+                  <td>
+                    <span className={`admin-badge badge-${u.role}`}>{u.role}</span>
+                    {u.role === 'college_admin' && (
+                      <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '3px', fontWeight: 500 }}>
+                        🏫 {u.organization_name || 'No institution assigned'}
+                      </div>
+                    )}
+                  </td>
                   <td><span className={`admin-badge ${u.is_active ? 'badge-active' : 'badge-suspended'}`}>{u.is_active ? 'Active' : 'Suspended'}</span></td>
                   <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{new Date(u.created_at).toLocaleDateString()}</td>
                   <td style={{ fontSize: '12px' }}>{u.total_submissions}</td>
                   <td style={{ fontSize: '12px', color: '#4ade80' }}>{u.total_accepted}</td>
                   <td>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                      {u.role !== 'admin' && (
-                        <button
-                          type="button"
-                          className="admin-btn admin-btn-sm"
-                          style={{ background: 'rgba(59, 130, 246, 0.12)', color: 'var(--kc-accent)', border: '1px solid rgba(59, 130, 246, 0.25)' }}
-                          onClick={() => handleActionClick('promote', u)}
-                          title="Promote to administrator"
-                        >
-                          Promote
-                        </button>
-                      )}
-                      {u.role === 'admin' && (
-                        <button
-                          type="button"
-                          className={`admin-btn admin-btn-ghost admin-btn-sm ${isSelf ? 'admin-btn-disabled' : ''}`}
-                          onClick={() => handleActionClick('demote', u)}
-                          title={isSelf ? 'Cannot demote yourself' : 'Demote to user'}
-                        >
-                          Demote
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className={`admin-btn admin-btn-sm ${isSelf ? 'admin-btn-disabled' : ''}`}
+                        style={{ background: 'rgba(59, 130, 246, 0.12)', color: 'var(--kc-accent)', border: '1px solid rgba(59, 130, 246, 0.25)' }}
+                        onClick={() => handleActionClick('role', u)}
+                        disabled={isSelf}
+                        title={isSelf ? 'Cannot modify your own administrator role' : 'Manage role and college assignment'}
+                      >
+                        Change Role
+                      </button>
                       {u.is_active ? (
                         <button
                           type="button"
@@ -318,7 +344,7 @@ export default function AdminUsers() {
         >
           <div
             className="admin-modal"
-            style={{ maxWidth: '480px' }}
+            style={{ maxWidth: '500px' }}
             onClick={e => e.stopPropagation()}
           >
             <div className="admin-modal-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -326,14 +352,13 @@ export default function AdminUsers() {
                 {modal.type === 'delete' ? <Trash2 size={18} style={{ color: 'var(--kc-error, #f87171)' }} /> :
                  modal.type === 'suspend' ? <PauseCircle size={18} style={{ color: '#fbbf24' }} /> :
                  modal.type === 'activate' ? <PlayCircle size={18} style={{ color: '#4ade80' }} /> :
-                 modal.type === 'promote' ? <ArrowUpCircle size={18} style={{ color: 'var(--kc-accent)' }} /> :
-                 <ArrowDownCircle size={18} style={{ color: 'var(--text-muted)' }} />}
+                 <Shield size={18} style={{ color: 'var(--kc-accent)' }} />}
               </span>
               <span>
                 {modal.type === 'delete' ? 'Permanently Delete User' :
                  modal.type === 'suspend' ? 'Suspend User Account' :
                  modal.type === 'activate' ? 'Activate User Account' :
-                 modal.type === 'promote' ? 'Promote to Administrator' : 'Demote to User'}
+                 'Manage User Role & Institution'}
               </span>
             </div>
 
@@ -358,34 +383,91 @@ export default function AdminUsers() {
               </div>
             </div>
 
-            <p style={{ fontSize: '13px', lineHeight: 1.5, color: 'var(--text-secondary)', marginBottom: '24px' }}>
-              {modal.type === 'delete' && (
-                <span style={{ color: '#f87171' }}>
-                  <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />
-                  This action cannot be undone. All submissions, chirps, and preferences associated with <strong>{modal.user.username}</strong> will be permanently removed from the system.
-                </span>
-              )}
-              {modal.type === 'suspend' && (
-                <span>
-                  The user will be immediately suspended and cannot sign in, submit solutions, or interact on the platform until reactivated.
-                </span>
-              )}
-              {modal.type === 'activate' && (
-                <span>
-                  The user account will be restored to active status and will be allowed to log in and participate normally.
-                </span>
-              )}
-              {modal.type === 'promote' && (
-                <span>
-                  This will grant <strong>{modal.user.username}</strong> full administrative rights, including problem curation, user management, and system metrics.
-                </span>
-              )}
-              {modal.type === 'demote' && (
-                <span>
-                  Administrative privileges will be revoked. The user will be demoted to a regular user account.
-                </span>
-              )}
-            </p>
+            {modal.type === 'role' ? (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                    Select Assigned Role
+                  </label>
+                  <select
+                    value={selectedRole}
+                    onChange={e => setSelectedRole(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      borderRadius: '8px',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: 'var(--text-primary)',
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="user">Standard User (Regular Student)</option>
+                    <option value="college_admin">College Administrator (Institution Scoped)</option>
+                    <option value="admin">Platform Administrator</option>
+                    <option value="super_admin">Super Administrator (Unrestricted)</option>
+                  </select>
+                </div>
+
+                {selectedRole === 'college_admin' && (
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                      Assign Institution / College
+                    </label>
+                    <select
+                      value={selectedOrgId}
+                      onChange={e => setSelectedOrgId(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        background: 'rgba(0, 0, 0, 0.4)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        color: 'var(--text-primary)',
+                        fontSize: '13px',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="">-- Select an academic institution --</option>
+                      {organizations.map(o => (
+                        <option key={o.id} value={o.id}>
+                          {o.name} ({o.code || o.slug})
+                        </option>
+                      ))}
+                    </select>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', display: 'block' }}>
+                      College admins only have access to students, assessments, and analytics of their assigned college.
+                    </span>
+                  </div>
+                )}
+
+                {selectedRole === 'super_admin' && (
+                  <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', fontSize: '12px', color: '#f87171' }}>
+                    Super Admins have unrestricted platform privileges, including cluster health, problem curation, and database access.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p style={{ fontSize: '13px', lineHeight: 1.5, color: 'var(--text-secondary)', marginBottom: '24px' }}>
+                {modal.type === 'delete' && (
+                  <span style={{ color: '#f87171' }}>
+                    <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />
+                    This action cannot be undone. All records associated with <strong>{modal.user.username}</strong> will be permanently removed.
+                  </span>
+                )}
+                {modal.type === 'suspend' && (
+                  <span>
+                    The user will be immediately suspended and cannot sign in until reactivated.
+                  </span>
+                )}
+                {modal.type === 'activate' && (
+                  <span>
+                    The user account will be restored to active status and allowed to log in normally.
+                  </span>
+                )}
+              </p>
+            )}
 
             <div className="admin-modal-actions">
               <button
@@ -401,18 +483,16 @@ export default function AdminUsers() {
                 className={`admin-btn ${
                   modal.type === 'delete' ? 'admin-btn-danger' :
                   modal.type === 'suspend' ? 'admin-btn-warning' :
-                  modal.type === 'activate' ? 'admin-btn-success' :
-                  modal.type === 'promote' ? 'admin-btn-primary' : 'admin-btn-ghost'
+                  modal.type === 'activate' ? 'admin-btn-success' : 'admin-btn-primary'
                 }`}
                 disabled={modal.loading}
                 onClick={handleModalConfirm}
               >
                 {modal.loading && <span className="admin-spinner-sm" style={{ marginRight: '6px' }}></span>}
-                {modal.loading ? 'Processing...' : (
+                {modal.loading ? 'Saving...' : (
                   modal.type === 'delete' ? 'Delete User' :
                   modal.type === 'suspend' ? 'Suspend User' :
-                  modal.type === 'activate' ? 'Activate User' :
-                  modal.type === 'promote' ? 'Confirm Promotion' : 'Confirm Demotion'
+                  modal.type === 'activate' ? 'Activate User' : 'Save Role Changes'
                 )}
               </button>
             </div>

@@ -20,6 +20,27 @@ function getInitialState() {
 
 export const useAuthStore = create((set) => ({
   ...getInitialState(),
+  initAuth: () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const token = localStorage.getItem('kc_token');
+      const userStr = localStorage.getItem('kc_user');
+      if (token && userStr) {
+        const user = JSON.parse(userStr);
+        const current = useAuthStore.getState();
+        if (current.token !== token || current.user?.id !== user.id || !current.isAuthenticated) {
+          set({ user, token, isAuthenticated: true });
+        }
+        return;
+      }
+    } catch {
+      // Corrupted storage
+    }
+    const current = useAuthStore.getState();
+    if (current.token || current.user || current.isAuthenticated) {
+      set({ user: null, token: null, isAuthenticated: false });
+    }
+  },
   login: (userData, token) => set({ user: userData, token, isAuthenticated: true }),
   logout: () => set({ user: null, token: null, isAuthenticated: false }),
 }));

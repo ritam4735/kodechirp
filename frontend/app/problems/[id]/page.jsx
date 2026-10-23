@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useProblem } from '../../../hooks/useProblem';
 import { ProblemDescription } from '../../../components/problem/ProblemDescription';
 import { TestCases } from '../../../components/problem/TestCases';
 import { ChirpsSection } from '../../../components/chirps/ChirpsSection';
+import { QuestionNavigatorDrawer } from '../../../components/problem/QuestionNavigatorDrawer';
 import dynamic from 'next/dynamic';
 import { LanguageSelector } from '../../../components/editor/LanguageSelector';
 
@@ -32,9 +33,12 @@ import {
   FileCheck, 
   Target, 
   ChevronRight, 
+  ChevronLeft,
   Terminal, 
   Lock, 
-  AlertTriangle 
+  AlertTriangle,
+  Layers,
+  CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
@@ -92,12 +96,21 @@ function DifficultyBadge({ difficulty }) {
 }
 
 export default function ProblemPage() {
+  const router = useRouter();
   const { id } = useParams();
   const { currentProblem, isLoading, error, fetchProblemDetails } = useProblem();
   const { resetConsole } = useEditor();
 
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const handleSelectProblem = useCallback((problem) => {
+    setIsDrawerOpen(false);
+    if (problem && problem.slug) {
+      router.push(`/problems/${problem.slug}`);
+    }
+  }, [router]);
 
   const [horizontalLayout, setHorizontalLayout] = useState(() => 
     loadStoredLayout(STORAGE_KEY_HORIZONTAL, DEFAULT_HORIZONTAL_LAYOUT, validateHorizontalLayout)
@@ -227,9 +240,23 @@ export default function ProblemPage() {
               </button>
             </div>
 
-            <div className="flex-1 min-h-0 min-w-0 flex flex-col h-full w-full overflow-hidden">
-              {activeTab === 'description' && <LeftPanelContent currentProblem={currentProblem} isMobile={isMobile} />}
-              {activeTab === 'editor' && <EditorContent problemId={currentProblem.id} />}
+            <div className="flex-1 min-h-0 min-w-0 flex flex-col h-full w-full overflow-hidden relative">
+              {activeTab === 'description' && (
+                <LeftPanelContent 
+                  currentProblem={currentProblem} 
+                  isMobile={isMobile}
+                  isDrawerOpen={isDrawerOpen}
+                  setIsDrawerOpen={setIsDrawerOpen}
+                  onSelectProblem={handleSelectProblem}
+                />
+              )}
+              {activeTab === 'editor' && (
+                <EditorContent 
+                  problemId={currentProblem.id} 
+                  currentProblem={currentProblem}
+                  onOpenDrawer={() => setIsDrawerOpen(true)}
+                />
+              )}
               {activeTab === 'tests' && <BottomContent testCases={currentProblem.testCases} problem={currentProblem} />}
             </div>
 
@@ -262,10 +289,16 @@ export default function ProblemPage() {
               defaultSize="40%"
               minSize="25%"
               maxSize="60%"
-              className="flex-1 flex flex-col h-full w-full min-h-0 min-w-0 !overflow-hidden"
+              className="flex-1 flex flex-col h-full w-full min-h-0 min-w-0 !overflow-hidden relative"
               style={{ height: '100%' }}
             >
-              <LeftPanelContent currentProblem={currentProblem} isMobile={false} />
+              <LeftPanelContent 
+                currentProblem={currentProblem} 
+                isMobile={false} 
+                isDrawerOpen={isDrawerOpen}
+                setIsDrawerOpen={setIsDrawerOpen}
+                onSelectProblem={handleSelectProblem}
+              />
             </Panel>
 
             <ResizeHandle direction="horizontal" />
@@ -319,22 +352,86 @@ export default function ProblemPage() {
 }
 
 // Left Panel Content (Problem Description & Meta)
-const LeftPanelContent = ({ currentProblem, isMobile }) => (
-  <div className="flex-1 flex flex-col h-full w-full bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg overflow-hidden min-h-0 min-w-0">
+const LeftPanelContent = ({ 
+  currentProblem, 
+  isMobile, 
+  isDrawerOpen, 
+  setIsDrawerOpen, 
+  onSelectProblem 
+}) => (
+  <div className="flex-1 flex flex-col h-full w-full bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg overflow-hidden min-h-0 min-w-0 relative">
+    {/* Question Navigator Drawer — Overlays the description pane without shifting or resizing editor */}
+    <QuestionNavigatorDrawer
+      isOpen={isDrawerOpen}
+      onClose={() => setIsDrawerOpen(false)}
+      currentProblem={currentProblem}
+      onSelectProblem={onSelectProblem}
+    />
+
     {/* Problem Header Information */}
     <div className="p-4 sm:p-5 border-b border-[var(--kc-border)] shrink-0 flex flex-col gap-2.5 bg-[var(--kc-surface)]">
-      <div className="flex items-center gap-1.5 text-xs text-[var(--kc-text-muted)] font-mono">
-        <Link href="/questions" className="hover:text-[var(--kc-text-primary)] transition-colors">
-          Challenges
-        </Link>
-        <ChevronRight size={11} />
-        <span className="text-[var(--kc-text-secondary)] truncate max-w-[240px]">{currentProblem.title}</span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 text-xs text-[var(--kc-text-muted)] font-mono min-w-0">
+          <button
+            type="button"
+            onClick={() => setIsDrawerOpen(true)}
+            className="hover:text-[var(--kc-text-primary)] transition-colors flex items-center gap-1 font-semibold group cursor-pointer focus:outline-none shrink-0"
+            title="Open Question Navigator"
+            aria-label="Open Question Navigator"
+          >
+            <Layers size={13} className="text-[var(--kc-accent)] shrink-0" aria-hidden="true" />
+            <span className="hover:underline">Challenges</span>
+            <ChevronRight size={11} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsDrawerOpen(true)}
+            className="text-[var(--kc-text-secondary)] hover:text-[var(--kc-text-primary)] truncate max-w-[180px] sm:max-w-[260px] transition-colors cursor-pointer text-left font-mono"
+            title="Click to switch question"
+          >
+            #{String(currentProblem.serial_number || 1).padStart(2, '0')} {currentProblem.title}
+          </button>
+        </div>
+
+        {/* Quick Prev / Next problem buttons right in header */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button
+            type="button"
+            disabled={!currentProblem.prevProblem}
+            onClick={() => currentProblem.prevProblem && onSelectProblem(currentProblem.prevProblem)}
+            className="p-1 rounded text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] hover:bg-[var(--kc-surface-subtle)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+            title={currentProblem.prevProblem ? `Previous: #${currentProblem.prevProblem.serial_number} ${currentProblem.prevProblem.title}` : 'First challenge'}
+            aria-label="Previous challenge"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <button
+            type="button"
+            disabled={!currentProblem.nextProblem}
+            onClick={() => currentProblem.nextProblem && onSelectProblem(currentProblem.nextProblem)}
+            className="p-1 rounded text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] hover:bg-[var(--kc-surface-subtle)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+            title={currentProblem.nextProblem ? `Next: #${currentProblem.nextProblem.serial_number} ${currentProblem.nextProblem.title}` : 'Last challenge'}
+            aria-label="Next challenge"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
       </div>
       
       <div className="flex items-start justify-between gap-3">
-        <h1 className="text-lg sm:text-xl font-bold font-display text-[var(--kc-text-primary)] tracking-tight">
-          {currentProblem.title}
-        </h1>
+        <button
+          type="button"
+          onClick={() => setIsDrawerOpen(true)}
+          className="text-left group cursor-pointer focus:outline-none"
+          title="Click to open question navigator"
+        >
+          <h1 className="text-lg sm:text-xl font-bold font-display text-[var(--kc-text-primary)] group-hover:text-[var(--kc-accent)] transition-colors tracking-tight flex items-center gap-2">
+            <span className="text-xs sm:text-sm font-mono font-medium text-[var(--kc-accent)] bg-[var(--kc-accent-subtle)] px-2 py-0.5 rounded border border-[var(--kc-accent-border)] shrink-0">
+              #{String(currentProblem.serial_number || 1).padStart(2, '0')}
+            </span>
+            <span className="group-hover:underline">{currentProblem.title}</span>
+          </h1>
+        </button>
         <DifficultyBadge difficulty={currentProblem.difficulty} />
       </div>
       
@@ -347,6 +444,12 @@ const LeftPanelContent = ({ currentProblem, isMobile }) => (
           <Activity size={13} className="text-[var(--kc-success)]" />
           <span>{currentProblem.acceptance_rate || 0}% Acceptance</span>
         </div>
+        {currentProblem.is_solved && (
+          <div className="flex items-center gap-1.5 text-[var(--kc-success)] font-semibold">
+            <CheckCircle2 size={13} />
+            <span>Solved</span>
+          </div>
+        )}
       </div>
     </div>
 
@@ -362,13 +465,27 @@ const LeftPanelContent = ({ currentProblem, isMobile }) => (
 );
 
 // Editor Content Panel
-const EditorContent = ({ problemId }) => {
+const EditorContent = ({ problemId, currentProblem, onOpenDrawer }) => {
   const { isAuthenticated } = useAuth();
   return (
     <div className="flex-1 flex flex-col h-full w-full bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg overflow-hidden min-h-0 min-w-0 relative">
       {/* Editor Control Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] shrink-0">
-        <LanguageSelector />
+        <div className="flex items-center gap-2">
+          {onOpenDrawer && (
+            <button
+              type="button"
+              onClick={onOpenDrawer}
+              className="md:hidden p-1.5 rounded text-[var(--kc-text-secondary)] hover:text-[var(--kc-text-primary)] hover:bg-[var(--kc-surface)] transition-colors flex items-center gap-1 text-xs font-mono border border-[var(--kc-border-subtle)]"
+              title="Open Question Navigator"
+              aria-label="Open Question Navigator"
+            >
+              <Layers size={13} className="text-[var(--kc-accent)]" />
+              <span>#{String(currentProblem?.serial_number || 1).padStart(2, '0')}</span>
+            </button>
+          )}
+          <LanguageSelector />
+        </div>
         <div className="flex items-center gap-2">
           <RunButton disabled={!isAuthenticated} />
           <SubmitButton problemId={problemId} disabled={!isAuthenticated} />

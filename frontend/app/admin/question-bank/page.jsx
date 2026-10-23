@@ -19,7 +19,8 @@ import {
   BookOpen,
   HelpCircle,
   AlertCircle,
-  FileText
+  FileText,
+  Upload
 } from 'lucide-react';
 
 export default function AdminQuestionBankPage() {
@@ -47,6 +48,15 @@ export default function AdminQuestionBankPage() {
   const [isBatchesOpen, setIsBatchesOpen] = useState(false);
   const [batches, setBatches] = useState([]);
   const [batchLoading, setBatchLoading] = useState(false);
+
+  // Import Modal state
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importJsonText, setImportJsonText] = useState('');
+  const [importCategory, setImportCategory] = useState('Quantitative Aptitude');
+  const [importTopic, setImportTopic] = useState('General');
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResult, setImportResult] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -169,24 +179,65 @@ export default function AdminQuestionBankPage() {
         { id: 'c', text: '' },
         { id: 'd', text: '' },
       ];
+    } else {
+      opts = opts.map((opt, idx) => {
+        if (typeof opt === 'string') {
+          return { id: String.fromCharCode(97 + idx), text: opt };
+        }
+        return {
+          id: (opt?.id || opt?.key || String.fromCharCode(97 + idx)).toString().toLowerCase(),
+          text: (opt?.text ?? opt?.value ?? '').toString(),
+        };
+      });
     }
 
     setFormData({
-      category: q.category,
-      topic: q.topic,
+      category: q.category || 'Quantitative Aptitude',
+      topic: q.topic || 'General',
       subtopic: q.subtopic || '',
-      difficulty: q.difficulty,
-      question_type: q.question_type,
-      question_text: q.question_text,
+      difficulty: q.difficulty || 'Medium',
+      question_type: q.question_type || 'single_choice',
+      question_text: q.question_text || '',
       options: opts,
-      correct_answer: q.correct_answer || 'a',
+      correct_answer: (q.correct_answer || opts[0]?.id || 'a').toString().toLowerCase(),
       explanation: q.explanation || '',
       default_marks: parseFloat(q.default_marks) || 1.0,
       default_negative_marks: parseFloat(q.default_negative_marks) || 0.0,
-      is_active: q.is_active,
+      is_active: q.is_active !== false,
     });
     setEditingQuestion(q);
     setIsCreateOpen(true);
+  };
+
+  const handleAddOption = () => {
+    const nextChar = String.fromCharCode(97 + formData.options.length);
+    setFormData((prev) => ({
+      ...prev,
+      options: [...prev.options, { id: nextChar, text: '' }],
+    }));
+  };
+
+  const handleRemoveOption = (idxToRemove) => {
+    if (formData.options.length <= 2) {
+      alert('A question must have at least 2 options.');
+      return;
+    }
+    const updated = formData.options
+      .filter((_, idx) => idx !== idxToRemove)
+      .map((opt, idx) => ({
+        ...opt,
+        id: String.fromCharCode(97 + idx),
+      }));
+    let newCorrect = formData.correct_answer;
+    const removedId = formData.options[idxToRemove].id;
+    if (newCorrect === removedId || !updated.some((o) => o.id === newCorrect)) {
+      newCorrect = updated[0].id;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      options: updated,
+      correct_answer: newCorrect,
+    }));
   };
 
   const handleSaveQuestion = async (e) => {
@@ -201,6 +252,45 @@ export default function AdminQuestionBankPage() {
       loadQuestions();
     } catch (err) {
       alert('Failed to save question: ' + err.message);
+    }
+  };
+
+  const handleImportSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setImportLoading(true);
+      setImportResult(null);
+      let res;
+      if (importFile) {
+        const form = new FormData();
+        form.append('file', importFile);
+        if (importCategory) form.append('category', importCategory);
+        if (importTopic) form.append('topic', importTopic);
+        res = await adminApi.importAssessmentQuestions(form);
+      } else if (importJsonText.trim()) {
+        let parsed;
+        try {
+          parsed = JSON.parse(importJsonText.trim());
+        } catch {
+          throw new Error('Invalid JSON format in questions text');
+        }
+        res = await adminApi.importAssessmentQuestions({
+          questions: Array.isArray(parsed) ? parsed : [parsed],
+          category: importCategory,
+          topic: importTopic,
+        });
+      } else {
+        throw new Error('Please select a JSON/CSV file or paste JSON questions.');
+      }
+
+      setImportResult(res);
+      loadQuestions();
+      setImportFile(null);
+      setImportJsonText('');
+    } catch (err) {
+      alert('Import failed: ' + err.message);
+    } finally {
+      setImportLoading(false);
     }
   };
 
@@ -229,6 +319,16 @@ export default function AdminQuestionBankPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              setImportResult(null);
+              setIsImportOpen(true);
+            }}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-[var(--border-default)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition-colors"
+          >
+            <Upload size={15} />
+            <span>Import Questions</span>
+          </button>
           <button
             onClick={loadBatches}
             className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-[var(--border-default)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition-colors"
@@ -390,18 +490,23 @@ export default function AdminQuestionBankPage() {
                         </div>
                         {opts.length > 0 && (
                           <div className="mt-1 flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
-                            {opts.map((opt) => (
-                              <span
-                                key={opt.id}
-                                className={`px-2 py-0.5 rounded border ${
-                                  q.correct_answer === opt.id
-                                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 font-semibold'
-                                    : 'bg-[var(--bg-primary)] border-[var(--border-default)]'
-                                }`}
-                              >
-                                {opt.id.toUpperCase()}: {opt.text.slice(0, 30)}{opt.text.length > 30 ? '…' : ''}
-                              </span>
-                            ))}
+                            {opts.map((opt, oIdx) => {
+                              const optId = String(opt?.id ?? opt?.key ?? String.fromCharCode(97 + oIdx) ?? '');
+                              const optText = String(opt?.text ?? opt?.value ?? (typeof opt === 'string' ? opt : '') ?? '');
+                              const isCorrect = String(q.correct_answer || '').toLowerCase() === optId.toLowerCase();
+                              return (
+                                <span
+                                  key={optId || oIdx}
+                                  className={`px-2 py-0.5 rounded border ${
+                                    isCorrect
+                                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-semibold'
+                                      : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-default)]'
+                                  }`}
+                                >
+                                  {optId ? optId.toUpperCase() + ': ' : ''}{optText.slice(0, 30)}{optText.length > 30 ? '…' : ''}
+                                </span>
+                              );
+                            })}
                           </div>
                         )}
                       </td>
@@ -411,12 +516,12 @@ export default function AdminQuestionBankPage() {
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
+                          className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${
                             q.difficulty === 'Easy'
-                              ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
                               : q.difficulty === 'Medium'
-                              ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                              : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+                              : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'
                           }`}
                         >
                           {q.difficulty}
@@ -599,22 +704,31 @@ export default function AdminQuestionBankPage() {
 
               {/* Options */}
               <div className="space-y-2">
-                <label className="block text-xs font-medium text-[var(--text-secondary)]">
-                  Options & Answer Key
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                    Options & Answer Key (minimum 2 options)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddOption}
+                    className="text-xs text-[var(--kc-accent)] hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <Plus size={13} /> Add Option
+                  </button>
+                </div>
                 {formData.options.map((opt, idx) => (
-                  <div key={opt.id} className="flex items-center gap-2">
+                  <div key={opt.id || idx} className="flex items-center gap-2">
                     <span className="w-8 text-center font-bold text-xs uppercase px-2 py-2 rounded bg-[var(--bg-tertiary)] text-[var(--text-secondary)]">
                       {opt.id}
                     </span>
                     <input
                       type="text"
                       required
-                      placeholder={`Option ${opt.id.toUpperCase()}`}
+                      placeholder={`Option ${String(opt.id || '').toUpperCase()}`}
                       value={opt.text}
                       onChange={(e) => {
                         const newOpts = [...formData.options];
-                        newOpts[idx].text = e.target.value;
+                        newOpts[idx] = { ...newOpts[idx], text: e.target.value };
                         setFormData({ ...formData, options: newOpts });
                       }}
                       className="flex-1 px-3 py-2 text-sm bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)]"
@@ -623,12 +737,22 @@ export default function AdminQuestionBankPage() {
                       <input
                         type="radio"
                         name="correct_answer_radio"
-                        checked={formData.correct_answer === opt.id}
+                        checked={String(formData.correct_answer || '').toLowerCase() === String(opt.id || '').toLowerCase()}
                         onChange={() => setFormData({ ...formData, correct_answer: opt.id })}
                         className="text-[var(--kc-accent)]"
                       />
                       <span>Correct</span>
                     </label>
+                    {formData.options.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveOption(idx)}
+                        className="p-1.5 text-[var(--text-muted)] hover:text-rose-500 rounded hover:bg-rose-500/10 transition-colors"
+                        title="Remove Option"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -704,28 +828,33 @@ export default function AdminQuestionBankPage() {
 
             <div className="space-y-2">
               <div className="text-xs font-medium text-[var(--text-secondary)]">Options</div>
-              {(Array.isArray(viewingQuestion.options) ? viewingQuestion.options : []).map((opt) => (
-                <div
-                  key={opt.id}
-                  className={`p-3 rounded-lg border flex items-center justify-between ${
-                    viewingQuestion.correct_answer === opt.id
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 font-semibold'
-                      : 'bg-[var(--bg-primary)] border-[var(--border-default)] text-[var(--text-secondary)]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)]">
-                      {opt.id}
-                    </span>
-                    <span>{opt.text}</span>
+              {(Array.isArray(viewingQuestion.options) ? viewingQuestion.options : []).map((opt, oIdx) => {
+                const optId = String(opt?.id ?? opt?.key ?? String.fromCharCode(97 + oIdx) ?? '');
+                const optText = String(opt?.text ?? opt?.value ?? (typeof opt === 'string' ? opt : '') ?? '');
+                const isCorrect = String(viewingQuestion.correct_answer || '').toLowerCase() === optId.toLowerCase();
+                return (
+                  <div
+                    key={optId || oIdx}
+                    className={`p-3 rounded-lg border flex items-center justify-between ${
+                      isCorrect
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-semibold'
+                        : 'bg-[var(--bg-primary)] border-[var(--border-default)] text-[var(--text-secondary)]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)]">
+                        {optId}
+                      </span>
+                      <span>{optText}</span>
+                    </div>
+                    {isCorrect && (
+                      <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold">
+                        Correct Key
+                      </span>
+                    )}
                   </div>
-                  {viewingQuestion.correct_answer === opt.id && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">
-                      Correct Key
-                    </span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {viewingQuestion.explanation && (
@@ -803,6 +932,117 @@ export default function AdminQuestionBankPage() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Questions Modal */}
+      {isImportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl max-w-xl w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
+              <div>
+                <h3 className="text-base font-bold text-[var(--text-primary)]">Import Questions to Bank</h3>
+                <p className="text-xs text-[var(--text-muted)]">Upload a JSON or CSV file, or paste JSON question definitions.</p>
+              </div>
+              <button
+                onClick={() => setIsImportOpen(false)}
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              >
+                ✕
+              </button>
+            </div>
+
+            {importResult && (
+              <div className={`p-3 rounded-lg text-xs space-y-1 ${
+                importResult.total_inserted > 0 ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400'
+              }`}>
+                <div className="font-semibold">Import Complete:</div>
+                <div>Inserted: {importResult.total_inserted} | Skipped: {importResult.total_skipped} | Discovered: {importResult.total_discovered}</div>
+                {importResult.sample_errors?.length > 0 && (
+                  <div className="text-[11px] text-rose-500 mt-1">
+                    Issues: {importResult.sample_errors.slice(0, 3).join('; ')}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <form onSubmit={handleImportSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                    Default Category
+                  </label>
+                  <input
+                    type="text"
+                    value={importCategory}
+                    onChange={(e) => setImportCategory(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                    Default Topic
+                  </label>
+                  <input
+                    type="text"
+                    value={importTopic}
+                    onChange={(e) => setImportTopic(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  Upload File (.json, .csv)
+                </label>
+                <input
+                  type="file"
+                  accept=".json,.csv"
+                  onChange={(e) => {
+                    setImportFile(e.target.files?.[0] || null);
+                    if (e.target.files?.[0]) setImportJsonText('');
+                  }}
+                  className="w-full text-xs text-[var(--text-secondary)] file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-[var(--kc-accent-subtle)] file:text-[var(--kc-accent)] hover:file:bg-[var(--kc-accent-hover)]/20"
+                />
+              </div>
+
+              <div className="text-center text-xs text-[var(--text-muted)]">— OR paste JSON —</div>
+
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  JSON Questions Array
+                </label>
+                <textarea
+                  rows={4}
+                  value={importJsonText}
+                  onChange={(e) => {
+                    setImportJsonText(e.target.value);
+                    if (e.target.value.trim()) setImportFile(null);
+                  }}
+                  placeholder='[{"question_text": "What is 2+2?", "options": [{"id":"a","text":"3"},{"id":"b","text":"4"}], "correct_answer": "b"}]'
+                  className="w-full px-3 py-2 text-xs font-mono bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-default)]">
+                <button
+                  type="button"
+                  onClick={() => setIsImportOpen(false)}
+                  className="px-4 py-2 text-xs rounded-lg border border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={importLoading}
+                  className="px-4 py-2 text-xs font-medium rounded-lg bg-[var(--kc-accent)] text-[var(--kc-on-primary)] hover:bg-[var(--kc-accent-hover)] disabled:opacity-50"
+                >
+                  {importLoading ? 'Importing...' : 'Start Import'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

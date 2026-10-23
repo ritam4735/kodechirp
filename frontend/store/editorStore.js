@@ -6,9 +6,21 @@ const initialExecution = {
   error: null,
 };
 
+const PREFERRED_LANGUAGE_KEY = 'kc_preferred_language';
+
+const getInitialLanguage = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(PREFERRED_LANGUAGE_KEY);
+      if (stored) return stored;
+    } catch (e) {}
+  }
+  return 'javascript';
+};
+
 export const useEditorStore = create((set) => ({
   codes: {},
-  language: 'javascript',
+  language: getInitialLanguage(),
   output: '',
   isExecuting: false,
   verdict: null,
@@ -21,15 +33,22 @@ export const useEditorStore = create((set) => ({
     codes: { ...state.codes, [key]: code } 
   })),
 
-  setLanguage: (language) => set({ 
-    language,
-    output: '',
-    verdict: null,
-    testCaseResults: null,
-    isExecuting: false,
-    execution: { ...initialExecution },
-    activePanel: 'testcases',
-  }),
+  setLanguage: (language) => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(PREFERRED_LANGUAGE_KEY, language);
+      } catch (e) {}
+    }
+    set({ 
+      language,
+      output: '',
+      verdict: null,
+      testCaseResults: null,
+      isExecuting: false,
+      execution: { ...initialExecution },
+      activePanel: 'testcases',
+    });
+  },
 
   setActivePanel: (activePanel) => set({ 
     activePanel: activePanel === 'console' ? 'console' : 'testcases' 

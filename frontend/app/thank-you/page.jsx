@@ -29,7 +29,7 @@ function ThankYouContent() {
     <div className="max-w-xl mx-auto w-full rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] p-8 sm:p-10 text-center relative shadow-sm">
       {/* Success Badge */}
       <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-5">
-        <CheckCircle2 size={24} className="text-emerald-400" />
+        <CheckCircle2 size={24} className="text-emerald-600 dark:text-emerald-400" />
       </div>
 
       <h1 className="text-2xl font-display font-semibold text-[var(--kc-text-primary)] mb-2">

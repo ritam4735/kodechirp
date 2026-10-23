@@ -12,7 +12,7 @@ import { User, Shield, Settings, FileCode2, BarChart3, LogOut, ChevronDown } fro
 const NAV_ITEMS = [
   { label: 'Home', href: '/' },
   { label: 'Questions', href: '/questions' },
-  { label: 'Assessments', href: '/assessments' },
+  { label: 'Compete', href: '/compete' },
 ];
 
 export const Navbar = () => {
@@ -29,11 +29,12 @@ export const Navbar = () => {
     setMounted(true);
   }, []);
 
-  // Admin tab only when authenticated AND role is admin
-  const isAdmin = mounted && isAuthenticated && user?.role === 'admin';
+  // Admin tab visible for Super Admin, Admin, and College Admin
+  const isAdmin = mounted && isAuthenticated && (user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'college_admin');
 
   const isActive = (href) => {
     if (href === '/') return pathname === '/';
+    if (href === '/compete') return pathname.startsWith('/compete') || pathname.startsWith('/assessments');
     return pathname.startsWith(href);
   };
 

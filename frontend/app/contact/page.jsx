@@ -166,12 +166,12 @@ export default function ContactPage() {
                   href="mailto:security@kodechirp.com"
                   className="flex items-start gap-3 p-3 rounded-md bg-[var(--kc-surface-subtle)] hover:bg-[var(--kc-surface-hover)] border border-[var(--kc-border)] transition-colors group"
                 >
-                  <ShieldAlert size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                  <ShieldAlert size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-[var(--kc-text-primary)] group-hover:text-emerald-400 transition-colors block text-xs">
+                    <strong className="text-[var(--kc-text-primary)] group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors block text-xs">
                       Security & Responsible Disclosure
                     </strong>
-                    <span className="text-[var(--kc-text)] font-mono text-[11px] mt-0.5 block">
+                    <span className="text-[var(--kc-text-primary)] font-mono text-[11px] mt-0.5 block">
                       security@kodechirp.com
                     </span>
                     <span className="text-[var(--kc-text-muted)] text-[10px] mt-0.5 block">
@@ -185,7 +185,7 @@ export default function ContactPage() {
             {/* Maintainer Info Card */}
             <div className="rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] p-5 text-xs text-[var(--kc-text-muted)] space-y-2 shadow-sm">
               <div className="font-medium text-[var(--kc-text-primary)]">Project Maintainer</div>
-              <p className="leading-relaxed text-[var(--kc-text)]">
+              <p className="leading-relaxed text-[var(--kc-text-secondary)]">
                 Created and maintained by <strong>Ritam Chatterjee</strong> (<a href="https://github.com/ritam4735" target="_blank" rel="noopener noreferrer" className="text-[var(--kc-accent)] hover:underline">@ritam4735</a>).
               </p>
               <p className="text-[11px] text-[var(--kc-text-muted)]">
@@ -221,8 +221,8 @@ export default function ContactPage() {
               </p>
 
               {error && (
-                <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs rounded-md flex items-center gap-2">
-                  <ShieldAlert size={14} className="shrink-0 text-rose-400" />
+                <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-800 dark:text-rose-200 text-xs rounded-md flex items-center gap-2">
+                  <ShieldAlert size={14} className="shrink-0 text-rose-600 dark:text-rose-400" />
                   <span>{error}</span>
                 </div>
               )}
@@ -252,7 +252,7 @@ export default function ContactPage() {
                     }`}
                   />
                   {fieldErrors.name && (
-                    <p id="contact-name-error" role="alert" className="text-xs text-rose-400 mt-1.5 flex items-center gap-1">
+                    <p id="contact-name-error" role="alert" className="text-xs text-rose-700 dark:text-rose-300 font-medium mt-1.5 flex items-center gap-1">
                       <span>{fieldErrors.name}</span>
                     </p>
                   )}
@@ -282,7 +282,7 @@ export default function ContactPage() {
                     }`}
                   />
                   {fieldErrors.email && (
-                    <p id="contact-email-error" role="alert" className="text-xs text-rose-400 mt-1.5 flex items-center gap-1">
+                    <p id="contact-email-error" role="alert" className="text-xs text-rose-700 dark:text-rose-300 font-medium mt-1.5 flex items-center gap-1">
                       <span>{fieldErrors.email}</span>
                     </p>
                   )}
@@ -331,7 +331,7 @@ export default function ContactPage() {
                     }`}
                   />
                   {fieldErrors.message && (
-                    <p id="contact-message-error" role="alert" className="text-xs text-rose-400 mt-1.5 flex items-center gap-1">
+                    <p id="contact-message-error" role="alert" className="text-xs text-rose-700 dark:text-rose-300 font-medium mt-1.5 flex items-center gap-1">
                       <span>{fieldErrors.message}</span>
                     </p>
                   )}

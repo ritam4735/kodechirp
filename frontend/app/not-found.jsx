@@ -40,22 +40,13 @@ export default function NotFound() {
       {/* Background ambient lighting */}
       <AnimatedBackground variant="default" />
 
-      {/* Subtle grid pattern overlay */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-[0.02] dark:opacity-[0.04]"
-        style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
-          backgroundSize: '24px 24px',
-        }}
-      />
-
       <div className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center">
         {/* Kicker badge */}
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-rose-500/20 bg-rose-500/10 text-rose-400 text-[11px] font-mono tracking-wider uppercase mb-6"
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300 font-semibold text-[11px] font-mono tracking-wider uppercase mb-6"
         >
           <span className="relative flex h-1.5 w-1.5">
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
@@ -108,12 +99,12 @@ export default function NotFound() {
               <span className="w-2 h-2 rounded-full bg-[var(--kc-border)]" />
             </div>
           </div>
-          <pre className="text-[12px] font-mono leading-relaxed text-[var(--kc-text)] overflow-x-auto">
+          <pre className="text-[12px] font-mono leading-relaxed text-[var(--kc-text-primary)] overflow-x-auto">
             <code>
               <span className="text-[var(--kc-text-muted)]">{'// Invariant violation: AST traversal failed'}</span>{'\n'}
-              <span className="text-rose-400">const</span> <span className="text-[var(--kc-accent)]">target</span> = router.<span className="text-[var(--kc-text-primary)]">resolve</span>(location.pathname);{'\n'}
-              <span className="text-rose-400">if</span> (!target) {'{'}{'\n'}
-              {'  '}<span className="text-rose-400">return</span> {'{'} status: <span className="text-[var(--kc-accent)]">404</span>, verdict: <span className="text-emerald-400">&apos;PATH_UNREACHABLE&apos;</span> {'}'};{'\n'}
+              <span className="text-rose-700 dark:text-rose-300">const</span> <span className="text-[var(--kc-accent)]">target</span> = router.<span className="text-[var(--kc-text-primary)]">resolve</span>(location.pathname);{'\n'}
+              <span className="text-rose-700 dark:text-rose-300">if</span> (!target) {'{'}{'\n'}
+              {'  '}<span className="text-rose-700 dark:text-rose-300">return</span> {'{'} status: <span className="text-[var(--kc-accent)]">404</span>, verdict: <span className="text-emerald-700 dark:text-emerald-300">&apos;PATH_UNREACHABLE&apos;</span> {'}'};{'\n'}
               {'}'}
             </code>
           </pre>

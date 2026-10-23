@@ -32,7 +32,7 @@ export default function ProblemsSection() {
     <section className="problems-section" id="questions">
       <div className="section-header animate-in">
         <div className="section-badge">⚡ Challenge Yourself</div>
-        <h2 className="section-title">Curated <span style={{background:'linear-gradient(90deg,var(--neon-blue),var(--neon-cyan))',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>Problems</span></h2>
+        <h2 className="section-title">Curated <span className="text-[var(--kc-accent)]">Problems</span></h2>
         <p className="section-subtitle">Battle-tested challenges across algorithms, data structures, and system design.</p>
       </div>
       <div className="problems-container">

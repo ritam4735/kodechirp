@@ -15,9 +15,9 @@ export default function TermsPage() {
       icon: Scale,
       title: '1. Acceptance of Terms',
       content: (
-        <div className="space-y-3 text-sm text-[#8b949e] leading-relaxed">
+        <div className="space-y-3 text-sm text-[var(--kc-text-secondary)] leading-relaxed">
           <p>
-            By accessing or using <strong className="text-[var(--kc-text-primary)]">KodeChirp</strong> (&ldquo;the platform&rdquo;), you agree to be bound by these Terms and Conditions. If you disagree with any part of these terms, you should discontinue using the platform.
+            By accessing or using <strong className="text-[var(--kc-text-primary)] font-semibold">KodeChirp</strong> (&ldquo;the platform&rdquo;), you agree to be bound by these Terms and Conditions. If you disagree with any part of these terms, you should discontinue using the platform.
           </p>
           <p>
             KodeChirp is an open-source, engineering-first online judge and learning platform built for algorithmic practice, technical interview preparation, and peer collaboration.
@@ -29,15 +29,15 @@ export default function TermsPage() {
       icon: Cpu,
       title: '2. Code Execution & Acceptable Use Policy',
       content: (
-        <div className="space-y-3 text-sm text-[#8b949e] leading-relaxed">
+        <div className="space-y-3 text-sm text-[var(--kc-text-secondary)] leading-relaxed">
           <p>
             Our platform provides automated code execution within isolated Docker sandboxes. You are granted access to run and submit code for educational and algorithmic problem-solving purposes.
           </p>
-          <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-md text-rose-300 text-xs space-y-1.5">
-            <div className="font-semibold text-rose-200 flex items-center gap-1.5">
-              <AlertTriangle size={14} /> Strictly Prohibited Activities:
+          <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-md text-rose-800 dark:text-rose-200 text-xs space-y-1.5">
+            <div className="font-semibold text-rose-900 dark:text-rose-100 flex items-center gap-1.5">
+              <AlertTriangle size={14} className="text-rose-600 dark:text-rose-400" /> Strictly Prohibited Activities:
             </div>
-            <ul className="list-disc pl-4 space-y-1 text-rose-300/90">
+            <ul className="list-disc pl-4 space-y-1 text-rose-800/90 dark:text-rose-200/90">
               <li>Attempting to escape or compromise Docker container isolation or proxy sockets.</li>
               <li>Attempting network calls, socket connections, or lateral scanning within the execution environment.</li>
               <li>Executing fork bombs, infinite allocation loops designed to bypass cgroup memory ceilings, or denial-of-service attacks.</li>
@@ -54,19 +54,19 @@ export default function TermsPage() {
       icon: MessageSquare,
       title: '3. Intellectual Property & Community Chirps',
       content: (
-        <div className="space-y-3 text-sm text-[var(--kc-text-muted)] leading-relaxed">
+        <div className="space-y-3 text-sm text-[var(--kc-text-secondary)] leading-relaxed">
           <p>
             You retain ownership of the original code and algorithmic explanations you write and publish on KodeChirp.
           </p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
-              <strong className="text-[var(--kc-text)]">License to Execute:</strong> By submitting code to the judge, you grant KodeChirp the technical license to compile, execute, test, and generate runtime diagnostics for your code.
+              <strong className="text-[var(--kc-text-primary)] font-semibold">License to Execute:</strong> By submitting code to the judge, you grant KodeChirp the technical license to compile, execute, test, and generate runtime diagnostics for your code.
             </li>
             <li>
-              <strong className="text-[var(--kc-text)]">Community Contributions:</strong> When you share a Chirp on a problem, you grant other developers permission to view, learn from, and discuss your approach in the spirit of open peer learning.
+              <strong className="text-[var(--kc-text-primary)] font-semibold">Community Contributions:</strong> When you share a Chirp on a problem, you grant other developers permission to view, learn from, and discuss your approach in the spirit of open peer learning.
             </li>
             <li>
-              <strong className="text-[var(--kc-text)]">Community Standards:</strong> Chirps and discussions must remain respectful, constructive, and free of abusive or harmful content.
+              <strong className="text-[var(--kc-text-primary)] font-semibold">Community Standards:</strong> Chirps and discussions must remain respectful, constructive, and free of abusive or harmful content.
             </li>
           </ul>
         </div>
@@ -76,7 +76,7 @@ export default function TermsPage() {
       icon: Terminal,
       title: '4. Service Availability & Limitations',
       content: (
-        <div className="space-y-3 text-sm text-[var(--kc-text-muted)] leading-relaxed">
+        <div className="space-y-3 text-sm text-[var(--kc-text-secondary)] leading-relaxed">
           <p>
             KodeChirp is provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis. While we strive for maximum uptime and sub-second queue processing:
           </p>
@@ -92,7 +92,7 @@ export default function TermsPage() {
       icon: FileText,
       title: '5. Open Source & Project License',
       content: (
-        <div className="space-y-3 text-sm text-[var(--kc-text-muted)] leading-relaxed">
+        <div className="space-y-3 text-sm text-[var(--kc-text-secondary)] leading-relaxed">
           <p>
             KodeChirp is an open-source project created by <a href="https://github.com/ritam4735" target="_blank" rel="noopener noreferrer" className="text-[var(--kc-accent)] hover:underline font-medium">Ritam</a>. You can inspect the source code, review architectural diagrams, report issues, and contribute improvements directly on GitHub.
           </p>

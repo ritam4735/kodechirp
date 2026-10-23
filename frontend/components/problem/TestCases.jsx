@@ -251,7 +251,7 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
               )}
             </button>
           </div>
-          <pre className="text-[12.5px] text-[var(--kc-accent)] dark:text-[var(--kc-accent-hover)] font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
+          <pre className="text-[12.5px] text-emerald-700 dark:text-emerald-300 font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
             {formattedExpected}
           </pre>
         </div>
@@ -284,8 +284,8 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
             <pre
               className={`text-[12.5px] font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed ${
                 isPassed
-                  ? 'text-[var(--kc-success)] border-[var(--kc-success-border)]'
-                  : 'text-[var(--kc-error)] border-[var(--kc-error-border)]'
+                  ? 'text-emerald-700 dark:text-emerald-300 border-[var(--kc-success-border)]'
+                  : 'text-rose-700 dark:text-rose-300 border-[var(--kc-error-border)]'
               }`}
             >
               {formattedYour ?? 'null'}

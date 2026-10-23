@@ -220,10 +220,6 @@ function GraphVisual({ step }) {
     <div className="kc-graph-wrapper">
       <svg viewBox="0 0 400 250" className="kc-graph-svg" aria-label="Graph shortest path network">
         <defs>
-          <linearGradient id="edgeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="var(--kc-accent)" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="var(--kc-accent-hover)" stopOpacity="0.8" />
-          </linearGradient>
           <filter id="nodeGlow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="var(--kc-accent)" floodOpacity="0.6" />
           </filter>

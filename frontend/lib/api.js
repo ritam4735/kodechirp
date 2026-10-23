@@ -4,12 +4,27 @@
 // Set NEXT_PUBLIC_API_URL in your .env.local (default: http://localhost:4000).
 // ─────────────────────────────────────────────────────────────────────────────
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-
 import { useAuthStore } from '../store/authStore';
+
+export function getApiBase() {
+  if (typeof window !== 'undefined') {
+    if (!window.location.port || window.location.port === '80' || window.location.port === '443') {
+      return '';
+    }
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return '';
+    }
+    if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost:4000')) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    return '';
+  }
+  return process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://gateway:4000';
+}
 
 async function request(path, options = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('kc_token') : null;
+  const API_BASE = getApiBase();
   const headers = { 'Content-Type': 'application/json', ...options.headers };
 
   if (token) {
@@ -110,6 +125,17 @@ export const api = {
     return data;
   },
 
+  registerCollege: async (data) => {
+    return request('/api/auth/register-college', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  verifyCollegeEmail: async (token) => {
+    return request(`/api/auth/register-college/verify-email?token=${encodeURIComponent(token)}`);
+  },
+
   resendVerification: async (email) => {
     const data = await request('/api/auth/resend-verification', {
       method: 'POST',
@@ -150,16 +176,17 @@ export const api = {
 
   // ── Problems ────────────────────────────────────────────────────────────────
 
-  getProblems: async (searchQuery = '', { page = 1, limit = 50, difficulty = '' } = {}) => {
+  getProblems: async (searchQuery = '', { page = 1, limit = 50, difficulty = '', topic = '' } = {}) => {
     const qs = new URLSearchParams();
     if (searchQuery) qs.set('search', searchQuery);
     if (page) qs.set('page', page);
     if (limit) qs.set('limit', limit);
     if (difficulty) qs.set('difficulty', difficulty);
+    if (topic) qs.set('topic', topic);
     const queryStr = qs.toString() ? `?${qs.toString()}` : '';
     const data = await request(`/api/problems${queryStr}`);
-    // Backend returns { success, data: [...], pagination: { page, limit, total }, counts: { total, Easy, Medium, Hard } }
-    return { problems: data.data, pagination: data.pagination, counts: data.counts };
+    // Backend returns { success, data: [...], pagination: { page, limit, total }, counts: { total, Easy, Medium, Hard }, topics: [...] }
+    return { problems: data.data, pagination: data.pagination, counts: data.counts, topics: data.topics };
   },
 
   getProblem: async (slug) => {

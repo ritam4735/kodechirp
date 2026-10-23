@@ -79,7 +79,7 @@ export function CookieBanner() {
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-[var(--kc-text-muted)] pb-3 mb-3 border-b border-[var(--kc-border)]">
-              <div className="flex items-center gap-1.5 text-emerald-400">
+              <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-medium">
                 <ShieldCheck size={13} aria-hidden="true" />
                 <span>GDPR & CCPA Compliant</span>
               </div>

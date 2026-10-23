@@ -1,10 +1,33 @@
 'use client';
 
+export function getApiBase() {
+  if (typeof window !== 'undefined') {
+    // If accessed through reverse proxy (e.g. port 80 / 443 / empty port):
+    if (!window.location.port || window.location.port === '80' || window.location.port === '443') {
+      return '';
+    }
+    // If accessed via non-localhost IP/domain, use relative path so Next.js rewrites or reverse proxy handles it
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return '';
+    }
+    // If NEXT_PUBLIC_API_URL is explicitly set to an external endpoint, use it
+    if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost:4000')) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    // In Next.js dev server, relative requests are routed seamlessly via Next.js rewrites
+    return '';
+  }
+  return process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://gateway:4000';
+}
+
 const requestAdmin = async (path, options = {}) => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('kc_token') : null;
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const API_BASE = getApiBase();
 
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  const headers = { ...options.headers };
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+  }
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   let res = await fetch(`${API_BASE}/api/admin${path}`, { headers, ...options });
@@ -47,7 +70,14 @@ const requestAdmin = async (path, options = {}) => {
       const detailsStr = data.details.map(d => `${d.field || d.path || d.param}: ${d.message || d.msg}`).join(', ');
       errorMessage += ` - ${detailsStr}`;
     }
-    throw new Error(errorMessage);
+    if (data.issues && Array.isArray(data.issues)) {
+      errorMessage += `:\n• ` + data.issues.join('\n• ');
+    }
+    const errorObj = new Error(errorMessage);
+    errorObj.issues = data.issues || data.details;
+    errorObj.status = res.status;
+    errorObj.data = data;
+    throw errorObj;
   }
   return data;
 };
@@ -124,8 +154,10 @@ export const adminApi = {
     if (params.status) qs.set('status', params.status);
     return requestAdmin(`/users?${qs.toString()}`);
   },
-  updateUserRole: (id, role) =>
-    requestAdmin(`/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role }) }),
+  updateUserRole: (id, role, organizationId = null) => {
+    const payload = typeof role === 'object' ? role : { role, organizationId };
+    return requestAdmin(`/users/${id}/role`, { method: 'PUT', body: JSON.stringify(payload) });
+  },
   updateUserStatus: (id, isActive) =>
     requestAdmin(`/users/${id}/status`, { method: 'PUT', body: JSON.stringify({ is_active: isActive }) }),
   deleteUser: (id) =>
@@ -227,6 +259,12 @@ export const adminApi = {
   toggleAssessmentQuestionStatus: (id) =>
     requestAdmin(`/assessment-questions/${id}/toggle-status`, { method: 'POST' }),
   getImportBatches: () => requestAdmin('/assessment-questions/batches'),
+  importAssessmentQuestions: (payload) => {
+    if (payload instanceof FormData) {
+      return requestAdmin('/assessment-questions/import', { method: 'POST', body: payload });
+    }
+    return requestAdmin('/assessment-questions/import', { method: 'POST', body: JSON.stringify(payload) });
+  },
 
   // ── Assessment & Test Builder ─────────────────────────────────────────────
   getAssessments: (params = {}) => {
@@ -247,19 +285,163 @@ export const adminApi = {
     requestAdmin(`/assessments/${id}`, { method: 'DELETE' }),
   toggleAssessmentStatus: (id, status) =>
     requestAdmin(`/assessments/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
+  releaseAssessmentResults: (id) =>
+    requestAdmin(`/assessments/${id}/release-results`, { method: 'POST' }),
   getAssessmentAttempts: (id) => requestAdmin(`/assessments/${id}/attempts`),
 
   // Section Management
   createAssessmentSection: (assessmentId, data) =>
     requestAdmin(`/assessments/${assessmentId}/sections`, { method: 'POST', body: JSON.stringify(data) }),
+  reorderAssessmentSections: (assessmentId, sectionIds) =>
+    requestAdmin(`/assessments/${assessmentId}/sections/reorder`, { method: 'PUT', body: JSON.stringify({ section_ids: sectionIds }) }),
+  reorderSections: (assessmentId, sectionIds) =>
+    requestAdmin(`/assessments/${assessmentId}/sections/reorder`, { method: 'PUT', body: JSON.stringify({ section_ids: sectionIds }) }),
   updateAssessmentSection: (sectionId, data) =>
     requestAdmin(`/assessments/sections/${sectionId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteAssessmentSection: (sectionId) =>
     requestAdmin(`/assessments/sections/${sectionId}`, { method: 'DELETE' }),
   addQuestionToSection: (sectionId, data) =>
     requestAdmin(`/assessments/sections/${sectionId}/questions`, { method: 'POST', body: JSON.stringify(data) }),
+  reorderSectionQuestions: (sectionId, mappingIds) =>
+    requestAdmin(`/assessments/sections/${sectionId}/questions/reorder`, { method: 'PUT', body: JSON.stringify({ mapping_ids: mappingIds }) }),
+  reorderQuestions: (sectionId, mappingIds) =>
+    requestAdmin(`/assessments/sections/${sectionId}/questions/reorder`, { method: 'PUT', body: JSON.stringify({ mapping_ids: mappingIds }) }),
+  updateQuestionMapping: (mappingId, data) =>
+    requestAdmin(`/assessments/sections/questions/${mappingId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  moveQuestionBetweenSections: (mappingId, targetSectionId) =>
+    requestAdmin(`/assessments/sections/questions/${mappingId}/move`, { method: 'PUT', body: JSON.stringify({ target_section_id: targetSectionId }) }),
+  createQuestionAndAddToSection: (sectionId, data) =>
+    requestAdmin(`/assessments/sections/${sectionId}/create-question`, { method: 'POST', body: JSON.stringify(data) }),
   removeQuestionFromSection: (mappingId) =>
     requestAdmin(`/assessments/sections/questions/${mappingId}`, { method: 'DELETE' }),
   populateRandomQuestions: (sectionId, data) =>
     requestAdmin(`/assessments/sections/${sectionId}/populate-random`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // ── Assessment Assignments (Cohorts) ──────────────────────────────────────
+  getAssessmentAssignments: (assessmentId) =>
+    requestAdmin(`/assessments/${assessmentId}/assignments`),
+  createAssessmentAssignment: (assessmentId, data) =>
+    requestAdmin(`/assessments/${assessmentId}/assignments`, { method: 'POST', body: JSON.stringify(data) }),
+  revokeAssessmentAssignment: (assessmentId, assignmentId) =>
+    requestAdmin(`/assessments/${assessmentId}/assignments/${assignmentId}`, { method: 'DELETE' }),
+
+  // ── Assessment Results Export ─────────────────────────────────────────────
+  previewExportResults: (assessmentId, params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set('status', params.status);
+    if (params.department) qs.set('department', params.department);
+    if (params.academicYear) qs.set('academicYear', params.academicYear);
+    if (params.startDate) qs.set('startDate', params.startDate);
+    if (params.endDate) qs.set('endDate', params.endDate);
+    return requestAdmin(`/assessments/${assessmentId}/export/preview?${qs.toString()}`);
+  },
+  getExportHistory: (assessmentId) =>
+    requestAdmin(`/assessments/${assessmentId}/export/history`),
+
+  // ── Organizations / Colleges ──────────────────────────────────────────────
+  getOrganizations: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.offset !== undefined) qs.set('offset', params.offset);
+    if (params.limit !== undefined) qs.set('limit', params.limit);
+    if (params.status) qs.set('status', params.status);
+    if (params.search) qs.set('search', params.search);
+    return requestAdmin(`/organizations?${qs.toString()}`);
+  },
+  getOrganization: (id) => requestAdmin(`/organizations/${id}`),
+  createOrganization: (data) =>
+    requestAdmin('/organizations', { method: 'POST', body: JSON.stringify(data) }),
+  updateOrganization: (id, data) =>
+    requestAdmin(`/organizations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  toggleOrganizationStatus: (id, is_active) =>
+    requestAdmin(`/organizations/${id}/status`, { method: 'POST', body: JSON.stringify({ is_active }) }),
+  getOrganizationAdmins: (id) => requestAdmin(`/organizations/${id}/admins`),
+  assignCollegeAdmin: (id, data) =>
+    requestAdmin(`/organizations/${id}/admins`, { method: 'POST', body: JSON.stringify(data) }),
+  revokeCollegeAdmin: (id, userId) =>
+    requestAdmin(`/organizations/${id}/admins/${userId}`, { method: 'DELETE' }),
+
+  // ── Student Roster Management ─────────────────────────────────────────────
+  getRoster: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.offset !== undefined) qs.set('offset', params.offset);
+    if (params.limit !== undefined) qs.set('limit', params.limit);
+    if (params.search) qs.set('search', params.search);
+    if (params.department) qs.set('department', params.department);
+    if (params.academicYear) qs.set('academicYear', params.academicYear);
+    if (params.status) qs.set('status', params.status);
+    return requestAdmin(`/roster?${qs.toString()}`);
+  },
+  previewRosterImport: (formData) =>
+    requestAdmin('/roster/preview', { method: 'POST', body: formData }),
+  confirmRosterImport: (payload) =>
+    requestAdmin('/roster/import', { method: 'POST', body: JSON.stringify(payload) }),
+  getRosterImportHistory: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.offset !== undefined) qs.set('offset', params.offset);
+    if (params.limit !== undefined) qs.set('limit', params.limit);
+    return requestAdmin(`/roster/history?${qs.toString()}`);
+  },
+  updateStudentEligibility: (studentId, data) =>
+    requestAdmin(`/roster/students/${studentId}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  // ── Administrative Audit Logs ─────────────────────────────────────────────
+  getAuditLogs: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.offset !== undefined) qs.set('offset', params.offset);
+    if (params.limit !== undefined) qs.set('limit', params.limit);
+    if (params.action) qs.set('action', params.action);
+    if (params.targetType) qs.set('targetType', params.targetType);
+    if (params.organizationId) qs.set('organizationId', params.organizationId);
+    return requestAdmin(`/audit-logs?${qs.toString()}`);
+  },
+
+  // ── College Registration Applications (Super Admin) ───────────────────────
+  getCollegeApplications: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.offset !== undefined) qs.set('offset', params.offset);
+    if (params.limit !== undefined) qs.set('limit', params.limit);
+    if (params.status) qs.set('status', params.status);
+    if (params.search) qs.set('search', params.search);
+    if (params.startDate) qs.set('startDate', params.startDate);
+    if (params.endDate) qs.set('endDate', params.endDate);
+    return requestAdmin(`/college-applications?${qs.toString()}`);
+  },
+  getCollegeApplication: (id) => requestAdmin(`/college-applications/${id}`),
+  approveCollegeApplication: (id) =>
+    requestAdmin(`/college-applications/${id}/approve`, { method: 'POST' }),
+  rejectCollegeApplication: (id, reason) =>
+    requestAdmin(`/college-applications/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),
 };
+
+/**
+ * Trigger browser file download from authenticated admin endpoint.
+ */
+export const downloadAdminFile = async (path, defaultFileName = 'download.xlsx') => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('kc_token') : null;
+  const API_BASE = getApiBase();
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}/api/admin${path}`, { headers });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Download failed (HTTP ${res.status})`);
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get('content-disposition');
+  let filename = defaultFileName;
+  if (disposition && disposition.includes('filename=')) {
+    filename = disposition.split('filename=')[1].replace(/["']/g, '');
+  }
+
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+};
+

@@ -51,7 +51,7 @@ export default function AuthPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setError('');
     setFieldErrors({});
     setSuccessMessage('');
@@ -99,7 +99,7 @@ export default function AuthPage() {
 
       handleLogin(data.user, data.accessToken);
 
-      if (data.user.role === 'admin') {
+      if (data.user.role === 'admin' || data.user.role === 'super_admin' || data.user.role === 'college_admin') {
         router.push('/admin');
       } else {
         router.push('/');
@@ -131,13 +131,13 @@ export default function AuthPage() {
         )}
 
         {resendSuccess && (
-          <div className="bg-[rgba(74,222,128,0.1)] border border-[rgba(74,222,128,0.25)] text-[#4ade80] p-3 rounded-md mb-4 text-xs sm:text-sm" role="status">
+          <div className="bg-[var(--kc-success-subtle)] border border-[var(--kc-success-border)] text-[var(--kc-success-text)] font-medium p-3 rounded-md mb-4 text-xs sm:text-sm" role="status">
             {resendSuccess}
           </div>
         )}
 
         {error && (
-          <div className="bg-[rgba(248,81,73,0.1)] border border-[rgba(248,81,73,0.25)] text-[var(--kc-error, #f87171)] p-3 rounded-md mb-4 text-xs sm:text-sm flex flex-col gap-2" role="alert">
+          <div className="bg-[var(--kc-error-subtle)] border border-[var(--kc-error-border)] text-[var(--kc-error-text)] font-medium p-3 rounded-md mb-4 text-xs sm:text-sm flex flex-col gap-2" role="alert">
             <div className="flex items-center gap-2">
               <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
               <span>{error}</span>
@@ -155,7 +155,7 @@ export default function AuthPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <form action="javascript:void(0)" onSubmit={handleSubmit} className="space-y-4" noValidate>
           {!isLogin && (
             <div>
               <label htmlFor="username-field" className="block text-xs font-mono font-medium text-[var(--kc-text-secondary)] mb-1.5 uppercase tracking-wider">
@@ -300,6 +300,13 @@ export default function AuthPage() {
           >
             {isLogin ? 'Sign up' : 'Sign in'}
           </button>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-[var(--kc-border)] text-center text-xs text-[var(--kc-text-muted)]">
+          Looking to onboard your institution?{' '}
+          <Link href="/register-college" className="text-[var(--kc-accent)] font-semibold hover:underline">
+            Register Your College
+          </Link>
         </div>
       </div>
     </div>

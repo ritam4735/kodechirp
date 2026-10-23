@@ -184,8 +184,8 @@ export default function AssessmentInstructionsPage() {
                         <span className="capitalize text-[var(--text-secondary)]">{s.section_type}</span>
                       </td>
                       <td className="py-2.5 px-4 text-center font-mono">{s.total_questions}</td>
-                      <td className="py-2.5 px-4 text-center font-mono text-emerald-500">+{s.marks_per_question}</td>
-                      <td className="py-2.5 px-4 text-center font-mono text-rose-500">-{s.negative_marks_per_question}</td>
+                      <td className="py-2.5 px-4 text-center font-mono font-semibold text-emerald-700 dark:text-emerald-400">+{s.marks_per_question}</td>
+                      <td className="py-2.5 px-4 text-center font-mono font-semibold text-rose-700 dark:text-rose-400">-{s.negative_marks_per_question}</td>
                       <td className="py-2.5 px-4 text-right font-bold font-mono text-[var(--text-primary)]">
                         {s.total_marks}
                       </td>
