@@ -4,7 +4,7 @@
   "private": true,
   "description": "KodeChirp — Production-grade peer-learning coding platform",
   "scripts": {
-    "dev": "docker compose up",
+    "dev": "docker compose up --build",
     "dev:gateway": "cd gateway && npm run dev",
     "dev:worker": "cd workers && uvicorn src.main:app --reload --port 8000",
     "dev:frontend": "cd frontend && npm run dev",
@@ -19,5 +19,8 @@
     "logs:gateway": "docker compose logs -f gateway",
     "logs:worker": "docker compose logs -f worker",
     "import:aptitude": "node gateway/src/scripts/import_aptitude.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
   }
 }
