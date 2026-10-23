@@ -191,7 +191,7 @@ function ProblemsSection({ problems }) {
             {/* Problem Table */}
             <div className="kc-problems-table" role="table" aria-label="Active Challenges List">
               <div className="kc-table-head" role="row">
-                <span role="columnheader">SR. NO.</span>
+                <span role="columnheader">STATUS</span>
                 <span role="columnheader">CHALLENGE TITLE</span>
                 <span role="columnheader">DIFFICULTY</span>
                 <span role="columnheader">ACCEPTANCE</span>
