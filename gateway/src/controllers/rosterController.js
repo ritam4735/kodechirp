@@ -50,10 +50,16 @@ exports.getRoster = async (req, res, next) => {
     }
 
     const countRes = await db.query(
-      `SELECT COUNT(*) FROM student_rosters sr WHERE ${whereClause}`,
+      `SELECT 
+        COUNT(*)::int AS total,
+        COUNT(CASE WHEN sr.is_active = TRUE AND (sr.enrollment_status = 'active' OR sr.enrollment_status IS NULL) THEN 1 END)::int AS active_count,
+        COUNT(CASE WHEN sr.matched_user_id IS NOT NULL THEN 1 END)::int AS registered_count
+       FROM student_rosters sr WHERE ${whereClause}`,
       params
     );
-    const total = parseInt(countRes.rows[0].count, 10);
+    const total = parseInt(countRes.rows[0].total, 10);
+    const activeCount = parseInt(countRes.rows[0].active_count, 10);
+    const registeredCount = parseInt(countRes.rows[0].registered_count, 10);
 
     // Get unique departments and academic years for filter dropdowns
     const filtersRes = await db.query(
@@ -67,6 +73,8 @@ exports.getRoster = async (req, res, next) => {
 
     const dataRes = await db.query(
       `SELECT sr.*, 
+              sr.student_id_number AS student_id,
+              sr.matched_user_id AS user_id,
               u.id AS user_account_id, u.username, u.avatar_url,
               (sr.matched_user_id IS NOT NULL) AS has_account
        FROM student_rosters sr
@@ -84,7 +92,7 @@ exports.getRoster = async (req, res, next) => {
       offset,
       students: dataRes.rows,
       data: dataRes.rows,
-      meta: { total, limit, offset },
+      meta: { total, activeCount, registeredCount, limit, offset },
       availableDepartments: filtersRes.rows[0]?.departments || [],
       availableAcademicYears: filtersRes.rows[0]?.academic_years || [],
     });
@@ -377,18 +385,68 @@ exports.updateStudentEligibility = async (req, res, next) => {
     }
     const current = existingRes.rows[0];
 
-    const updatedActive = is_active !== undefined ? Boolean(is_active) : current.is_active;
-    const updatedStatus = enrollment_status || current.enrollment_status;
+    let updatedActive;
+    let updatedStatus;
+
+    if (enrollment_status !== undefined) {
+      updatedStatus = enrollment_status;
+      if (is_active !== undefined) {
+        updatedActive = Boolean(is_active);
+      } else {
+        updatedActive = (enrollment_status === 'active');
+      }
+    } else if (is_active !== undefined) {
+      updatedActive = Boolean(is_active);
+      if (updatedActive) {
+        updatedStatus = (current.enrollment_status === 'inactive' || !current.enrollment_status) ? 'active' : current.enrollment_status;
+      } else {
+        updatedStatus = current.enrollment_status === 'active' ? 'inactive' : current.enrollment_status;
+      }
+    } else {
+      updatedActive = current.is_active;
+      updatedStatus = current.enrollment_status;
+    }
+
     const updatedDept = department !== undefined ? department : current.department;
     const updatedYear = academic_year !== undefined ? academic_year : current.academic_year;
 
+    // Check if matched user exists or can be matched
+    let matchedUserId = current.matched_user_id;
+    if (!matchedUserId && current.college_email) {
+      const userRes = await db.query(
+        'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
+        [current.college_email]
+      );
+      if (userRes.rows.length > 0) {
+        matchedUserId = userRes.rows[0].id;
+      }
+    }
+
     const result = await db.query(
       `UPDATE student_rosters
-       SET is_active = $1, enrollment_status = $2, department = $3, academic_year = $4, updated_at = NOW()
-       WHERE id = $5 AND organization_id = $6
+       SET is_active = $1, enrollment_status = $2, department = $3, academic_year = $4,
+           matched_user_id = COALESCE($5, matched_user_id),
+           updated_at = NOW()
+       WHERE id = $6 AND organization_id = $7
        RETURNING *`,
-      [updatedActive, updatedStatus, updatedDept, updatedYear, studentId, orgId]
+      [updatedActive, updatedStatus, updatedDept, updatedYear, matchedUserId, studentId, orgId]
     );
+
+    // Synchronize organization_members if student has matched user account
+    if (matchedUserId) {
+      await db.query(
+        `INSERT INTO organization_members (organization_id, user_id, role, department, academic_year, enrollment_status, student_id_number, updated_at)
+         VALUES ($1, $2, 'student', $3, $4, $5, $6, NOW())
+         ON CONFLICT (organization_id, user_id)
+         DO UPDATE SET
+            department = EXCLUDED.department,
+            academic_year = EXCLUDED.academic_year,
+            enrollment_status = EXCLUDED.enrollment_status,
+            student_id_number = EXCLUDED.student_id_number,
+            updated_at = NOW()`,
+        [orgId, matchedUserId, updatedDept, updatedYear, updatedStatus, current.student_id_number]
+      );
+    }
 
     await logAdminAction({
       organizationId: orgId,
@@ -402,7 +460,14 @@ exports.updateStudentEligibility = async (req, res, next) => {
       ipAddress: req.ip,
     });
 
-    res.status(200).json({ success: true, student: result.rows[0] });
+    const studentRecord = {
+      ...result.rows[0],
+      student_id: result.rows[0].student_id_number,
+      user_id: result.rows[0].matched_user_id,
+      has_account: Boolean(result.rows[0].matched_user_id),
+    };
+
+    res.status(200).json({ success: true, student: studentRecord });
   } catch (err) {
     next(err);
   }

@@ -72,6 +72,8 @@ exports.getOrganizations = async (req, res, next) => {
       limit,
       offset,
       organizations: dataRes.rows,
+      data: dataRes.rows,
+      meta: { total, limit, offset },
     });
   } catch (err) {
     next(err);
@@ -308,7 +310,7 @@ exports.getOrganizationAdmins = async (req, res, next) => {
       [id]
     );
 
-    res.status(200).json({ success: true, admins: result.rows });
+    res.status(200).json({ success: true, admins: result.rows, data: result.rows });
   } catch (err) {
     next(err);
   }

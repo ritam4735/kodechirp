@@ -1136,7 +1136,15 @@ exports.getUsers = async (req, res, next) => {
         FROM submissions
         GROUP BY user_id
       ) sub_stats ON sub_stats.user_id = u.id
-      LEFT JOIN organization_members om ON om.user_id = u.id AND om.role = 'college_admin'
+      LEFT JOIN (
+        SELECT DISTINCT ON (user_id)
+               user_id,
+               organization_id,
+               role,
+               role AS organization_role
+        FROM organization_members
+        ORDER BY user_id, (role = 'college_admin') DESC, updated_at DESC
+      ) om ON om.user_id = u.id
       LEFT JOIN organizations o ON o.id = om.organization_id
       ${whereClause}
       ORDER BY u.created_at DESC
@@ -1206,6 +1214,10 @@ exports.updateUserRole = async (req, res, next) => {
 
     // Manage organization_members association
     if (role === 'college_admin' && orgId) {
+      await db.query(
+        `DELETE FROM organization_members WHERE user_id = $1 AND role = 'college_admin' AND organization_id != $2`,
+        [req.params.id, orgId]
+      );
       await db.query(
         `INSERT INTO organization_members (organization_id, user_id, role, enrollment_status)
          VALUES ($1, $2, 'college_admin', 'active')

@@ -27,13 +27,16 @@ async function checkStudentEligibility({ assessment, userId, userRole }) {
   // Fetch student membership and roster entry
   const memberRes = await db.query(
     `SELECT om.role, om.department, om.academic_year, om.enrollment_status, om.student_id_number,
+            sr.id AS roster_id, sr.student_id_number AS roster_student_id,
             sr.is_active AS roster_active, sr.department AS roster_dept, sr.academic_year AS roster_year,
             sr.enrollment_status AS roster_status,
             o.name AS organization_name, o.is_active AS organization_active
      FROM organizations o
      LEFT JOIN organization_members om ON om.organization_id = o.id AND om.user_id = $2
      LEFT JOIN student_rosters sr ON sr.organization_id = o.id AND (sr.matched_user_id = $2 OR LOWER(sr.college_email) = (SELECT LOWER(email) FROM users WHERE id = $2))
-     WHERE o.id = $1`,
+     WHERE o.id = $1
+     ORDER BY (sr.is_active = TRUE) DESC, (om.enrollment_status = 'active') DESC, sr.created_at DESC
+     LIMIT 1`,
     [orgId, userId]
   );
 
@@ -53,7 +56,7 @@ async function checkStudentEligibility({ assessment, userId, userRole }) {
 
   // Must have an active membership or roster record in this organization
   const hasMembership = Boolean(record.role);
-  const hasRoster = Boolean(record.student_id_number || record.roster_dept);
+  const hasRoster = Boolean(record.roster_id || record.roster_student_id || record.student_id_number || record.roster_dept);
 
   if (!hasMembership && !hasRoster) {
     return {
@@ -62,11 +65,56 @@ async function checkStudentEligibility({ assessment, userId, userRole }) {
     };
   }
 
+  // Check suspended status
+  const isSuspended = record.enrollment_status === 'suspended' || record.roster_status === 'suspended';
+  if (isSuspended) {
+    return {
+      eligible: false,
+      reason: 'Your student enrollment record is marked as inactive or suspended.',
+    };
+  }
+
+  // Check graduated status
+  const isGraduated = record.enrollment_status === 'graduated' || record.roster_status === 'graduated';
+  if (isGraduated) {
+    return {
+      eligible: false,
+      reason: 'Graduated students are not eligible to attempt active college assessments.',
+    };
+  }
+
+  // Check inactive or deactivated status
+  const isRosterInactive = record.roster_id && (record.roster_active === false || record.roster_status === 'inactive');
+  const isMemberInactive = !record.roster_id && record.enrollment_status === 'inactive';
+  if (isRosterInactive || isMemberInactive) {
+    return {
+      eligible: false,
+      reason: 'Your student enrollment record is marked as inactive or suspended.',
+    };
+  }
+
+  // If roster record is explicitly active & eligible, but organization_members is still 'inactive' (e.g. legacy desync), heal it
+  if (record.roster_id && record.roster_active && (record.roster_status === 'active' || !record.roster_status)) {
+    if (record.enrollment_status === 'inactive') {
+      try {
+        await db.query(
+          `UPDATE organization_members
+           SET enrollment_status = 'active', updated_at = NOW()
+           WHERE organization_id = $1 AND user_id = $2`,
+          [orgId, userId]
+        );
+        record.enrollment_status = 'active';
+      } catch (e) {
+        logger.warn({ err: e }, '[AssessmentEligibility] Non-fatal error healing om.enrollment_status');
+      }
+    }
+  }
+
   // Check enrollment status (must not be suspended or inactive)
   const isEnrolledActive =
     (record.enrollment_status === 'active' || !record.enrollment_status) &&
     (record.roster_active !== false) &&
-    (record.roster_status !== 'inactive' && record.roster_status !== 'suspended');
+    (record.roster_status !== 'inactive' && record.roster_status !== 'suspended' && record.roster_status !== 'graduated');
 
   if (!isEnrolledActive) {
     return {
@@ -77,7 +125,7 @@ async function checkStudentEligibility({ assessment, userId, userRole }) {
 
   const studentDept = record.department || record.roster_dept || '';
   const studentYear = record.academic_year || record.roster_year || '';
-  const studentIdNumber = record.student_id_number || '';
+  const studentIdNumber = record.student_id_number || record.roster_student_id || '';
 
   // Check assignments for this assessment
   const assignmentsRes = await db.query(

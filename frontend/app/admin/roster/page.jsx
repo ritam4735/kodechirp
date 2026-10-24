@@ -209,11 +209,16 @@ export default function StudentRosterPage() {
 
   // Toggle student eligibility
   const handleToggleEligibility = async (student) => {
-    const newStatus = !student.is_active;
+    const isCurrentlyActive = student.is_active && (student.enrollment_status === 'active' || !student.enrollment_status);
+    const newActive = !isCurrentlyActive;
+    const newStatus = newActive ? 'active' : 'inactive';
     try {
-      await adminApi.updateStudentEligibility(student.id, { is_active: newStatus });
-      showToast('success', `${student.student_name} (${student.student_id}) marked as ${newStatus ? 'Active' : 'Inactive'}.`);
-      setRoster(prev => prev.map(s => s.id === student.id ? { ...s, is_active: newStatus } : s));
+      await adminApi.updateStudentEligibility(student.id, { 
+        is_active: newActive,
+        enrollment_status: newStatus,
+      });
+      showToast('success', `${student.student_name} (${student.student_id_number || student.student_id || student.college_email}) marked as ${newActive ? 'Active' : 'Inactive'}.`);
+      setRoster(prev => prev.map(s => s.id === student.id ? { ...s, is_active: newActive, enrollment_status: newStatus } : s));
     } catch (err) {
       showToast('error', `Failed to update status: ${err.message}`);
     }
@@ -308,14 +313,14 @@ export default function StudentRosterPage() {
         <div className="admin-stat-card">
           <div className="admin-stat-label">Eligible / Active</div>
           <div className="admin-stat-value" style={{ color: '#4ade80' }}>
-            {roster.filter(s => s.is_active).length}
+            {meta.activeCount !== undefined ? meta.activeCount : roster.filter(s => s.is_active && (s.enrollment_status === 'active' || !s.enrollment_status)).length}
           </div>
           <div className="admin-stat-sub">Permitted to take assigned assessments</div>
         </div>
         <div className="admin-stat-card">
           <div className="admin-stat-label">Registered Accounts</div>
           <div className="admin-stat-value" style={{ color: 'var(--kc-accent)' }}>
-            {roster.filter(s => s.user_id).length}
+            {meta.registeredCount !== undefined ? meta.registeredCount : roster.filter(s => s.user_id || s.matched_user_id || s.has_account || s.user_account_id).length}
           </div>
           <div className="admin-stat-sub">Synced with authenticated user profile</div>
         </div>
@@ -419,54 +424,65 @@ export default function StudentRosterPage() {
                 </td>
               </tr>
             ) : (
-              roster.map(student => (
-                <tr key={student.id}>
-                  <td style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--kc-accent)' }}>
-                    {student.student_id}
-                  </td>
-                  <td className="title-cell">
-                    <div style={{ fontWeight: 600 }}>{student.student_name}</div>
-                  </td>
-                  <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {student.college_email}
-                  </td>
-                  <td style={{ fontSize: '12px' }}>
-                    {student.department || '—'}
-                  </td>
-                  <td style={{ fontSize: '12px' }}>
-                    {student.academic_year || '—'}
-                  </td>
-                  <td>
-                    {student.user_id ? (
-                      <span className="admin-badge badge-active" style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <UserCheck size={12} />
-                        Mapped
+              roster.map(student => {
+                const isStudentActive = student.is_active && (student.enrollment_status === 'active' || !student.enrollment_status);
+                const hasAccount = Boolean(student.user_id || student.matched_user_id || student.has_account || student.user_account_id);
+                const studentIdDisplay = student.student_id_number || student.student_id || '—';
+                const statusLabel = student.enrollment_status === 'suspended' ? 'Suspended' :
+                                    student.enrollment_status === 'graduated' ? 'Graduated' :
+                                    isStudentActive ? 'Eligible' : 'Deactivated';
+                const badgeClass = isStudentActive ? 'badge-active' :
+                                   student.enrollment_status === 'suspended' ? 'badge-suspended' : 'badge-inactive';
+
+                return (
+                  <tr key={student.id}>
+                    <td style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--kc-accent)' }}>
+                      {studentIdDisplay}
+                    </td>
+                    <td className="title-cell">
+                      <div style={{ fontWeight: 600 }}>{student.student_name}</div>
+                    </td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {student.college_email}
+                    </td>
+                    <td style={{ fontSize: '12px' }}>
+                      {student.department || '—'}
+                    </td>
+                    <td style={{ fontSize: '12px' }}>
+                      {student.academic_year || '—'}
+                    </td>
+                    <td>
+                      {hasAccount ? (
+                        <span className="admin-badge badge-active" style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <UserCheck size={12} />
+                          Mapped
+                        </span>
+                      ) : (
+                        <span className="admin-badge" style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Clock size={12} />
+                          Unregistered
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`admin-badge ${badgeClass}`}>
+                        {statusLabel}
                       </span>
-                    ) : (
-                      <span className="admin-badge" style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <Clock size={12} />
-                        Unregistered
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    <span className={`admin-badge ${student.is_active ? 'badge-active' : 'badge-suspended'}`}>
-                      {student.is_active ? 'Eligible' : 'Deactivated'}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className={`admin-btn admin-btn-sm ${student.is_active ? 'admin-btn-warning' : 'admin-btn-success'}`}
-                      onClick={() => handleToggleEligibility(student)}
-                      title={student.is_active ? 'Revoke assessment eligibility' : 'Restore assessment eligibility'}
-                    >
-                      {student.is_active ? <UserX size={13} /> : <UserCheck size={13} />}
-                      {student.is_active ? 'Deactivate' : 'Activate'}
-                    </button>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className={`admin-btn admin-btn-sm ${isStudentActive ? 'admin-btn-warning' : 'admin-btn-success'}`}
+                        onClick={() => handleToggleEligibility(student)}
+                        title={isStudentActive ? 'Revoke assessment eligibility' : 'Restore assessment eligibility'}
+                      >
+                        {isStudentActive ? <UserX size={13} /> : <UserCheck size={13} />}
+                        {isStudentActive ? 'Deactivate' : 'Activate'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

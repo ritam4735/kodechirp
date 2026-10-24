@@ -18,10 +18,11 @@ import {
   Building2,
   GraduationCap,
   History,
+  LogOut,
 } from 'lucide-react';
 
 export default function AdminClientLayout({ children }) {
-  const { user, isAuthenticated, initAuth } = useAuth();
+  const { user, isAuthenticated, initAuth, handleLogout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -178,6 +179,18 @@ export default function AdminClientLayout({ children }) {
             })}
           </div>
         ))}
+
+        <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--kc-border-subtle, rgba(255,255,255,0.08))', paddingBottom: '8px' }}>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="admin-nav-item"
+            style={{ width: '100%', color: 'var(--kc-danger, #ef4444)', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <LogOut size={14} className="admin-nav-icon text-[#ef4444]" aria-hidden="true" />
+            <span className="flex-1">Sign Out</span>
+          </button>
+        </div>
       </aside>
 
       <div className="admin-main">

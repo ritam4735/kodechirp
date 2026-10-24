@@ -49,6 +49,13 @@ export default function AdminAssessmentsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({
+    open: false,
+    id: null,
+    title: '',
+    loading: false,
+    error: null,
+  });
 
   const [formData, setFormData] = useState(initialFormData);
 
@@ -127,13 +134,29 @@ export default function AdminAssessmentsPage() {
     }
   };
 
-  const handleDelete = async (id, title) => {
-    if (!confirm(`Are you sure you want to delete assessment "${title}"?`)) return;
+  const openDeleteModal = (id, title) => {
+    setDeleteModal({
+      open: true,
+      id,
+      title,
+      loading: false,
+      error: null,
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteModal.id) return;
+    setDeleteModal((prev) => ({ ...prev, loading: true, error: null }));
     try {
-      await adminApi.deleteAssessment(id);
+      await adminApi.deleteAssessment(deleteModal.id);
+      setDeleteModal({ open: false, id: null, title: '', loading: false, error: null });
       loadAssessments();
     } catch (err) {
-      alert('Failed to delete: ' + err.message);
+      setDeleteModal((prev) => ({
+        ...prev,
+        loading: false,
+        error: err.message || 'Failed to delete assessment',
+      }));
     }
   };
 
@@ -290,8 +313,13 @@ export default function AdminAssessmentsPage() {
 
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleDelete(a.id, a.title)}
-                      className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-rose-500"
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openDeleteModal(a.id, a.title);
+                      }}
+                      className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-rose-500 cursor-pointer transition-colors"
                       title="Delete"
                     >
                       <Trash2 size={15} />
@@ -529,6 +557,76 @@ export default function AdminAssessmentsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.open && (
+        <div
+          data-testid="delete-assessment-modal"
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deleteModal.loading) {
+              setDeleteModal({ open: false, id: null, title: '', loading: false, error: null });
+            }
+          }}
+        >
+          <div
+            className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-rose-500/15 flex items-center justify-center text-rose-500 shrink-0">
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]">
+                  Delete Assessment?
+                </h2>
+                <p className="text-xs text-[var(--text-muted)]">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            {deleteModal.error && (
+              <div className="p-3 text-xs rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 flex items-start gap-2">
+                <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                <span className="flex-1 whitespace-pre-wrap">{deleteModal.error}</span>
+              </div>
+            )}
+
+            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+              Are you sure you want to permanently delete <strong className="text-[var(--text-primary)] font-semibold">&ldquo;{deleteModal.title}&rdquo;</strong>? This will remove all associated sections, questions, and test configurations.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-default)]">
+              <button
+                type="button"
+                disabled={deleteModal.loading}
+                onClick={() => setDeleteModal({ open: false, id: null, title: '', loading: false, error: null })}
+                className="px-4 py-2 text-sm rounded-lg border border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-50 cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteModal.loading}
+                onClick={handleConfirmDelete}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-50 cursor-pointer shadow-sm transition-colors"
+              >
+                {deleteModal.loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={15} />
+                    <span>Delete Assessment</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

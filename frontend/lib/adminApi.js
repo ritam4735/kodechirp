@@ -1,5 +1,7 @@
 'use client';
 
+import { useAuthStore } from '../store/authStore';
+
 export function getApiBase() {
   if (typeof window !== 'undefined') {
     // If accessed through reverse proxy (e.g. port 80 / 443 / empty port):
@@ -30,7 +32,7 @@ const requestAdmin = async (path, options = {}) => {
   }
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  let res = await fetch(`${API_BASE}/api/admin${path}`, { headers, ...options });
+  let res = await fetch(`${API_BASE}/api/admin${path}`, { credentials: 'include', headers, ...options });
   let data = await res.json().catch(() => ({}));
 
   if (res.status === 401 && (data.code === 'TOKEN_EXPIRED' || data.error?.toLowerCase().includes('token'))) {
@@ -54,10 +56,13 @@ const requestAdmin = async (path, options = {}) => {
         // Retry original request with refreshed token
         headers['Authorization'] = `Bearer ${newToken}`;
         res = await fetch(`${API_BASE}/api/admin${path}`, {
+          credentials: 'include',
           headers,
           ...options,
         });
         data = await res.json().catch(() => ({}));
+      } else {
+        useAuthStore.getState().logout();
       }
     } catch (e) {
       console.error('Failed to refresh token in adminApi', e);

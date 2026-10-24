@@ -84,8 +84,8 @@ export default function OrganizationsPage() {
         search: search.trim() || undefined,
         status: statusFilter || undefined,
       });
-      setOrganizations(res.data || []);
-      setMeta(res.meta || { total: 0 });
+      setOrganizations(res.organizations || res.data || []);
+      setMeta(res.meta || { total: res.total ?? (res.organizations || res.data || []).length });
     } catch (err) {
       setError(err.message);
       showToast('error', `Failed to load organizations: ${err.message}`);
@@ -193,7 +193,7 @@ export default function OrganizationsPage() {
       const res = await adminApi.getOrganizationAdmins(org.id);
       setAdminModal(prev => ({
         ...prev,
-        admins: res.data || [],
+        admins: res.admins || res.data || [],
         loading: false,
       }));
     } catch (err) {
@@ -221,7 +221,7 @@ export default function OrganizationsPage() {
       const res = await adminApi.getOrganizationAdmins(adminModal.org.id);
       setAdminModal(prev => ({
         ...prev,
-        admins: res.data || [],
+        admins: res.admins || res.data || [],
         assigning: false,
       }));
       fetchOrganizations();
