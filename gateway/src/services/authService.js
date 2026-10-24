@@ -98,6 +98,9 @@ async function login({ identifier, password }) {
   // Clean sensitive fields
   delete user.password_hash;
 
+  // Auto-sync with student roster if matching college email exists
+  await syncUserWithRoster(user);
+
   // Fetch organization membership if available
   try {
     const orgRes = await db.query(
@@ -188,6 +191,9 @@ async function refreshAccessToken(refreshToken) {
 
   const user = userResult.rows[0];
 
+  // Auto-sync with student roster if matching college email exists
+  await syncUserWithRoster(user);
+
   try {
     const orgRes = await db.query(
       `SELECT om.organization_id, om.role AS member_role, om.department, om.academic_year, 
@@ -219,11 +225,36 @@ async function refreshAccessToken(refreshToken) {
  * Revoke all refresh tokens for a user (logout everywhere).
  */
 async function revokeAllTokens(userId) {
+  if (!userId) return;
   await db.query(
     'UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL',
     [userId]
   );
   logger.info({ userId }, '[Auth] All refresh tokens revoked');
+}
+
+/**
+ * Revoke a specific refresh token family (and associated user tokens) by token string.
+ */
+async function revokeRefreshToken(refreshToken) {
+  if (!refreshToken) return;
+  try {
+    const tokenHash = hashToken(refreshToken);
+    const result = await db.query(
+      'SELECT user_id, family_id FROM refresh_tokens WHERE token_hash = $1',
+      [tokenHash]
+    );
+    if (result.rows.length > 0) {
+      const { user_id, family_id } = result.rows[0];
+      await db.query(
+        'UPDATE refresh_tokens SET revoked_at = NOW() WHERE (family_id = $1 OR user_id = $2) AND revoked_at IS NULL',
+        [family_id, user_id]
+      );
+      logger.info({ userId: user_id, familyId: family_id }, '[Auth] Refresh token and family revoked');
+    }
+  } catch (err) {
+    logger.warn({ err }, '[Auth] Error revoking refresh token');
+  }
 }
 
 /**
@@ -438,6 +469,9 @@ async function verifyEmail(token, email) {
     [user.id]
   );
 
+  // Auto-sync with student roster if matching college email exists
+  await syncUserWithRoster(user);
+
   logger.info({ userId: user.id }, '[Auth] Email verified successfully');
   return true;
 }
@@ -480,14 +514,60 @@ async function resendVerification(email) {
   return true;
 }
 
+/**
+ * Automatically link an authenticated user with any matching student roster entry
+ * and synchronize organization membership.
+ */
+async function syncUserWithRoster(user) {
+  if (!user || !user.email) return;
+
+  try {
+    // 1. Link matching student_rosters records
+    const rosterRes = await db.query(
+      `UPDATE student_rosters
+       SET matched_user_id = $1, updated_at = NOW()
+       WHERE LOWER(college_email) = LOWER($2)
+         AND (matched_user_id IS NULL OR matched_user_id = $1)
+       RETURNING organization_id, department, academic_year, enrollment_status, student_id_number, is_active`,
+      [user.id, user.email]
+    );
+
+    // 2. For each matched organization, ensure organization_members row
+    for (const sr of rosterRes.rows) {
+      await db.query(
+        `INSERT INTO organization_members (organization_id, user_id, role, department, academic_year, enrollment_status, student_id_number, updated_at)
+         VALUES ($1, $2, 'student', $3, $4, $5, $6, NOW())
+         ON CONFLICT (organization_id, user_id)
+         DO UPDATE SET
+            department = COALESCE(EXCLUDED.department, organization_members.department),
+            academic_year = COALESCE(EXCLUDED.academic_year, organization_members.academic_year),
+            enrollment_status = EXCLUDED.enrollment_status,
+            student_id_number = COALESCE(EXCLUDED.student_id_number, organization_members.student_id_number),
+            updated_at = NOW()`,
+        [sr.organization_id, user.id, sr.department, sr.academic_year, sr.enrollment_status, sr.student_id_number]
+      );
+
+      // If user's global role is 'user', elevate to 'student'
+      if (user.role === 'user') {
+        await db.query(`UPDATE users SET role = 'student', updated_at = NOW() WHERE id = $1`, [user.id]);
+        user.role = 'student';
+      }
+    }
+  } catch (err) {
+    logger.warn({ err, userId: user.id }, '[Auth] syncUserWithRoster failed non-fatally');
+  }
+}
+
 module.exports = {
   signup,
   login,
   refreshAccessToken,
   revokeAllTokens,
+  revokeRefreshToken,
   getProfile,
   forgotPassword,
   resetPassword,
   verifyEmail,
   resendVerification,
+  syncUserWithRoster,
 };

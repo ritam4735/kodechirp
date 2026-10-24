@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'Thank You',
-  description: 'Thank you for reaching out to the KodeChirp team.',
+  title: 'Thank You for Visiting | KodeChirp',
+  description: "You've successfully signed out of KodeChirp. We hope to see you again soon!",
   robots: {
     index: false,
     follow: false,

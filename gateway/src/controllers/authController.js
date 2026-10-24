@@ -88,13 +88,29 @@ exports.refresh = async (req, res, next) => {
 
 exports.logout = async (req, res, next) => {
   try {
-    if (req.user) {
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+
+    if (req.user?.id) {
       await authService.revokeAllTokens(req.user.id);
+    } else if (refreshToken) {
+      await authService.revokeRefreshToken(refreshToken);
     }
 
-    res.clearCookie('refreshToken', { path: '/api/auth/refresh' });
+    // Clear refresh cookie across both the endpoint path and root path
+    res.clearCookie('refreshToken', {
+      path: '/api/auth/refresh',
+      httpOnly: true,
+      secure: config.env === 'production',
+      sameSite: 'strict',
+    });
+    res.clearCookie('refreshToken', {
+      path: '/',
+      httpOnly: true,
+      secure: config.env === 'production',
+      sameSite: 'strict',
+    });
 
-    return res.status(200).json({ success: true, message: 'Logged out' });
+    return res.status(200).json({ success: true, message: 'Logged out successfully' });
   } catch (err) {
     next(err);
   }

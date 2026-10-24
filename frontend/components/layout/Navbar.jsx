@@ -62,10 +62,10 @@ export const Navbar = () => {
     setMobileNavOpen(false);
   }, [pathname]);
 
-  const onLogout = () => {
+  const onLogout = async () => {
     setMenuOpen(false);
     setMobileNavOpen(false);
-    handleLogout();
+    await handleLogout();
   };
 
   return (
@@ -235,7 +235,26 @@ export const Navbar = () => {
             ))}
           </div>
 
-          {!isAuthenticated && mounted && (
+          {isAuthenticated && mounted ? (
+            <div style={{ paddingTop: '12px', borderTop: '1px solid var(--kc-border)', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <Link
+                href="/profile"
+                onClick={() => setMobileNavOpen(false)}
+                className="nav-mobile-link"
+              >
+                <span>Profile ({user?.display_name || user?.username})</span>
+              </Link>
+              <button
+                type="button"
+                onClick={onLogout}
+                className="nav-mobile-link text-[#EF4444]"
+                style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}
+              >
+                <LogOut size={14} className="text-[#EF4444]" aria-hidden="true" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          ) : !isAuthenticated && mounted ? (
             <div style={{ paddingTop: '12px', borderTop: '1px solid var(--kc-border)', marginTop: '8px' }}>
               <Link
                 href="/auth"
@@ -246,7 +265,7 @@ export const Navbar = () => {
                 Sign In
               </Link>
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </>

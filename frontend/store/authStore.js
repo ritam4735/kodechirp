@@ -42,5 +42,15 @@ export const useAuthStore = create((set) => ({
     }
   },
   login: (userData, token) => set({ user: userData, token, isAuthenticated: true }),
-  logout: () => set({ user: null, token: null, isAuthenticated: false }),
+  logout: () => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('kc_token');
+        localStorage.removeItem('kc_user');
+      } catch (e) {
+        console.error('[AuthStore] Failed to clear persisted auth items:', e);
+      }
+    }
+    set({ user: null, token: null, isAuthenticated: false });
+  },
 }));

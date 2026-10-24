@@ -32,6 +32,7 @@ async function request(path, options = {}) {
   }
 
   let res = await fetch(`${API_BASE}${path}`, {
+    credentials: 'include',
     headers,
     ...options,
   });
@@ -57,6 +58,7 @@ async function request(path, options = {}) {
         // Retry original request
         headers['Authorization'] = `Bearer ${newToken}`;
         res = await fetch(`${API_BASE}${path}`, {
+          credentials: 'include',
           ...options,
           headers,
         });
@@ -91,6 +93,18 @@ export const api = {
       body: JSON.stringify({ identifier, password }),
     });
     return data;
+  },
+
+  logout: async () => {
+    try {
+      return await request('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (e) {
+      console.warn('[Auth] Remote logout request failed non-fatally:', e);
+      return { success: false, error: e.message };
+    }
   },
 
   signup: async (email, password, username) => {
