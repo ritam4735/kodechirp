@@ -9,6 +9,7 @@ jest.mock('../src/services/authService', () => {
   return {
     ...original,
     revokeAllTokens: jest.fn(),
+    revokeRefreshToken: jest.fn(),
   };
 });
 jest.mock('../src/services/emailService', () => ({
@@ -22,10 +23,11 @@ describe('Auth Controller & Service - Password Reset', () => {
   let mockReq, mockRes, mockNext;
 
   beforeEach(() => {
-    mockReq = { body: {}, query: {} };
+    mockReq = { body: {}, query: {}, cookies: {} };
     mockRes = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
+      clearCookie: jest.fn(),
     };
     mockNext = jest.fn();
     jest.clearAllMocks();
@@ -238,6 +240,101 @@ describe('Auth Controller & Service - Password Reset', () => {
         message: 'Email is already verified',
         status: 400
       }));
+    });
+  });
+
+  describe('logout', () => {
+    it('revokes all tokens when req.user is populated and clears cookies on both paths', async () => {
+      mockReq.user = { id: 'user-123' };
+
+      await authController.logout(mockReq, mockRes, mockNext);
+
+      expect(authService.revokeAllTokens).toHaveBeenCalledWith('user-123');
+      expect(mockRes.clearCookie).toHaveBeenCalledWith('refreshToken', expect.objectContaining({ path: '/api/auth/refresh' }));
+      expect(mockRes.clearCookie).toHaveBeenCalledWith('refreshToken', expect.objectContaining({ path: '/' }));
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: true,
+        message: 'Logged out successfully',
+      }));
+    });
+
+    it('revokes refresh token from cookie when req.user is absent', async () => {
+      mockReq.cookies = { refreshToken: 'cookie-refresh-token-xyz' };
+
+      await authController.logout(mockReq, mockRes, mockNext);
+
+      expect(authService.revokeRefreshToken).toHaveBeenCalledWith('cookie-refresh-token-xyz');
+      expect(mockRes.clearCookie).toHaveBeenCalledWith('refreshToken', expect.objectContaining({ path: '/api/auth/refresh' }));
+      expect(mockRes.clearCookie).toHaveBeenCalledWith('refreshToken', expect.objectContaining({ path: '/' }));
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: true,
+      }));
+    });
+
+    it('revokes refresh token from body when req.user and cookies are absent', async () => {
+      mockReq.body = { refreshToken: 'body-refresh-token-xyz' };
+
+      await authController.logout(mockReq, mockRes, mockNext);
+
+      expect(authService.revokeRefreshToken).toHaveBeenCalledWith('body-refresh-token-xyz');
+      expect(mockRes.clearCookie).toHaveBeenCalledWith('refreshToken', expect.objectContaining({ path: '/api/auth/refresh' }));
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+    });
+
+    it('clears cookies and returns 200 even if no user or token is provided', async () => {
+      mockReq = { body: {}, query: {}, cookies: {} };
+
+      await authController.logout(mockReq, mockRes, mockNext);
+
+      expect(authService.revokeAllTokens).not.toHaveBeenCalled();
+      expect(authService.revokeRefreshToken).not.toHaveBeenCalled();
+      expect(mockRes.clearCookie).toHaveBeenCalledWith('refreshToken', expect.objectContaining({ path: '/api/auth/refresh' }));
+      expect(mockRes.clearCookie).toHaveBeenCalledWith('refreshToken', expect.objectContaining({ path: '/' }));
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+    });
+
+    it('passes error to next middleware if service throws', async () => {
+      mockReq.user = { id: 'user-err' };
+      const testErr = new Error('Database failure');
+      authService.revokeAllTokens.mockRejectedValueOnce(testErr);
+
+      await authController.logout(mockReq, mockRes, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(testErr);
+    });
+  });
+
+  describe('authService session revocation methods', () => {
+    const actualAuthService = jest.requireActual('../src/services/authService');
+
+    it('revokeAllTokens updates all non-revoked refresh tokens for user', async () => {
+      db.query.mockResolvedValueOnce({ rowCount: 2 });
+      await actualAuthService.revokeAllTokens('user-abc');
+
+      expect(db.query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL'),
+        ['user-abc']
+      );
+    });
+
+    it('revokeRefreshToken looks up token hash and revokes family and user tokens', async () => {
+      db.query.mockResolvedValueOnce({
+        rows: [{ user_id: 'user-xyz', family_id: 'family-123' }],
+      });
+      db.query.mockResolvedValueOnce({ rowCount: 1 });
+
+      await actualAuthService.revokeRefreshToken('sample-refresh-token-string');
+
+      expect(db.query).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT user_id, family_id FROM refresh_tokens WHERE token_hash = $1'),
+        [expect.any(String)]
+      );
+      expect(db.query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE refresh_tokens SET revoked_at = NOW() WHERE (family_id = $1 OR user_id = $2) AND revoked_at IS NULL'),
+        ['family-123', 'user-xyz']
+      );
     });
   });
 });

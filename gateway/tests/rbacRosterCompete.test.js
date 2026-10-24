@@ -448,5 +448,351 @@ describe('RBAC, Roster, Eligibility, and Export Test Suite', () => {
       expect(result.eligible).toBe(true);
       expect(result.maxAttempts).toBe(3);
     });
+
+    it('denies access if student is graduated', async () => {
+      const orgAssessment = {
+        id: 'assess-grad',
+        is_public: false,
+        organization_id: 'org-alpha',
+        max_attempts: 1,
+      };
+
+      db.query.mockResolvedValueOnce({
+        rows: [{
+          role: 'student',
+          roster_id: 'sr-grad-1',
+          roster_student_id: 'GRAD001',
+          department: 'Computer Science',
+          enrollment_status: 'graduated',
+          roster_status: 'graduated',
+          roster_active: false,
+          organization_name: 'Alpha College',
+          organization_active: true,
+        }],
+      });
+
+      const result = await eligibilityService.checkStudentEligibility({
+        assessment: orgAssessment,
+        userId: 'student-grad',
+        userRole: 'student',
+      });
+
+      expect(result.eligible).toBe(false);
+      expect(result.reason).toContain('Graduated students are not eligible');
+    });
+
+    it('denies access if roster record is marked is_active = false', async () => {
+      const orgAssessment = {
+        id: 'assess-deact',
+        is_public: false,
+        organization_id: 'org-alpha',
+        max_attempts: 1,
+      };
+
+      db.query.mockResolvedValueOnce({
+        rows: [{
+          role: 'student',
+          roster_id: 'sr-deact-1',
+          roster_student_id: 'STU102',
+          department: 'Computer Science',
+          enrollment_status: 'active',
+          roster_status: 'inactive',
+          roster_active: false,
+          organization_name: 'Alpha College',
+          organization_active: true,
+        }],
+      });
+
+      const result = await eligibilityService.checkStudentEligibility({
+        assessment: orgAssessment,
+        userId: 'student-deact',
+        userRole: 'student',
+      });
+
+      expect(result.eligible).toBe(false);
+      expect(result.reason).toContain('inactive or suspended');
+    });
+
+    it('allows access and self-heals stale om.enrollment_status when student is active on roster', async () => {
+      const orgAssessment = {
+        id: 'assess-heal',
+        is_public: false,
+        organization_id: 'org-alpha',
+        target_audience: 'organization',
+        max_attempts: 2,
+      };
+
+      db.query
+        .mockResolvedValueOnce({
+          rows: [{
+            role: 'student',
+            roster_id: 'sr-aarav',
+            roster_student_id: 'DC1-2024-001',
+            department: 'Computer Science & Engineering',
+            academic_year: '3rd Year',
+            enrollment_status: 'inactive', // stale membership record
+            roster_status: 'active',       // active on roster
+            roster_active: true,
+            organization_name: 'Alpha College',
+            organization_active: true,
+          }],
+        })
+        // healing query update organization_members
+        .mockResolvedValueOnce({ rowCount: 1 })
+        // assignments query: none, open to all enrolled students
+        .mockResolvedValueOnce({ rows: [] });
+
+      const result = await eligibilityService.checkStudentEligibility({
+        assessment: orgAssessment,
+        userId: 'aarav-user-id',
+        userRole: 'student',
+      });
+
+      expect(result.eligible).toBe(true);
+      expect(result.maxAttempts).toBe(2);
+      expect(db.query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE organization_members'),
+        ['org-alpha', 'aarav-user-id']
+      );
+    });
+
+    it('denies access if assessment belongs to an inactive organization', async () => {
+      const orgAssessment = {
+        id: 'assess-inact-org',
+        is_public: false,
+        organization_id: 'org-inactive',
+        max_attempts: 1,
+      };
+
+      db.query.mockResolvedValueOnce({
+        rows: [{
+          role: 'student',
+          roster_id: 'sr-1',
+          organization_name: 'Inactive College',
+          organization_active: false, // Inactive org
+        }],
+      });
+
+      const result = await eligibilityService.checkStudentEligibility({
+        assessment: orgAssessment,
+        userId: 'student-1',
+        userRole: 'student',
+      });
+
+      expect(result.eligible).toBe(false);
+      expect(result.reason).toContain('organization that is not currently active');
+    });
+  });
+
+  // ── 5. ROSTER ELIGIBILITY MANAGEMENT & ACCOUNT SYNC ─────────────────────────
+  describe('5. Roster Eligibility Management & Account Sync', () => {
+    const rosterController = require('../src/controllers/rosterController');
+    const authService = require('../src/services/authService');
+
+    it('updateStudentEligibility synchronizes is_active and enrollment_status to active and updates organization_members', async () => {
+      const req = {
+        organizationId: 'org-alpha',
+        params: { studentId: 'roster-student-1' },
+        body: { is_active: true }, // Admin toggles to active without explicit enrollment_status
+        user: { id: 'admin-1', email: 'admin@college.edu', role: 'college_admin' },
+        ip: '127.0.0.1',
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+      const next = jest.fn();
+
+      // Current record is inactive
+      db.query
+        // 1. SELECT current record
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'roster-student-1',
+            student_id_number: 'STU001',
+            college_email: 'aarav@college.edu',
+            is_active: false,
+            enrollment_status: 'inactive',
+            matched_user_id: 'user-aarav-id',
+            department: 'Computer Science',
+            academic_year: '3rd Year',
+          }],
+        })
+        // 2. UPDATE student_rosters
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'roster-student-1',
+            student_id_number: 'STU001',
+            college_email: 'aarav@college.edu',
+            is_active: true,
+            enrollment_status: 'active',
+            matched_user_id: 'user-aarav-id',
+            department: 'Computer Science',
+            academic_year: '3rd Year',
+          }],
+        })
+        // 3. INSERT / UPDATE organization_members
+        .mockResolvedValueOnce({ rowCount: 1 })
+        // 4. Audit log query
+        .mockResolvedValueOnce({ rowCount: 1 });
+
+      await rosterController.updateStudentEligibility(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: true,
+        student: expect.objectContaining({
+          is_active: true,
+          enrollment_status: 'active',
+          student_id: 'STU001',
+          user_id: 'user-aarav-id',
+          has_account: true,
+        }),
+      }));
+
+      // Verify organization_members was updated with 'active'
+      expect(db.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO organization_members'),
+        ['org-alpha', 'user-aarav-id', 'Computer Science', '3rd Year', 'active', 'STU001']
+      );
+    });
+
+    it('updateStudentEligibility sets enrollment_status to inactive when is_active is set to false', async () => {
+      const req = {
+        organizationId: 'org-alpha',
+        params: { studentId: 'roster-student-1' },
+        body: { is_active: false }, // Deactivate student
+        user: { id: 'admin-1', email: 'admin@college.edu', role: 'college_admin' },
+        ip: '127.0.0.1',
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+      const next = jest.fn();
+
+      db.query
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'roster-student-1',
+            student_id_number: 'STU001',
+            college_email: 'aarav@college.edu',
+            is_active: true,
+            enrollment_status: 'active',
+            matched_user_id: 'user-aarav-id',
+            department: 'Computer Science',
+            academic_year: '3rd Year',
+          }],
+        })
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'roster-student-1',
+            student_id_number: 'STU001',
+            college_email: 'aarav@college.edu',
+            is_active: false,
+            enrollment_status: 'inactive',
+            matched_user_id: 'user-aarav-id',
+            department: 'Computer Science',
+            academic_year: '3rd Year',
+          }],
+        })
+        .mockResolvedValueOnce({ rowCount: 1 })
+        .mockResolvedValueOnce({ rowCount: 1 });
+
+      await rosterController.updateStudentEligibility(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: true,
+        student: expect.objectContaining({
+          is_active: false,
+          enrollment_status: 'inactive',
+        }),
+      }));
+    });
+
+    it('getRoster returns student_id, user_id aliases and counts in meta', async () => {
+      const req = {
+        organizationId: 'org-alpha',
+        query: { page: '0', limit: '10' },
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+      const next = jest.fn();
+
+      db.query
+        // Count query
+        .mockResolvedValueOnce({
+          rows: [{ total: '8', active_count: '8', registered_count: '5' }],
+        })
+        // Filter dropdowns query
+        .mockResolvedValueOnce({
+          rows: [{ departments: ['Computer Science'], academic_years: ['3rd Year'] }],
+        })
+        // Data query
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'r1',
+            student_id_number: 'DC1-001',
+            student_id: 'DC1-001',
+            matched_user_id: 'u1',
+            user_id: 'u1',
+            has_account: true,
+            is_active: true,
+            enrollment_status: 'active',
+          }],
+        });
+
+      await rosterController.getRoster(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      const jsonCall = res.json.mock.calls[0][0];
+      expect(jsonCall.meta).toEqual(expect.objectContaining({
+        total: 8,
+        activeCount: 8,
+        registeredCount: 5,
+      }));
+      expect(jsonCall.students[0].student_id).toBe('DC1-001');
+      expect(jsonCall.students[0].user_id).toBe('u1');
+    });
+
+    it('syncUserWithRoster links unlinked roster records and creates organization_members on user authentication', async () => {
+      const user = {
+        id: 'new-user-uuid',
+        email: 'alex.j@college.edu',
+        role: 'user',
+      };
+
+      db.query
+        // 1. UPDATE student_rosters RETURNING
+        .mockResolvedValueOnce({
+          rows: [{
+            organization_id: 'org-alpha',
+            department: 'Computer Science',
+            academic_year: '2024-2025',
+            enrollment_status: 'active',
+            student_id_number: 'CS2024001',
+            is_active: true,
+          }],
+        })
+        // 2. INSERT INTO organization_members
+        .mockResolvedValueOnce({ rowCount: 1 })
+        // 3. UPDATE users SET role = 'student'
+        .mockResolvedValueOnce({ rowCount: 1 });
+
+      await authService.syncUserWithRoster(user);
+
+      expect(db.query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE student_rosters'),
+        [user.id, user.email]
+      );
+      expect(db.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO organization_members'),
+        ['org-alpha', user.id, 'Computer Science', '2024-2025', 'active', 'CS2024001']
+      );
+      expect(user.role).toBe('student');
+    });
   });
 });
