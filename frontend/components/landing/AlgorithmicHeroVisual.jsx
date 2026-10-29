@@ -47,12 +47,12 @@ export default function AlgorithmicHeroVisual() {
         </div>
 
         <div className="kc-console-title">
-          <span className="kc-console-env">sandbox://kernel-x86_64</span>
+          <span className="kc-console-env">algorithms</span>
           <span className="kc-console-divider">/</span>
           <span className="kc-console-file">
-            {activeAlgo === 'graph' && 'dijkstra_traversal.rs'}
-            {activeAlgo === 'twoPointer' && 'two_pointer_invariant.py'}
-            {activeAlgo === 'slidingWindow' && 'monotonic_window.cpp'}
+            {activeAlgo === 'graph' && 'dijkstra_shortest_path.py'}
+            {activeAlgo === 'twoPointer' && 'two_pointer_water.py'}
+            {activeAlgo === 'slidingWindow' && 'sliding_window_stream.py'}
           </span>
         </div>
 
