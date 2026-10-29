@@ -29,7 +29,7 @@ export default function AdminAnalytics() {
   }, []);
 
   if (loading) return <div className="admin-loading"><div className="admin-spinner"></div>Loading analytics...</div>;
-  if (error || !data) return <div style={{ color: 'var(--kc-error, #f85149)', padding: '40px' }}>Failed to load analytics: {error || 'No data available'}</div>;
+  if (error || !data) return <div style={{ color: 'var(--kc-error-text)', padding: '40px' }}>Failed to load analytics: {error || 'No data available'}</div>;
 
   // ── College Admin Institutional Analytics ──────────────────────────────────
   if (data.isCollegeAdmin) {
@@ -274,14 +274,14 @@ export default function AdminAnalytics() {
           {['Easy', 'Medium', 'Hard'].map(d => {
             const count = diffMap[d] || 0;
             const pct = (count / totalProblems) * 100;
-            const color = d === 'Easy' ? '#4ade80' : d === 'Medium' ? '#fbbf24' : '#f87171';
+            const color = d === 'Easy' ? 'var(--kc-success-text)' : d === 'Medium' ? 'var(--kc-warning-text)' : 'var(--kc-error-text)';
             return (
               <div key={d} style={{ marginBottom: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>{d}</span>
                   <span style={{ color, fontWeight: 600 }}>{count} ({pct.toFixed(0)}%)</span>
                 </div>
-                <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ height: '6px', background: 'var(--kc-border)', borderRadius: '3px', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '3px', transition: 'width 0.6s ease' }} />
                 </div>
               </div>
@@ -294,7 +294,7 @@ export default function AdminAnalytics() {
             <Target size={15} style={{ color: 'var(--kc-accent)' }} /> Acceptance by Difficulty
           </div>
           {(data.acceptanceByDifficulty || []).map(d => {
-            const color = d.difficulty === 'Easy' ? '#4ade80' : d.difficulty === 'Medium' ? '#fbbf24' : '#f87171';
+            const color = d.difficulty === 'Easy' ? 'var(--kc-success-text)' : d.difficulty === 'Medium' ? 'var(--kc-warning-text)' : 'var(--kc-error-text)';
             return (
               <div key={d.difficulty} style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
@@ -315,8 +315,8 @@ export default function AdminAnalytics() {
           </div>
           {Object.entries(statusMap).sort((a, b) => b[1] - a[1]).map(([status, count]) => {
             const pct = (count / totalStatusSubs) * 100;
-            const color = status === 'Accepted' ? '#4ade80' : status === 'Wrong Answer' ? '#f87171' :
-              status === 'Time Limit Exceeded' ? '#fbbf24' : '#fb923c';
+            const color = status === 'Accepted' ? 'var(--kc-success-text)' : status === 'Wrong Answer' ? 'var(--kc-error-text)' :
+              status === 'Time Limit Exceeded' ? 'var(--kc-warning-text)' : 'var(--accent-orange)';
             return (
               <div key={status} style={{ marginBottom: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '3px' }}>
@@ -374,7 +374,7 @@ export default function AdminAnalytics() {
       <div className="admin-grid-3">
         <div className="admin-section-card">
           <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Flame size={15} style={{ color: '#f87171' }} /> Most Attempted
+            <Flame size={15} style={{ color: 'var(--kc-error-text)' }} /> Most Attempted
           </div>
           {(data.mostAttempted || []).map((p, i) => (
             <div key={p.id} className="admin-activity-item">
@@ -389,13 +389,13 @@ export default function AdminAnalytics() {
 
         <div className="admin-section-card">
           <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <CheckCircle2 size={15} style={{ color: '#4ade80' }} /> Most Solved
+            <CheckCircle2 size={15} style={{ color: 'var(--kc-success-text)' }} /> Most Solved
           </div>
           {(data.mostSolved || []).map((p, i) => (
             <div key={p.id} className="admin-activity-item">
               <span style={{ color: 'var(--text-muted)', fontSize: '12px', width: '20px' }}>#{i + 1}</span>
               <span style={{ flex: 1, color: 'var(--text-primary)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</span>
-              <span style={{ color: '#4ade80', fontSize: '12px', fontWeight: 600 }}>{p.solved}</span>
+              <span style={{ color: 'var(--kc-success-text)', fontSize: '12px', fontWeight: 600 }}>{p.solved}</span>
             </div>
           ))}
           {(data.mostSolved || []).length === 0 && <div className="admin-empty"><div className="admin-empty-text">No data</div></div>}
@@ -403,14 +403,14 @@ export default function AdminAnalytics() {
 
         <div className="admin-section-card">
           <div className="admin-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Users size={15} style={{ color: 'var(--kc-accent)' }} /> Most Active Users
+            <Users size={15} style={{ color: 'var(--kc-accent-text)' }} /> Most Active Users
           </div>
           {(data.mostActiveUsers || []).map((u, i) => (
             <div key={u.id} className="admin-activity-item">
               <span style={{ color: 'var(--text-muted)', fontSize: '12px', width: '20px' }}>#{i + 1}</span>
               <span style={{ flex: 1, color: 'var(--text-primary)', fontSize: '13px' }}>{u.username}</span>
               <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{u.total_submissions} subs</span>
-              <span style={{ color: '#4ade80', fontSize: '11px' }}>{u.accepted} acc</span>
+              <span style={{ color: 'var(--kc-success-text)', fontSize: '11px' }}>{u.accepted} acc</span>
             </div>
           ))}
           {(data.mostActiveUsers || []).length === 0 && <div className="admin-empty"><div className="admin-empty-text">No data</div></div>}

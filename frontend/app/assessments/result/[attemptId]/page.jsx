@@ -83,7 +83,7 @@ export default function AssessmentResultPage() {
             <Clock size={28} />
           </div>
           <h2 className="text-xl font-bold text-[var(--text-primary)]">{result.assessment_title}</h2>
-          <div className="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+          <div className="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
             Submission Received — Results Pending Release
           </div>
           <p className="text-sm text-[var(--text-secondary)]">
@@ -141,8 +141,8 @@ export default function AssessmentResultPage() {
                 <span
                   className={`px-3 py-0.5 text-xs font-bold rounded-full border ${
                     isPassed
-                      ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
-                      : 'bg-rose-500/10 text-rose-500 border-rose-500/30'
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                      : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30'
                   }`}
                 >
                   {isPassed ? 'PASSED' : 'NOT QUALIFIED'}
@@ -175,7 +175,7 @@ export default function AssessmentResultPage() {
                 </div>
                 <div
                   className={`text-3xl font-black font-mono mt-0.5 ${
-                    isPassed ? 'text-emerald-500' : 'text-rose-500'
+                    isPassed ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
                   }`}
                 >
                   {result.percentage}%
@@ -195,14 +195,14 @@ export default function AssessmentResultPage() {
           </div>
           <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl p-4 text-center">
             <div className="text-xs text-[var(--text-muted)]">Correct Answers</div>
-            <div className="text-xl font-bold font-mono text-emerald-500 mt-1 flex items-center justify-center gap-1">
+            <div className="text-xl font-bold font-mono text-emerald-700 dark:text-emerald-400 mt-1 flex items-center justify-center gap-1">
               <CheckCircle2 size={18} />
               <span>{result.correct_count}</span>
             </div>
           </div>
           <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl p-4 text-center">
             <div className="text-xs text-[var(--text-muted)]">Incorrect Answers</div>
-            <div className="text-xl font-bold font-mono text-rose-500 mt-1 flex items-center justify-center gap-1">
+            <div className="text-xl font-bold font-mono text-rose-700 dark:text-rose-400 mt-1 flex items-center justify-center gap-1">
               <XCircle size={18} />
               <span>{result.incorrect_count}</span>
             </div>
@@ -332,10 +332,10 @@ export default function AssessmentResultPage() {
                         <span
                           className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                             isCorrect
-                              ? 'bg-emerald-500 text-white'
+                              ? 'bg-emerald-600 text-white'
                               : isUnanswered
                               ? 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
-                              : 'bg-rose-500 text-white'
+                              : 'bg-rose-600 text-white'
                           }`}
                         >
                           {isCorrect ? '✓' : isUnanswered ? '—' : '✕'}
@@ -351,7 +351,7 @@ export default function AssessmentResultPage() {
                       </div>
 
                       <div className="font-mono text-xs font-semibold">
-                        <span className={isCorrect ? 'text-emerald-500' : q.score_awarded < 0 ? 'text-rose-500' : 'text-[var(--text-muted)]'}>
+                        <span className={isCorrect ? 'text-emerald-700 dark:text-emerald-400' : q.score_awarded < 0 ? 'text-rose-700 dark:text-rose-400' : 'text-[var(--text-muted)]'}>
                           {q.score_awarded > 0 ? `+${q.score_awarded}` : q.score_awarded} Marks
                         </span>
                       </div>

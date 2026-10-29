@@ -185,9 +185,9 @@ export default function AdminClientLayout({ children }) {
             type="button"
             onClick={handleLogout}
             className="admin-nav-item"
-            style={{ width: '100%', color: 'var(--kc-danger, #ef4444)', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}
+            style={{ width: '100%', color: 'var(--kc-error-text)', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}
           >
-            <LogOut size={14} className="admin-nav-icon text-[#ef4444]" aria-hidden="true" />
+            <LogOut size={14} className="admin-nav-icon text-[var(--kc-error-text)]" aria-hidden="true" />
             <span className="flex-1">Sign Out</span>
           </button>
         </div>

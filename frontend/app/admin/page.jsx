@@ -66,7 +66,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-default)] pb-6">
           <div>
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
+              <div className="p-2.5 rounded-xl bg-[var(--kc-warning-subtle)] border border-[var(--kc-warning-border)] text-[var(--kc-warning-text)]">
                 <Building2 size={24} />
               </div>
               <div>
@@ -74,7 +74,7 @@ export default function AdminDashboard() {
                   <h1 className="text-2xl font-bold tracking-tight text-[var(--kc-text-primary)]">
                     {org.name || 'Campus Portal'}
                   </h1>
-                  <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 font-mono">
+                  <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-[var(--kc-warning-subtle)] text-[var(--kc-warning-text)] border border-[var(--kc-warning-border)] font-mono">
                     {org.code || org.slug || 'INSTITUTION'}
                   </span>
                 </div>
@@ -139,7 +139,7 @@ export default function AdminDashboard() {
 
           <Link href="/admin/analytics" className="admin-stat-card">
             <div className="admin-stat-icon">
-              <TrendingUp size={16} className="text-[#10B981]" />
+              <TrendingUp size={16} className="text-[var(--kc-success-text)]" />
             </div>
             <div className="admin-stat-value">{stats.averageScore || 0}%</div>
             <div className="admin-stat-label">Average Campus Score</div>
@@ -206,13 +206,13 @@ export default function AdminDashboard() {
           {/* Campus Metrics */}
           <div className="admin-section-card">
             <div className="admin-section-title">
-              <Activity size={14} className="text-[#10B981]" />
+              <Activity size={14} className="text-[var(--kc-success-text)]" />
               <span>Institutional Overview</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12.5px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--kc-text-secondary)' }}>
                 <span>Active Roster Status</span>
-                <span style={{ color: '#10B981', fontWeight: 600 }}>
+                <span style={{ color: 'var(--kc-success-text)', fontWeight: 600 }}>
                   {stats.totalStudents > 0 ? ((stats.activeStudents / stats.totalStudents) * 100).toFixed(0) : 0}% Active
                 </span>
               </div>
@@ -413,7 +413,7 @@ export default function AdminDashboard() {
 
         <Link href="/admin/analytics" className="admin-stat-card">
           <div className="admin-stat-icon">
-            <BarChart3 size={16} className="text-[#10B981]" />
+            <BarChart3 size={16} className="text-[var(--kc-success-text)]" />
           </div>
           <div className="admin-stat-value">{stats.successRate}%</div>
           <div className="admin-stat-label">Acceptance Rate</div>
@@ -430,9 +430,9 @@ export default function AdminDashboard() {
             <span>Problems by Difficulty</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <DifficultyBar label="Easy" count={difficultyMap['Easy'] || 0} total={stats.totalProblems} color="#10B981" />
-            <DifficultyBar label="Medium" count={difficultyMap['Medium'] || 0} total={stats.totalProblems} color="#F59E0B" />
-            <DifficultyBar label="Hard" count={difficultyMap['Hard'] || 0} total={stats.totalProblems} color="#EF4444" />
+            <DifficultyBar label="Easy" count={difficultyMap['Easy'] || 0} total={stats.totalProblems} color="var(--kc-success-text)" />
+            <DifficultyBar label="Medium" count={difficultyMap['Medium'] || 0} total={stats.totalProblems} color="var(--kc-warning-text)" />
+            <DifficultyBar label="Hard" count={difficultyMap['Hard'] || 0} total={stats.totalProblems} color="var(--kc-error-text)" />
           </div>
         </div>
 
@@ -461,13 +461,13 @@ export default function AdminDashboard() {
         {/* Platform Health */}
         <div className="admin-section-card">
           <div className="admin-section-title">
-            <Activity size={14} className="text-[#10B981]" />
+            <Activity size={14} className="text-[var(--kc-success-text)]" />
             <span>Platform Metrics</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--kc-text-secondary)' }}>
               <span>Published Problems</span>
-              <span style={{ color: '#10B981', fontWeight: 600, fontFamily: 'var(--kc-font-code)' }}>{stats.publishedProblems}</span>
+              <span style={{ color: 'var(--kc-success-text)', fontWeight: 600, fontFamily: 'var(--kc-font-code)' }}>{stats.publishedProblems}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--kc-text-secondary)' }}>
               <span>Draft Problems</span>

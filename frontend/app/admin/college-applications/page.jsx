@@ -146,8 +146,8 @@ export default function CollegeApplicationsPage() {
         <div
           className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-xl border text-sm font-semibold flex items-center gap-2 ${
             toast.type === 'success'
-              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
-              : 'bg-rose-500/10 border-rose-500/30 text-rose-500'
+              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+              : 'bg-rose-500/15 border-rose-500/30 text-rose-700 dark:text-rose-300'
           }`}
         >
           {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
@@ -181,7 +181,7 @@ export default function CollegeApplicationsPage() {
               : 'bg-[var(--bg-secondary)] border-[var(--border-default)] hover:border-amber-500/30'
           }`}
         >
-          <div className="flex items-center justify-between text-amber-500 text-xs font-bold uppercase">
+          <div className="flex items-center justify-between text-amber-700 dark:text-amber-400 text-xs font-bold uppercase">
             <span>Pending Review</span>
             <Clock size={16} />
           </div>
@@ -198,7 +198,7 @@ export default function CollegeApplicationsPage() {
               : 'bg-[var(--bg-secondary)] border-[var(--border-default)] hover:border-emerald-500/30'
           }`}
         >
-          <div className="flex items-center justify-between text-emerald-500 text-xs font-bold uppercase">
+          <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase">
             <span>Approved</span>
             <CheckCircle2 size={16} />
           </div>
@@ -215,7 +215,7 @@ export default function CollegeApplicationsPage() {
               : 'bg-[var(--bg-secondary)] border-[var(--border-default)] hover:border-rose-500/30'
           }`}
         >
-          <div className="flex items-center justify-between text-rose-500 text-xs font-bold uppercase">
+          <div className="flex items-center justify-between text-rose-700 dark:text-rose-400 text-xs font-bold uppercase">
             <span>Rejected</span>
             <XCircle size={16} />
           </div>
@@ -303,9 +303,9 @@ export default function CollegeApplicationsPage() {
               <tbody className="divide-y divide-[var(--border-default)]">
                 {applications.map((app) => {
                   const statusColors = {
-                    PENDING: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-                    APPROVED: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-                    REJECTED: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+                    PENDING: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+                    APPROVED: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+                    REJECTED: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
                   };
 
                   return (
@@ -364,7 +364,7 @@ export default function CollegeApplicationsPage() {
                       <td className="px-5 py-4 text-[var(--text-muted)]">
                         {app.status === 'APPROVED' && (
                           <div className="space-y-0.5">
-                            <span className="text-emerald-500 font-semibold">Approved</span>
+                            <span className="text-emerald-700 dark:text-emerald-400 font-semibold">Approved</span>
                             {app.reviewer_display_name && (
                               <div className="text-[11px]">by {app.reviewer_display_name}</div>
                             )}
@@ -375,7 +375,7 @@ export default function CollegeApplicationsPage() {
                         )}
                         {app.status === 'REJECTED' && (
                           <div className="space-y-0.5 max-w-xs">
-                            <span className="text-rose-500 font-semibold">Rejected</span>
+                            <span className="text-rose-700 dark:text-rose-400 font-semibold">Rejected</span>
                             {app.rejection_reason && (
                               <div className="text-[11px] text-[var(--text-muted)] truncate" title={app.rejection_reason}>
                                 "{app.rejection_reason}"
@@ -384,7 +384,7 @@ export default function CollegeApplicationsPage() {
                           </div>
                         )}
                         {app.status === 'PENDING' && (
-                          <span className="text-amber-500 font-medium">Awaiting Action</span>
+                          <span className="text-amber-700 dark:text-amber-400 font-medium">Awaiting Action</span>
                         )}
                       </td>
 
@@ -554,12 +554,12 @@ export default function CollegeApplicationsPage() {
             {selectedApp.status !== 'PENDING' && (
               <div className="p-4 rounded-xl border text-xs space-y-1 bg-[var(--bg-tertiary)] border-[var(--border-default)]">
                 <div className="font-bold text-sm">
-                  Review Decision: <span className={selectedApp.status === 'APPROVED' ? 'text-emerald-500' : 'text-rose-500'}>{selectedApp.status}</span>
+                  Review Decision: <span className={selectedApp.status === 'APPROVED' ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}>{selectedApp.status}</span>
                 </div>
                 <div>Reviewed by: {selectedApp.reviewer_display_name || selectedApp.reviewer_username || 'Super Admin'}</div>
                 <div>Date: {selectedApp.reviewed_at ? new Date(selectedApp.reviewed_at).toLocaleString() : 'N/A'}</div>
                 {selectedApp.rejection_reason && (
-                  <div className="mt-2 text-rose-500">
+                  <div className="mt-2 text-rose-700 dark:text-rose-400">
                     <span className="font-semibold">Recorded Rejection Reason:</span>
                     <p className="text-[var(--text-muted)] mt-0.5 font-normal">"{selectedApp.rejection_reason}"</p>
                   </div>
@@ -608,8 +608,8 @@ export default function CollegeApplicationsPage() {
       {isApproveModalOpen && selectedApp && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center gap-3 text-emerald-500">
-              <div className="p-2.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+            <div className="flex items-center gap-3 text-emerald-700 dark:text-emerald-400">
+              <div className="p-2.5 rounded-full bg-emerald-500/15 border border-emerald-500/30">
                 <CheckCircle2 size={24} />
               </div>
               <h3 className="text-lg font-bold text-[var(--text-primary)]">
@@ -651,8 +651,8 @@ export default function CollegeApplicationsPage() {
       {isRejectModalOpen && selectedApp && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center gap-3 text-rose-500">
-              <div className="p-2.5 rounded-full bg-rose-500/10 border border-rose-500/20">
+            <div className="flex items-center gap-3 text-rose-700 dark:text-rose-400">
+              <div className="p-2.5 rounded-full bg-rose-500/15 border border-rose-500/30">
                 <XCircle size={24} />
               </div>
               <h3 className="text-lg font-bold text-[var(--text-primary)]">

@@ -251,7 +251,7 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
               )}
             </button>
           </div>
-          <pre className="text-[12.5px] text-emerald-700 dark:text-emerald-300 font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
+          <pre className="text-[12.5px] text-[var(--kc-success-text)] font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border border-[var(--kc-border)] whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed">
             {formattedExpected}
           </pre>
         </div>
@@ -270,8 +270,8 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
               >
                 {copiedKey === `your-${idx}` ? (
                   <>
-                    <Check size={11} className="text-[var(--kc-success)]" />
-                    <span className="text-[var(--kc-success)] text-[10.5px]">Copied</span>
+                    <Check size={11} className="text-[var(--kc-success-text)]" />
+                    <span className="text-[var(--kc-success-text)] text-[10.5px]">Copied</span>
                   </>
                 ) : (
                   <>
@@ -284,8 +284,8 @@ const TestCaseCard = ({ tc, idx, signature, returnType, isResultMode, copiedKey,
             <pre
               className={`text-[12.5px] font-mono bg-[var(--kc-surface)] p-2.5 rounded-md border whitespace-pre-wrap break-words max-w-full overflow-x-auto leading-relaxed ${
                 isPassed
-                  ? 'text-emerald-700 dark:text-emerald-300 border-[var(--kc-success-border)]'
-                  : 'text-rose-700 dark:text-rose-300 border-[var(--kc-error-border)]'
+                  ? 'text-[var(--kc-success-text)] border-[var(--kc-success-border)]'
+                  : 'text-[var(--kc-error-text)] border-[var(--kc-error-border)]'
               }`}
             >
               {formattedYour ?? 'null'}

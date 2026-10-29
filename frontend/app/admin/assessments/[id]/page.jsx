@@ -953,7 +953,7 @@ export default function AssessmentBuilderPage() {
 
   if (error || !assessment) {
     return (
-      <div className="p-12 text-center text-rose-500">
+      <div className="p-12 text-center text-rose-700 dark:text-rose-400 font-semibold">
         <p>{error || 'Assessment not found'}</p>
         <Link href="/admin/assessments" className="mt-4 inline-block text-sm text-[var(--kc-accent)] hover:underline">
           Return to Assessments
@@ -985,20 +985,20 @@ export default function AssessmentBuilderPage() {
         </Link>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs text-emerald-500 font-medium px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+          <div className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-medium px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30">
             <CheckCircle2 size={13} />
             <span>All changes saved</span>
           </div>
 
           {assessment.results_released_at ? (
-            <span className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-purple-500/40 bg-purple-500/10 text-purple-400">
+            <span className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-purple-500/40 bg-purple-500/15 text-purple-700 dark:text-purple-300">
               ✓ Results Released
             </span>
           ) : (
             <button
               type="button"
               onClick={handleReleaseResults}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-indigo-500/40 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 active:scale-95 cursor-pointer transition-all"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-indigo-500/40 bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-500/25 active:scale-95 cursor-pointer transition-all"
               title="Release results and scores to all participating students"
             >
               📢 Release Results
@@ -1010,8 +1010,8 @@ export default function AssessmentBuilderPage() {
             onClick={handleToggleStatus}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
               assessment.status === 'Published'
-                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 active:scale-95'
-                : 'border-amber-500/40 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 active:scale-95'
+                ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/25 active:scale-95'
+                : 'border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-500/25 active:scale-95'
             }`}
           >
             {assessment.status === 'Published' ? '✓ Published (Click to Unpublish)' : '● Draft (Click to Publish)'}
@@ -1603,18 +1603,18 @@ export default function AssessmentBuilderPage() {
                           {att.total_score} / {att.max_marks}
                         </td>
                         <td className="py-2.5 px-3 text-center font-mono">
-                          <span className={isPassed ? 'text-emerald-500 font-bold' : 'text-rose-500'}>
+                          <span className={isPassed ? 'text-emerald-700 dark:text-emerald-400 font-bold' : 'text-rose-700 dark:text-rose-400'}>
                             {att.percentage}%
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-center text-emerald-500 font-mono">{att.correct_count}</td>
-                        <td className="py-2.5 px-3 text-center text-rose-500 font-mono">{att.incorrect_count}</td>
+                        <td className="py-2.5 px-3 text-center text-emerald-700 dark:text-emerald-400 font-mono">{att.correct_count}</td>
+                        <td className="py-2.5 px-3 text-center text-rose-700 dark:text-rose-400 font-mono">{att.incorrect_count}</td>
                         <td className="py-2.5 px-3 text-center">
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                               isPassed
-                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                                : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                                : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30'
                             }`}
                           >
                             {isPassed ? 'PASSED' : 'FAILED'}

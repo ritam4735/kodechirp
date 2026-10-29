@@ -59,15 +59,15 @@ export default function AuditLogsPage() {
 
   const formatActionBadge = (action) => {
     if (action.includes('create') || action.includes('add') || action.includes('assign')) {
-      return <span className="admin-badge" style={{ background: 'rgba(74, 222, 128, 0.15)', color: '#4ade80' }}>{action}</span>;
+      return <span className="admin-badge kc-badge-success">{action}</span>;
     }
     if (action.includes('delete') || action.includes('revoke') || action.includes('suspend') || action.includes('deactivate')) {
-      return <span className="admin-badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}>{action}</span>;
+      return <span className="admin-badge kc-badge-error">{action}</span>;
     }
     if (action.includes('export')) {
-      return <span className="admin-badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc' }}>{action}</span>;
+      return <span className="admin-badge kc-badge-info">{action}</span>;
     }
-    return <span className="admin-badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--kc-accent)' }}>{action}</span>;
+    return <span className="admin-badge" style={{ background: 'var(--kc-accent-subtle)', color: 'var(--kc-accent-text)', border: '1px solid var(--kc-accent-border)' }}>{action}</span>;
   };
 
   return (

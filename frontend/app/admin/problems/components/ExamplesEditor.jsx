@@ -169,7 +169,7 @@ export default function ExamplesEditor({
             padding: '10px 14px',
             marginBottom: '16px',
             fontSize: '13px',
-            color: '#f85149',
+            color: 'var(--kc-error-text)',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
@@ -255,7 +255,7 @@ export default function ExamplesEditor({
                       className="admin-btn admin-btn-ghost admin-btn-sm"
                       onClick={() => handleRemoveExample(index)}
                       title="Remove Example"
-                      style={{ padding: '4px 8px', height: 'auto', minWidth: 'unset', color: '#f85149', marginLeft: '4px' }}
+                      style={{ padding: '4px 8px', height: 'auto', minWidth: 'unset', color: 'var(--kc-error-text)', marginLeft: '4px' }}
                     >
                       <Trash2 size={13} style={{ marginRight: '4px' }} />
                       Remove
@@ -269,14 +269,14 @@ export default function ExamplesEditor({
                   <div className="admin-form-group" style={{ marginBottom: 0 }}>
                     <label className="admin-form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span>Input</span>
-                      <span style={{ color: '#f85149' }}>*</span>
-                      {missingInput && <span style={{ color: '#f85149', fontSize: '11px', fontWeight: 400 }}>(required)</span>}
+                      <span style={{ color: 'var(--kc-error-text)' }}>*</span>
+                      {missingInput && <span style={{ color: 'var(--kc-error-text)', fontSize: '11px', fontWeight: 400 }}>(required)</span>}
                     </label>
                     <textarea
                       className="admin-textarea author-code-input"
                       style={{
                         minHeight: '80px',
-                        borderColor: missingInput ? '#f85149' : undefined,
+                        borderColor: missingInput ? 'var(--kc-error)' : undefined,
                       }}
                       value={ex.input}
                       onChange={(e) => handleUpdateField(index, 'input', e.target.value)}
@@ -288,14 +288,14 @@ export default function ExamplesEditor({
                   <div className="admin-form-group" style={{ marginBottom: 0 }}>
                     <label className="admin-form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span>Output</span>
-                      <span style={{ color: '#f85149' }}>*</span>
-                      {missingOutput && <span style={{ color: '#f85149', fontSize: '11px', fontWeight: 400 }}>(required)</span>}
+                      <span style={{ color: 'var(--kc-error-text)' }}>*</span>
+                      {missingOutput && <span style={{ color: 'var(--kc-error-text)', fontSize: '11px', fontWeight: 400 }}>(required)</span>}
                     </label>
                     <textarea
                       className="admin-textarea author-code-input"
                       style={{
                         minHeight: '80px',
-                        borderColor: missingOutput ? '#f85149' : undefined,
+                        borderColor: missingOutput ? 'var(--kc-error)' : undefined,
                       }}
                       value={ex.output}
                       onChange={(e) => handleUpdateField(index, 'output', e.target.value)}

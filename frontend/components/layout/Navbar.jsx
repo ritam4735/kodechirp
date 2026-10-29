@@ -123,7 +123,7 @@ export const Navbar = () => {
                       style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
                     />
                   ) : (
-                    <User size={14} className="text-[#9E9EA4]" aria-hidden="true" />
+                    <User size={14} className="text-[var(--kc-text-secondary)]" aria-hidden="true" />
                   )}
                 </div>
                 <div className="nav-user-info">
@@ -154,28 +154,28 @@ export const Navbar = () => {
                   </div>
                   <div className="nav-dropdown-divider"></div>
                   <Link href="/profile" className="nav-dropdown-item" role="menuitem">
-                    <User size={14} className="text-[#9E9EA4]" aria-hidden="true" /> Profile
+                    <User size={14} className="text-[var(--kc-text-secondary)]" aria-hidden="true" /> Profile
                   </Link>
                   <Link href="/settings" className="nav-dropdown-item" role="menuitem">
-                    <Settings size={14} className="text-[#9E9EA4]" aria-hidden="true" /> Settings
+                    <Settings size={14} className="text-[var(--kc-text-secondary)]" aria-hidden="true" /> Settings
                   </Link>
                   <Link href="/submissions" className="nav-dropdown-item" role="menuitem">
-                    <FileCode2 size={14} className="text-[#9E9EA4]" aria-hidden="true" /> My Submissions
+                    <FileCode2 size={14} className="text-[var(--kc-text-secondary)]" aria-hidden="true" /> My Submissions
                   </Link>
                   <Link href="/progress" className="nav-dropdown-item" role="menuitem">
-                    <BarChart3 size={14} className="text-[#9E9EA4]" aria-hidden="true" /> My Progress
+                    <BarChart3 size={14} className="text-[var(--kc-text-secondary)]" aria-hidden="true" /> My Progress
                   </Link>
                   {isAdmin && (
                     <>
                       <div className="nav-dropdown-divider"></div>
                       <Link href="/admin" className="nav-dropdown-item" role="menuitem">
-                        <Shield size={14} className="text-[#3B82F6]" aria-hidden="true" /> Admin Console
+                        <Shield size={14} className="text-[var(--kc-accent-text)]" aria-hidden="true" /> Admin Console
                       </Link>
                     </>
                   )}
                   <div className="nav-dropdown-divider"></div>
                   <button className="nav-dropdown-item nav-dropdown-logout" onClick={onLogout} role="menuitem">
-                    <LogOut size={14} className="text-[#EF4444]" aria-hidden="true" /> Sign Out
+                    <LogOut size={14} className="text-[var(--kc-error-text)]" aria-hidden="true" /> Sign Out
                   </button>
                 </div>
               )}
@@ -227,7 +227,7 @@ export const Navbar = () => {
               >
                 <span>{item.label}</span>
                 {item.label === 'Admin' ? (
-                  <Shield size={13} className="text-[#3B82F6]" aria-hidden="true" />
+                  <Shield size={13} className="text-[var(--kc-accent-text)]" aria-hidden="true" />
                 ) : (
                   <span className="nav-mobile-chevron" aria-hidden="true">›</span>
                 )}

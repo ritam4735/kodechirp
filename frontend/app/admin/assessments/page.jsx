@@ -219,7 +219,7 @@ export default function AdminAssessmentsPage() {
       {loading ? (
         <div className="p-12 text-center text-[var(--text-muted)]">Loading assessments...</div>
       ) : error ? (
-        <div className="p-12 text-center text-rose-500">{error}</div>
+        <div className="p-12 text-center text-rose-700 dark:text-rose-400 font-semibold">{error}</div>
       ) : assessments.length === 0 ? (
         <div className="p-12 text-center text-[var(--text-muted)] border border-dashed border-[var(--border-default)] rounded-xl bg-[var(--bg-secondary)]">
           <Award size={36} className="mx-auto mb-2 text-[var(--text-muted)]" />

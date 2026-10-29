@@ -159,9 +159,9 @@ export default function CompeteArenaPage() {
             {/* Contests Teaser Badge */}
             <div className="pt-2 flex items-center gap-3 text-xs text-[var(--text-muted)]">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--bg-primary)] border border-[var(--border-default)] text-[var(--text-secondary)]">
-                <Flame size={13} className="text-amber-500" />
+                <Flame size={13} className="text-amber-600 dark:text-amber-400" />
                 <span>Coding Contests</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-500 font-medium">Coming in v2.5</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold border border-amber-500/20">Coming in v2.5</span>
               </span>
               <span>•</span>
               <span>Official Institutional Assessments Active</span>
@@ -426,7 +426,7 @@ export default function CompeteArenaPage() {
                       {inProgress ? (
                         <Link
                           href={`/assessments/take/${uStatus.latest_attempt_id}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors shadow-sm"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors shadow-sm"
                         >
                           <RotateCw size={12} className="animate-spin" />
                           <span>Resume Attempt</span>
@@ -435,7 +435,7 @@ export default function CompeteArenaPage() {
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/assessments/result/${uStatus.latest_attempt_id}`}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[var(--kc-accent-subtle)] text-[var(--kc-accent)] hover:bg-[var(--kc-accent)] hover:text-white transition-colors"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[var(--kc-accent-subtle)] text-[var(--kc-accent-text)] hover:bg-[var(--kc-accent)] hover:text-white transition-colors border border-[var(--kc-accent-border)]"
                           >
                             <span>Result ({Number(uStatus.latest_score || 0)} pts)</span>
                             <ChevronRight size={13} />

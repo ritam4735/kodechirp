@@ -53,15 +53,15 @@ export default function ProblemsSection() {
           <div className="sidebar-card">
             <div className="sidebar-card-title">Your Progress</div>
             <div className="progress-item">
-              <div className="progress-label"><span style={{color:'#4ade80'}}>Easy</span><span style={{color:'#4ade80'}}>42 / 120</span></div>
+              <div className="progress-label"><span style={{color:'var(--kc-success-text)'}}>Easy</span><span style={{color:'var(--kc-success-text)'}}>42 / 120</span></div>
               <div className="progress-bar"><div className="progress-fill pf-easy" style={{width:'35%'}}></div></div>
             </div>
             <div className="progress-item">
-              <div className="progress-label"><span style={{color:'var(--neon-gold)'}}>Medium</span><span style={{color:'var(--neon-gold)'}}>18 / 340</span></div>
+              <div className="progress-label"><span style={{color:'var(--kc-warning-text)'}}>Medium</span><span style={{color:'var(--kc-warning-text)'}}>18 / 340</span></div>
               <div className="progress-bar"><div className="progress-fill pf-medium" style={{width:'5.3%'}}></div></div>
             </div>
             <div className="progress-item">
-              <div className="progress-label"><span style={{color:'#f87171'}}>Hard</span><span style={{color:'#f87171'}}>3 / 180</span></div>
+              <div className="progress-label"><span style={{color:'var(--kc-error-text)'}}>Hard</span><span style={{color:'var(--kc-error-text)'}}>3 / 180</span></div>
               <div className="progress-bar"><div className="progress-fill pf-hard" style={{width:'1.7%'}}></div></div>
             </div>
           </div>
@@ -72,7 +72,7 @@ export default function ProblemsSection() {
           <div className="sidebar-card">
             <div className="sidebar-card-title">Daily Challenge</div>
             <div style={{fontSize:'13px',color:'var(--text-secondary)',marginBottom:'12px',lineHeight:'1.6'}}>
-              Minimum Window Substring — <span style={{color:'#f87171',fontWeight:'600'}}>Hard</span>
+              Minimum Window Substring — <span style={{color:'var(--kc-error-text)',fontWeight:'600'}}>Hard</span>
             </div>
             <a href="#" className="btn btn-primary" style={{width:'100%',justifyContent:'center',fontSize:'13px',padding:'10px'}}>
               {"Attempt Today's Challenge 🎯"}

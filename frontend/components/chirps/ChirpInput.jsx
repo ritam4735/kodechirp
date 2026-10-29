@@ -37,7 +37,7 @@ export const ChirpInput = ({ problemId, onChirpPosted }) => {
   return (
     <div className="mb-4">
       {postError && (
-        <div className="mb-2 p-2 bg-[var(--kc-error-subtle)] border border-[var(--kc-error-border)] rounded-md text-xs text-[var(--kc-error)]">
+        <div className="mb-2 p-2 bg-[var(--kc-error-subtle)] border border-[var(--kc-error-border)] rounded-md text-xs text-[var(--kc-error-text)]">
           {postError}
         </div>
       )}

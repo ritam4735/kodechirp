@@ -522,9 +522,9 @@ export default function AssessmentTakingArena() {
             </div>
 
             <div className="flex items-center gap-2 text-xs font-mono font-semibold">
-              <span className="text-emerald-500">+{currentQuestion.marks}</span>
+              <span className="text-emerald-700 dark:text-emerald-400 font-bold">+{currentQuestion.marks}</span>
               {parseFloat(currentQuestion.negative_marks) > 0 && (
-                <span className="text-rose-500">-{currentQuestion.negative_marks}</span>
+                <span className="text-rose-700 dark:text-rose-400 font-bold">-{currentQuestion.negative_marks}</span>
               )}
             </div>
           </div>
@@ -546,7 +546,7 @@ export default function AssessmentTakingArena() {
                     : 'Select One Option:'}
                 </span>
                 {currentQuestion.question_type === 'multiple_choice' && (
-                  <span className="text-[11px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+                  <span className="text-[11px] px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-medium">
                     Multiple Choice
                   </span>
                 )}
@@ -1127,9 +1127,9 @@ export default function AssessmentTakingArena() {
 
                 let btnClass = 'bg-[var(--bg-primary)] border-[var(--border-default)] text-[var(--text-secondary)]';
                 if (isAnswered && isFlagged) {
-                  btnClass = 'bg-amber-500/10 border-amber-500 text-amber-700 dark:text-amber-300 font-bold';
+                  btnClass = 'bg-amber-500/15 border-amber-500 text-amber-700 dark:text-amber-300 font-bold';
                 } else if (isAnswered) {
-                  btnClass = 'bg-emerald-500 text-white font-bold border-emerald-500';
+                  btnClass = 'bg-emerald-600 text-white font-bold border-emerald-600';
                 } else if (isFlagged) {
                   btnClass = 'bg-amber-500 text-zinc-950 font-bold border-amber-500';
                 }
@@ -1181,7 +1181,7 @@ export default function AssessmentTakingArena() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="text-center space-y-2">
-              <AlertTriangle size={36} className="mx-auto text-amber-500" />
+              <AlertTriangle size={36} className="mx-auto text-amber-600 dark:text-amber-400" />
               <h2 className="text-lg font-bold text-[var(--text-primary)]">Submit Assessment?</h2>
               <p className="text-xs text-[var(--text-muted)]">
                 Please review your progress before finalizing. Once submitted, answers cannot be edited.
@@ -1192,11 +1192,11 @@ export default function AssessmentTakingArena() {
             <div className="grid grid-cols-3 gap-2 py-3 px-4 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] text-center">
               <div>
                 <div className="text-[10px] text-[var(--text-muted)]">Answered</div>
-                <div className="text-base font-bold text-emerald-500">{answeredCount}</div>
+                <div className="text-base font-bold text-emerald-700 dark:text-emerald-400">{answeredCount}</div>
               </div>
               <div>
                 <div className="text-[10px] text-[var(--text-muted)]">Review</div>
-                <div className="text-base font-bold text-amber-500">{flaggedCount}</div>
+                <div className="text-base font-bold text-amber-700 dark:text-amber-400">{flaggedCount}</div>
               </div>
               <div>
                 <div className="text-[10px] text-[var(--text-muted)]">Unanswered</div>
@@ -1205,7 +1205,7 @@ export default function AssessmentTakingArena() {
             </div>
 
             {unansweredCount > 0 && (
-              <p className="text-xs text-amber-400/90 text-center">
+              <p className="text-xs text-amber-700 dark:text-amber-300 font-medium text-center">
                 ⚠️ You have <strong>{unansweredCount} unanswered questions</strong>.
               </p>
             )}

@@ -155,7 +155,7 @@ export default function ProfilePage() {
   // Before mount: return the same stable shell the server rendered.
   // This keeps SSR and initial client HTML identical → no hydration error.
   if (!mounted) {
-    return <div className="relative flex-1 bg-[#0d1117] min-h-screen overflow-hidden" />;
+    return <div className="relative flex-1 bg-[var(--kc-bg)] min-h-screen overflow-hidden" />;
   }
 
   if (!isAuthenticated) return null;
@@ -237,7 +237,7 @@ export default function ProfilePage() {
                 <p className="text-[var(--kc-text-secondary)] text-xs mb-2">{user?.email}</p>
                 {user?.created_at && (
                   <p className="text-[var(--kc-text-muted)] text-xs mb-5 flex items-center justify-center gap-1">
-                    <CheckCircle size={12} className="text-[#4ade80]"/> 
+                    <CheckCircle size={12} className="text-[var(--kc-success-text)]"/> 
                     Joined {new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}
                   </p>
                 )}
@@ -274,7 +274,7 @@ export default function ProfilePage() {
                   </h3>
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center p-3 bg-[var(--kc-surface-subtle)] rounded-md border border-[var(--kc-border)]">
-                      <div className="w-8 h-8 rounded-md bg-[rgba(74,222,128,0.12)] flex items-center justify-center text-[#4ade80] mr-3">
+                      <div className="w-8 h-8 rounded-md bg-[var(--kc-success-subtle)] border border-[var(--kc-success-border)] flex items-center justify-center text-[var(--kc-success-text)] mr-3">
                         <CheckSquare size={16} />
                       </div>
                       <div className="flex-1">
@@ -284,7 +284,7 @@ export default function ProfilePage() {
                     </div>
                     
                     <div className="flex items-center p-3 bg-[var(--kc-surface-subtle)] rounded-md border border-[var(--kc-border)]">
-                      <div className="w-8 h-8 rounded-md bg-[rgba(59,130,246,0.12)] flex items-center justify-center text-[var(--kc-accent)] mr-3">
+                      <div className="w-8 h-8 rounded-md bg-[var(--kc-accent-subtle)] border border-[var(--kc-accent-border)] flex items-center justify-center text-[var(--kc-accent)] mr-3">
                         <Activity size={16} />
                       </div>
                       <div className="flex-1">
@@ -294,7 +294,7 @@ export default function ProfilePage() {
                     </div>
                     
                     <div className="flex items-center p-3 bg-[var(--kc-surface-subtle)] rounded-md border border-[var(--kc-border)]">
-                      <div className="w-8 h-8 rounded-md bg-[rgba(251,191,36,0.12)] flex items-center justify-center text-[#fbbf24] mr-3">
+                      <div className="w-8 h-8 rounded-md bg-[var(--kc-warning-subtle)] border border-[var(--kc-warning-border)] flex items-center justify-center text-[var(--kc-warning-text)] mr-3">
                         <Award size={16} />
                       </div>
                       <div className="flex-1">
@@ -346,7 +346,7 @@ export default function ProfilePage() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="bg-[rgba(248,81,73,0.1)] border border-[rgba(248,81,73,0.25)] text-[var(--kc-error, #f87171)] px-4 py-2.5 rounded-md text-xs sm:text-sm flex items-center gap-2.5"
+                    className="bg-[var(--kc-error-subtle)] border border-[var(--kc-error-border)] text-[var(--kc-error-text)] px-4 py-2.5 rounded-md text-xs sm:text-sm flex items-center gap-2.5"
                   >
                     <AlertCircle size={15} className="shrink-0" />
                     {error}
@@ -357,7 +357,7 @@ export default function ProfilePage() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="bg-[rgba(74,222,128,0.1)] border border-[rgba(74,222,128,0.25)] text-[#4ade80] px-4 py-2.5 rounded-md text-xs sm:text-sm flex items-center gap-2.5"
+                    className="bg-[var(--kc-success-subtle)] border border-[var(--kc-success-border)] text-[var(--kc-success-text)] px-4 py-2.5 rounded-md text-xs sm:text-sm flex items-center gap-2.5"
                   >
                     <CheckCircle size={15} className="shrink-0" />
                     {success}
@@ -490,7 +490,7 @@ export default function ProfilePage() {
                 {activeTab === 'settings' && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <h3 className="text-base font-bold text-[var(--kc-text-primary)] mb-6 flex items-center gap-2 border-b border-[var(--kc-border)] pb-3">
-                      <SettingsIcon size={16} className="text-[#fbbf24]" />
+                      <SettingsIcon size={16} className="text-[var(--kc-accent-text)]" />
                       Security
                     </h3>
                     <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4 max-w-md">

@@ -100,7 +100,7 @@ export default function SignatureBuilder({ signature, onChange }) {
                 <button 
                   type="button" 
                   onClick={() => removeParam(idx)}
-                  className="text-red-400 hover:text-red-300 px-2 font-bold text-xs"
+                  className="text-[var(--kc-error-text)] hover:opacity-80 px-2 font-bold text-xs"
                 >
                   ✕
                 </button>
@@ -111,7 +111,7 @@ export default function SignatureBuilder({ signature, onChange }) {
       </div>
 
       <div className="mt-4 p-3 bg-[var(--kc-surface-subtle)] rounded-md border border-[var(--kc-border)] font-mono text-xs text-[var(--kc-text-secondary)]">
-        <span className="text-[var(--kc-accent)]">def</span> <span className="text-amber-300">{currentSignature.name || 'function_name'}</span>(
+        <span className="text-[var(--kc-accent-text)] font-semibold">def</span> <span className="text-amber-600 dark:text-amber-400 font-semibold">{currentSignature.name || 'function_name'}</span>(
         {currentSignature.params.map(p => `${p.name}: ${p.type}`).join(', ')}
         ) -&gt; {currentSignature.returnType}
       </div>

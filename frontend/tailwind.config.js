@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: ['variant', ['&:is(.dark, .dark *)', '&:is([data-theme="dark"], [data-theme="dark"] *)']],
   content: [
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -33,6 +34,24 @@ module.exports = {
           'on-primary': 'var(--kc-on-primary)',
           primary: 'var(--kc-accent)',
           focus: 'var(--kc-focus-ring)',
+          success: 'var(--kc-success)',
+          'success-text': 'var(--kc-success-text)',
+          'success-subtle': 'var(--kc-success-subtle)',
+          'success-border': 'var(--kc-success-border)',
+          warning: 'var(--kc-warning)',
+          'warning-text': 'var(--kc-warning-text)',
+          'warning-subtle': 'var(--kc-warning-subtle)',
+          'warning-border': 'var(--kc-warning-border)',
+          error: 'var(--kc-error)',
+          'error-text': 'var(--kc-error-text)',
+          'error-subtle': 'var(--kc-error-subtle)',
+          'error-border': 'var(--kc-error-border)',
+          danger: 'var(--kc-error)',
+          'danger-text': 'var(--kc-error-text)',
+          info: 'var(--kc-info)',
+          'info-text': 'var(--kc-info-text)',
+          'info-subtle': 'var(--kc-info-subtle)',
+          'info-border': 'var(--kc-info-border)',
         },
         // KodeChirp custom palette
         chirp: {

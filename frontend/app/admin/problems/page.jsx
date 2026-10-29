@@ -112,7 +112,7 @@ export default function AdminProblems() {
 
   const totalPages = Math.ceil(meta.total / PAGE_SIZE);
 
-  if (error) return <div style={{ color: '#f85149', padding: '40px' }}>Error: {error}</div>;
+  if (error) return <div style={{ color: 'var(--kc-error-text)', padding: '40px' }}>Error: {error}</div>;
 
   return (
     <div>
@@ -197,7 +197,7 @@ export default function AdminProblems() {
                   <span style={{
                     fontSize: '12px',
                     fontWeight: 600,
-                    color: p.test_count > 0 ? '#4ade80' : '#f85149',
+                    color: p.test_count > 0 ? 'var(--kc-success-text)' : 'var(--kc-error-text)',
                   }}>
                     {p.test_count || 0}
                   </span>

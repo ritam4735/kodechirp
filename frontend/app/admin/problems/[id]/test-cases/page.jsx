@@ -131,15 +131,15 @@ export default function TestCaseManager() {
           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Total Tests</div>
         </div>
         <div className="admin-section-card" style={{ flex: 1, textAlign: 'center', padding: '16px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#4ade80' }}>{publicCount}</div>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--kc-success-text)' }}>{publicCount}</div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Public</div>
         </div>
         <div className="admin-section-card" style={{ flex: 1, textAlign: 'center', padding: '16px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#f59e0b' }}>{privateCount}</div>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--kc-warning-text)' }}>{privateCount}</div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Hidden</div>
         </div>
         <div className="admin-section-card" style={{ flex: 1, textAlign: 'center', padding: '16px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: publicCount > 0 && privateCount > 0 ? '#4ade80' : 'var(--kc-error, #f85149)', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '36px' }}>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: publicCount > 0 && privateCount > 0 ? 'var(--kc-success-text)' : 'var(--kc-error-text)', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '36px' }}>
             {publicCount > 0 && privateCount > 0 ? <Check size={22} /> : <X size={22} />}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Publish Ready</div>
@@ -149,13 +149,13 @@ export default function TestCaseManager() {
       {/* Validation Warnings */}
       {(publicCount === 0 || privateCount === 0) && (
         <div style={{
-          background: 'rgba(248,81,73,0.08)',
-          border: '1px solid rgba(248,81,73,0.2)',
+          background: 'var(--kc-error-subtle)',
+          border: '1px solid var(--kc-error-border)',
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '20px',
           fontSize: '13px',
-          color: 'var(--kc-error, #f85149)',
+          color: 'var(--kc-error-text)',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',

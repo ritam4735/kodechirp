@@ -14,51 +14,60 @@
   --kc-font-code: 'JetBrains Mono', monospace;
 
   /* ─────────────────────────────────────────────────────────────
-     DARK MODE TOKENS (Default) — Wine Red + Light Sand
-     Primary brand color: #7F011F (Wine Red)
-     Primary text / accent: #F5EBD0 (Light Sand)
-     Background: Deep, near-black burgundy-neutral tones (#171114)
-     Surface: Dark charcoal with subtle warm undertones (#21181C)
+     DARK MODE TOKENS (Default) — Deep Charcoal / Slate Engineering Palette
+     Background: Deep dark slate (#0B0F17)
+     Surfaces: Layered charcoal & slate (#151B26, #1C2433, #232D3F)
+     Text: High-contrast near-white (#F8FAFC) & readable muted slate (#CBD5E1, #94A3B8)
+     Accent: Vibrant tech blue (#3B82F6) with high-contrast text (#60A5FA)
+     Borders: Crisp visible slate borders (#283347)
      ───────────────────────────────────────────────────────────── */
-  --kc-bg: #171114;
-  --kc-surface: #21181C;
-  --kc-surface-subtle: #281C21;
-  --kc-surface-elevated: #2B1E23;
-  --kc-text-primary: #F5EBD0;
-  --kc-text-secondary: #DFD3B8;
-  --kc-text-muted: #C7B8BB;
-  --kc-accent: #7F011F;
-  --kc-accent-hover: #9E0D31;
-  --kc-accent-active: #5E0016;
-  --kc-accent-subtle: rgba(127, 1, 31, 0.22);
-  --kc-accent-glow: rgba(127, 1, 31, 0.35);
-  --kc-accent-border: rgba(163, 17, 56, 0.35);
-  --kc-accent-text: #F5EBD0;
-  --kc-on-primary: #F5EBD0;
-  --kc-border: #493139;
-  --kc-border-subtle: rgba(245, 235, 208, 0.08);
-  --kc-border-hover: #6E434F;
-  --kc-focus-ring: #A31138;
-  --kc-nav-bg: rgba(23, 17, 20, 0.88);
+  --kc-bg: #0B0F17;
+  --kc-surface: #151B26;
+  --kc-surface-subtle: #1C2433;
+  --kc-surface-elevated: #232D3F;
+  --kc-surface-hover: #1E2838;
+  --kc-text-primary: #F8FAFC;
+  --kc-text-secondary: #CBD5E1;
+  --kc-text-muted: #94A3B8;
+  --kc-text: var(--kc-text-primary);
+  --kc-accent: #3B82F6;
+  --kc-accent-hover: #60A5FA;
+  --kc-accent-active: #2563EB;
+  --kc-accent-subtle: rgba(59, 130, 246, 0.15);
+  --kc-accent-glow: rgba(59, 130, 246, 0.35);
+  --kc-accent-border: rgba(96, 165, 250, 0.35);
+  --kc-accent-text: #60A5FA;
+  --kc-on-primary: #FFFFFF;
+  --kc-border: #283347;
+  --kc-border-subtle: rgba(255, 255, 255, 0.08);
+  --kc-border-hover: #3E4D68;
+  --kc-focus-ring: #3B82F6;
+  --kc-nav-bg: rgba(11, 15, 23, 0.90);
   --kc-nav-height: 64px;
 
-  /* Semantic Status Tokens (Clearly distinct from Wine Red brand color) */
+  /* Semantic Status Tokens (Dark theme: vibrant, accessible on dark surfaces) */
   --kc-success: #10B981;
-  --kc-success-subtle: rgba(16, 185, 129, 0.12);
-  --kc-success-border: rgba(16, 185, 129, 0.25);
-  --kc-success-text: #6EE7B7;
+  --kc-success-subtle: rgba(16, 185, 129, 0.15);
+  --kc-success-border: rgba(16, 185, 129, 0.35);
+  --kc-success-text: #34D399;
   --kc-warning: #F59E0B;
-  --kc-warning-subtle: rgba(245, 158, 11, 0.12);
-  --kc-warning-border: rgba(245, 158, 11, 0.25);
-  --kc-warning-text: #FDE68A;
-  --kc-error: #F43F5E;
-  --kc-error-subtle: rgba(244, 63, 94, 0.12);
-  --kc-error-border: rgba(244, 63, 94, 0.25);
-  --kc-error-text: #FECDD3;
+  --kc-warning-subtle: rgba(245, 158, 11, 0.15);
+  --kc-warning-border: rgba(245, 158, 11, 0.35);
+  --kc-warning-text: #FBBF24;
+  --kc-error: #EF4444;
+  --kc-error-subtle: rgba(239, 68, 68, 0.15);
+  --kc-error-border: rgba(239, 68, 68, 0.35);
+  --kc-error-text: #F87171;
   --kc-info: #38BDF8;
-  --kc-info-subtle: rgba(56, 189, 248, 0.12);
-  --kc-info-border: rgba(56, 189, 248, 0.25);
-  --kc-info-text: #BAE6FD;
+  --kc-info-subtle: rgba(56, 189, 248, 0.15);
+  --kc-info-border: rgba(56, 189, 248, 0.35);
+  --kc-info-text: #7DD3FC;
+
+  /* Danger aliases */
+  --kc-danger: var(--kc-error);
+  --kc-danger-subtle: var(--kc-error-subtle);
+  --kc-danger-border: var(--kc-error-border);
+  --kc-danger-text: var(--kc-error-text);
 
   /* Centralized Design Tokens (Semantic mapping) */
   --color-primary: var(--kc-accent);
@@ -102,52 +111,64 @@
 
 :root[data-theme="light"],
 html[data-theme="light"],
-[data-theme="light"] {
+[data-theme="light"],
+html.light,
+.light {
   /* ─────────────────────────────────────────────────────────────
-     LIGHT MODE TOKENS — Royal Blue + Light Cream
-     Primary brand color: #014BAA (Royal Blue)
-     Primary text / background: #F8F3F0 (Light Cream)
-     Surface: White or subtly differentiated warm cream (#FFFFFF, #FFFDFC)
-     Borders: Soft warm grey or muted blue-grey (#DEDDE0)
+     LIGHT MODE TOKENS — Crisp White & Slate Engineering Palette
+     Background: Clean modern off-white (#F8FAFC)
+     Surfaces: Pure white (#FFFFFF) & subtle slate (#F1F5F9)
+     Text: High-contrast slate-900 (#0F172A), slate-700 (#334155), slate-600 (#475569)
+     Accent: Deep royal blue (#1D4ED8) with >6.5:1 contrast ratio
+     Borders: Crisp visible slate borders (#CBD5E1)
      ───────────────────────────────────────────────────────────── */
-  --kc-bg: #F8F3F0;
+  --kc-bg: #F8FAFC;
   --kc-surface: #FFFFFF;
-  --kc-surface-subtle: #F1EBE6;
-  --kc-surface-elevated: #FFFDFC;
-  --kc-text-primary: #202735;
-  --kc-text-secondary: #495366;
-  --kc-text-muted: #626B78;
-  --kc-accent: #014BAA;
-  --kc-accent-hover: #013C8A;
-  --kc-accent-active: #002D66;
-  --kc-accent-subtle: rgba(1, 75, 170, 0.08);
-  --kc-accent-glow: rgba(1, 75, 170, 0.25);
-  --kc-accent-border: rgba(1, 75, 170, 0.25);
-  --kc-accent-text: #014BAA;
+  --kc-surface-subtle: #F1F5F9;
+  --kc-surface-elevated: #FFFFFF;
+  --kc-surface-hover: #F1F5F9;
+  --kc-text-primary: #0F172A;
+  --kc-text-secondary: #334155;
+  --kc-text-muted: #475569;
+  --kc-text: var(--kc-text-primary);
+  --kc-accent: #1D4ED8;
+  --kc-accent-hover: #1E40AF;
+  --kc-accent-active: #172554;
+  --kc-accent-subtle: rgba(29, 78, 216, 0.08);
+  --kc-accent-glow: rgba(29, 78, 216, 0.20);
+  --kc-accent-border: rgba(29, 78, 216, 0.25);
+  --kc-accent-text: #1D4ED8;
   --kc-on-primary: #FFFFFF;
-  --kc-border: #DEDDE0;
-  --kc-border-subtle: #ECEBEA;
-  --kc-border-hover: #BFC5D2;
-  --kc-focus-ring: #014BAA;
-  --kc-nav-bg: rgba(248, 243, 240, 0.88);
+  --kc-border: #CBD5E1;
+  --kc-border-subtle: #E2E8F0;
+  --kc-border-hover: #94A3B8;
+  --kc-focus-ring: #2563EB;
+  --kc-nav-bg: rgba(248, 250, 252, 0.94);
   --kc-nav-height: 64px;
 
+  /* Semantic Status Tokens (Light theme: deep, high-contrast text on light surfaces) */
   --kc-success: #059669;
   --kc-success-subtle: rgba(5, 150, 105, 0.10);
-  --kc-success-border: rgba(5, 150, 105, 0.25);
+  --kc-success-border: rgba(5, 150, 105, 0.35);
   --kc-success-text: #065F46;
   --kc-warning: #D97706;
   --kc-warning-subtle: rgba(217, 119, 6, 0.10);
-  --kc-warning-border: rgba(217, 119, 6, 0.25);
+  --kc-warning-border: rgba(217, 119, 6, 0.35);
   --kc-warning-text: #92400E;
   --kc-error: #DC2626;
   --kc-error-subtle: rgba(220, 38, 38, 0.10);
-  --kc-error-border: rgba(220, 38, 38, 0.25);
+  --kc-error-border: rgba(220, 38, 38, 0.35);
   --kc-error-text: #991B1B;
   --kc-info: #0284C7;
   --kc-info-subtle: rgba(2, 132, 199, 0.10);
-  --kc-info-border: rgba(2, 132, 199, 0.25);
+  --kc-info-border: rgba(2, 132, 199, 0.35);
   --kc-info-text: #075985;
+
+  /* Danger aliases */
+  --kc-danger: var(--kc-error);
+  --kc-danger-subtle: var(--kc-error-subtle);
+  --kc-danger-border: var(--kc-error-border);
+  --kc-danger-text: var(--kc-error-text);
 
   --color-primary: var(--kc-accent);
   --color-on-primary: var(--kc-on-primary);
@@ -184,38 +205,54 @@ html[data-theme="light"],
 
 :root[data-theme="dark"],
 html[data-theme="dark"],
-[data-theme="dark"] {
-  --kc-bg: #171114;
-  --kc-surface: #21181C;
-  --kc-surface-subtle: #281C21;
-  --kc-surface-elevated: #2B1E23;
-  --kc-text-primary: #F5EBD0;
-  --kc-text-secondary: #DFD3B8;
-  --kc-text-muted: #C7B8BB;
-  --kc-accent: #7F011F;
-  --kc-accent-hover: #9E0D31;
-  --kc-accent-active: #5E0016;
-  --kc-accent-subtle: rgba(127, 1, 31, 0.22);
-  --kc-accent-glow: rgba(127, 1, 31, 0.35);
-  --kc-accent-border: rgba(163, 17, 56, 0.35);
-  --kc-accent-text: #F5A3B3;
-  --kc-on-primary: #F5EBD0;
-  --kc-border: #493139;
-  --kc-border-subtle: rgba(245, 235, 208, 0.08);
-  --kc-border-hover: #6E434F;
-  --kc-focus-ring: #A31138;
-  --kc-nav-bg: rgba(23, 17, 20, 0.88);
+[data-theme="dark"],
+html.dark,
+.dark {
+  --kc-bg: #0B0F17;
+  --kc-surface: #151B26;
+  --kc-surface-subtle: #1C2433;
+  --kc-surface-elevated: #232D3F;
+  --kc-surface-hover: #1E2838;
+  --kc-text-primary: #F8FAFC;
+  --kc-text-secondary: #CBD5E1;
+  --kc-text-muted: #94A3B8;
+  --kc-text: var(--kc-text-primary);
+  --kc-accent: #3B82F6;
+  --kc-accent-hover: #60A5FA;
+  --kc-accent-active: #2563EB;
+  --kc-accent-subtle: rgba(59, 130, 246, 0.15);
+  --kc-accent-glow: rgba(59, 130, 246, 0.35);
+  --kc-accent-border: rgba(96, 165, 250, 0.35);
+  --kc-accent-text: #60A5FA;
+  --kc-on-primary: #FFFFFF;
+  --kc-border: #283347;
+  --kc-border-subtle: rgba(255, 255, 255, 0.08);
+  --kc-border-hover: #3E4D68;
+  --kc-focus-ring: #3B82F6;
+  --kc-nav-bg: rgba(11, 15, 23, 0.90);
   --kc-nav-height: 64px;
 
   --kc-success: #10B981;
-  --kc-success-subtle: rgba(16, 185, 129, 0.12);
-  --kc-success-border: rgba(16, 185, 129, 0.25);
+  --kc-success-subtle: rgba(16, 185, 129, 0.15);
+  --kc-success-border: rgba(16, 185, 129, 0.35);
+  --kc-success-text: #34D399;
   --kc-warning: #F59E0B;
-  --kc-warning-subtle: rgba(245, 158, 11, 0.12);
-  --kc-warning-border: rgba(245, 158, 11, 0.25);
-  --kc-error: #F43F5E;
-  --kc-error-subtle: rgba(244, 63, 94, 0.12);
-  --kc-error-border: rgba(244, 63, 94, 0.25);
+  --kc-warning-subtle: rgba(245, 158, 11, 0.15);
+  --kc-warning-border: rgba(245, 158, 11, 0.35);
+  --kc-warning-text: #FBBF24;
+  --kc-error: #EF4444;
+  --kc-error-subtle: rgba(239, 68, 68, 0.15);
+  --kc-error-border: rgba(239, 68, 68, 0.35);
+  --kc-error-text: #F87171;
+  --kc-info: #38BDF8;
+  --kc-info-subtle: rgba(56, 189, 248, 0.15);
+  --kc-info-border: rgba(56, 189, 248, 0.35);
+  --kc-info-text: #7DD3FC;
+
+  --kc-danger: var(--kc-error);
+  --kc-danger-subtle: var(--kc-error-subtle);
+  --kc-danger-border: var(--kc-error-border);
+  --kc-danger-text: var(--kc-error-text);
 
   --color-primary: var(--kc-accent);
   --color-on-primary: var(--kc-on-primary);
@@ -241,6 +278,13 @@ html[data-theme="dark"],
   --text-primary: var(--kc-text-primary);
   --text-secondary: var(--kc-text-secondary);
   --text-muted: var(--kc-text-muted);
+
+  --accent-green: var(--kc-success);
+  --accent-blue: #38BDF8;
+  --accent-orange: #F97316;
+  --accent-red: var(--kc-error);
+  --accent-yellow: var(--kc-warning);
+  --accent-purple: #C084FC;
 }
 
 * {
@@ -392,27 +436,27 @@ select option {
 /* Status badge colors - theme adaptive, WCAG AA compliant */
 .status-accepted,
 .kc-diff-easy {
-  color: var(--kc-success);
+  color: var(--kc-success-text);
   background: var(--kc-success-subtle);
   border: 1px solid var(--kc-success-border);
 }
 
 .status-wrong,
 .kc-diff-hard {
-  color: var(--kc-error);
+  color: var(--kc-error-text);
   background: var(--kc-error-subtle);
   border: 1px solid var(--kc-error-border);
 }
 
 .status-tle,
 .kc-diff-medium {
-  color: var(--kc-warning);
+  color: var(--kc-warning-text);
   background: var(--kc-warning-subtle);
   border: 1px solid var(--kc-warning-border);
 }
 
 .status-error {
-  color: var(--kc-error);
+  color: var(--kc-error-text);
   background: var(--kc-error-subtle);
   border: 1px solid var(--kc-error-border);
 }
@@ -422,6 +466,63 @@ select option {
   background: var(--kc-surface-subtle);
   border: 1px solid var(--kc-border-subtle);
 }
+
+/* Explicit semantic badge utilities for universal component reuse */
+.kc-badge-success {
+  color: var(--kc-success-text) !important;
+  background-color: var(--kc-success-subtle) !important;
+  border: 1px solid var(--kc-success-border) !important;
+}
+
+.kc-badge-warning {
+  color: var(--kc-warning-text) !important;
+  background-color: var(--kc-warning-subtle) !important;
+  border: 1px solid var(--kc-warning-border) !important;
+}
+
+.kc-badge-error,
+.kc-badge-danger {
+  color: var(--kc-error-text) !important;
+  background-color: var(--kc-error-subtle) !important;
+  border: 1px solid var(--kc-error-border) !important;
+}
+
+.kc-badge-info {
+  color: var(--kc-info-text) !important;
+  background-color: var(--kc-info-subtle) !important;
+  border: 1px solid var(--kc-info-border) !important;
+}
+
+.kc-badge-neutral {
+  color: var(--kc-text-secondary) !important;
+  background-color: var(--kc-surface-subtle) !important;
+  border: 1px solid var(--kc-border-subtle) !important;
+}
+
+/* Accessible text color utilities */
+.kc-text-success { color: var(--kc-success-text) !important; }
+.kc-text-warning { color: var(--kc-warning-text) !important; }
+.kc-text-error,
+.kc-text-danger  { color: var(--kc-error-text) !important; }
+.kc-text-info    { color: var(--kc-info-text) !important; }
+
+
+/* Common button and input accessibility refinements */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed !important;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--kc-focus-ring);
+  outline-offset: 1px;
+}
+
 
 /* ── Problem Solving Workspace: Full Available Viewport Layout ── */
 .kc-workspace-root {

@@ -331,7 +331,7 @@ export default function EditProblem() {
           marginBottom: '20px',
           fontSize: '13px',
         }}>
-          <div style={{ color: 'var(--kc-error, #f85149)', fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ color: 'var(--kc-error-text)', fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <AlertTriangle size={15} /> Cannot Publish — Fix the following:
           </div>
           <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)' }}>
@@ -365,13 +365,13 @@ export default function EditProblem() {
 
       {validation && validation.valid && form.status !== 'Published' && (
         <div style={{
-          background: 'rgba(74,222,128,0.08)',
-          border: '1px solid rgba(74,222,128,0.2)',
+          background: 'var(--kc-success-subtle)',
+          border: '1px solid var(--kc-success-border)',
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '20px',
           fontSize: '13px',
-          color: '#4ade80',
+          color: 'var(--kc-success-text)',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
@@ -672,11 +672,11 @@ export default function EditProblem() {
                 {/* Summary stats */}
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '14px', flexWrap: 'wrap' }}>
                   {[
-                    { label: 'Generated', value: genResult.summary.totalGenerated, color: '#4d9fff' },
-                    { label: 'Valid', value: genResult.summary.totalValid, color: '#fbbf24' },
-                    { label: 'Visible Saved', value: genResult.summary.visibleSaved, color: '#4ade80' },
-                    { label: 'Hidden Saved', value: genResult.summary.hiddenSaved, color: '#f59e0b' },
-                    { label: 'Failures', value: genResult.summary.failures, color: '#f87171' },
+                    { label: 'Generated', value: genResult.summary.totalGenerated, color: 'var(--kc-accent-text)' },
+                    { label: 'Valid', value: genResult.summary.totalValid, color: 'var(--kc-warning-text)' },
+                    { label: 'Visible Saved', value: genResult.summary.visibleSaved, color: 'var(--kc-success-text)' },
+                    { label: 'Hidden Saved', value: genResult.summary.hiddenSaved, color: 'var(--kc-warning-text)' },
+                    { label: 'Failures', value: genResult.summary.failures, color: 'var(--kc-error-text)' },
                   ].map(s => (
                     <div key={s.label} className="admin-section-card" style={{ padding: '10px 16px', textAlign: 'center', minWidth: '100px' }}>
                       <div style={{ fontSize: '20px', fontWeight: 700, color: s.color }}>{s.value}</div>

@@ -149,7 +149,7 @@ export default function AdminUsers() {
   const totalPages = Math.ceil(meta.total / PAGE_SIZE);
 
   if (error && !users.length) {
-    return <div style={{ color: '#f85149', padding: '40px' }}>Error: {error}</div>;
+    return <div style={{ color: 'var(--kc-error-text)', padding: '40px' }}>Error: {error}</div>;
   }
 
   return (
@@ -172,12 +172,12 @@ export default function AdminUsers() {
           justifyContent: 'space-between',
           fontSize: '13px',
           fontWeight: 500,
-          background: toast.type === 'success' ? 'rgba(34, 197, 94, 0.14)' :
-                      toast.type === 'error' ? 'rgba(248, 81, 73, 0.14)' : 'rgba(251, 191, 36, 0.14)',
-          border: `1px solid ${toast.type === 'success' ? 'rgba(34, 197, 94, 0.35)' :
-                               toast.type === 'error' ? 'rgba(248, 81, 73, 0.35)' : 'rgba(251, 191, 36, 0.35)'}`,
-          color: toast.type === 'success' ? '#4ade80' :
-                 toast.type === 'error' ? '#f87171' : '#fbbf24',
+          background: toast.type === 'success' ? 'var(--kc-success-subtle)' :
+                      toast.type === 'error' ? 'var(--kc-error-subtle)' : 'var(--kc-warning-subtle)',
+          border: `1px solid ${toast.type === 'success' ? 'var(--kc-success-border)' :
+                               toast.type === 'error' ? 'var(--kc-error-border)' : 'var(--kc-warning-border)'}`,
+          color: toast.type === 'success' ? 'var(--kc-success-text)' :
+                 toast.type === 'error' ? 'var(--kc-error-text)' : 'var(--kc-warning-text)',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
           animation: 'fadeIn 0.2s ease',
         }}>
@@ -265,7 +265,7 @@ export default function AdminUsers() {
                   <td>
                     <span className={`admin-badge badge-${u.role}`}>{u.role}</span>
                     {u.role === 'college_admin' && (
-                      <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '3px', fontWeight: 500 }}>
+                      <div style={{ fontSize: '11px', color: 'var(--kc-warning-text)', marginTop: '3px', fontWeight: 500 }}>
                         🏫 {u.organization_name || 'No institution assigned'}
                       </div>
                     )}
@@ -273,7 +273,7 @@ export default function AdminUsers() {
                   <td><span className={`admin-badge ${u.is_active ? 'badge-active' : 'badge-suspended'}`}>{u.is_active ? 'Active' : 'Suspended'}</span></td>
                   <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{new Date(u.created_at).toLocaleDateString()}</td>
                   <td style={{ fontSize: '12px' }}>{u.total_submissions}</td>
-                  <td style={{ fontSize: '12px', color: '#4ade80' }}>{u.total_accepted}</td>
+                  <td style={{ fontSize: '12px', color: 'var(--kc-success-text)' }}>{u.total_accepted}</td>
                   <td>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       <button
@@ -349,10 +349,10 @@ export default function AdminUsers() {
           >
             <div className="admin-modal-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ display: 'flex', alignItems: 'center' }}>
-                {modal.type === 'delete' ? <Trash2 size={18} style={{ color: 'var(--kc-error, #f87171)' }} /> :
-                 modal.type === 'suspend' ? <PauseCircle size={18} style={{ color: '#fbbf24' }} /> :
-                 modal.type === 'activate' ? <PlayCircle size={18} style={{ color: '#4ade80' }} /> :
-                 <Shield size={18} style={{ color: 'var(--kc-accent)' }} />}
+                {modal.type === 'delete' ? <Trash2 size={18} style={{ color: 'var(--kc-error-text)' }} /> :
+                 modal.type === 'suspend' ? <PauseCircle size={18} style={{ color: 'var(--kc-warning-text)' }} /> :
+                 modal.type === 'activate' ? <PlayCircle size={18} style={{ color: 'var(--kc-success-text)' }} /> :
+                 <Shield size={18} style={{ color: 'var(--kc-accent-text)' }} />}
               </span>
               <span>
                 {modal.type === 'delete' ? 'Permanently Delete User' :
@@ -443,7 +443,7 @@ export default function AdminUsers() {
                 )}
 
                 {selectedRole === 'super_admin' && (
-                  <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', fontSize: '12px', color: '#f87171' }}>
+                  <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--kc-error-subtle)', border: '1px solid var(--kc-error-border)', fontSize: '12px', color: 'var(--kc-error-text)' }}>
                     Super Admins have unrestricted platform privileges, including cluster health, problem curation, and database access.
                   </div>
                 )}
@@ -451,7 +451,7 @@ export default function AdminUsers() {
             ) : (
               <p style={{ fontSize: '13px', lineHeight: 1.5, color: 'var(--text-secondary)', marginBottom: '24px' }}>
                 {modal.type === 'delete' && (
-                  <span style={{ color: '#f87171' }}>
+                  <span style={{ color: 'var(--kc-error-text)' }}>
                     <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />
                     This action cannot be undone. All records associated with <strong>{modal.user.username}</strong> will be permanently removed.
                   </span>

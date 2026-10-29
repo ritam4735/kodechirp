@@ -9,11 +9,11 @@ import { api } from '../../lib/api';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
 
 const STATUS_CONFIG = {
-  'Accepted':            { icon: CheckCircle,    color: '#4ade80', bg: 'rgba(74,222,128,0.08)' },
-  'Wrong Answer':        { icon: XCircle,        color: '#f87171', bg: 'rgba(248,113,113,0.08)' },
-  'Runtime Error':       { icon: AlertTriangle,  color: '#fb923c', bg: 'rgba(251,146,60,0.08)' },
-  'Time Limit Exceeded': { icon: Clock,          color: '#fbbf24', bg: 'rgba(251,191,36,0.08)' },
-  'Compilation Error':   { icon: XCircle,        color: '#a78bfa', bg: 'rgba(167,139,250,0.08)' },
+  'Accepted':            { icon: CheckCircle,    color: 'var(--kc-success-text)', bg: 'var(--kc-success-subtle)', border: 'var(--kc-success-border)' },
+  'Wrong Answer':        { icon: XCircle,        color: 'var(--kc-error-text)', bg: 'var(--kc-error-subtle)', border: 'var(--kc-error-border)' },
+  'Runtime Error':       { icon: AlertTriangle,  color: 'var(--kc-error-text)', bg: 'var(--kc-error-subtle)', border: 'var(--kc-error-border)' },
+  'Time Limit Exceeded': { icon: Clock,          color: 'var(--kc-warning-text)', bg: 'var(--kc-warning-subtle)', border: 'var(--kc-warning-border)' },
+  'Compilation Error':   { icon: XCircle,        color: 'var(--kc-error-text)', bg: 'var(--kc-error-subtle)', border: 'var(--kc-error-border)' },
 };
 
 export default function SubmissionsPage() {
@@ -114,7 +114,7 @@ export default function SubmissionsPage() {
             </div>
           ) : (
             submissions.map((sub, i) => {
-              const cfg = STATUS_CONFIG[sub.status] || { icon: Clock, color: 'var(--kc-text-muted)', bg: 'rgba(255,255,255,0.04)' };
+              const cfg = STATUS_CONFIG[sub.status] || { icon: Clock, color: 'var(--kc-text-muted)', bg: 'var(--kc-surface-subtle)', border: 'var(--kc-border-subtle)' };
               const Icon = cfg.icon;
               return (
                 <motion.div
@@ -133,7 +133,7 @@ export default function SubmissionsPage() {
                       {sub.language} · {sub.runtime_ms ? `${sub.runtime_ms}ms` : '–'} · {new Date(sub.created_at).toLocaleDateString()}
                     </div>
                   </div>
-                  <span className="px-2 sm:px-2.5 py-0.5 rounded text-[10px] sm:text-[11px] font-medium shrink-0" style={{ background: cfg.bg, color: cfg.color }}>
+                  <span className="px-2 sm:px-2.5 py-0.5 rounded text-[10px] sm:text-[11px] font-medium shrink-0 border" style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.border }}>
                     {sub.status}
                   </span>
                 </motion.div>

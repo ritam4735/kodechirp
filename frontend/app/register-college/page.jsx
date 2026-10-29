@@ -149,7 +149,7 @@ export default function RegisterCollegePage() {
     return (
       <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center p-6">
         <div className="max-w-lg w-full bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-2xl p-8 shadow-xl text-center space-y-6">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center mx-auto">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto">
             <CheckCircle2 size={36} />
           </div>
 
@@ -163,7 +163,7 @@ export default function RegisterCollegePage() {
           </div>
 
           <div className="bg-[var(--bg-tertiary)] border border-[var(--border-default)] rounded-xl p-4 text-left text-xs space-y-3">
-            <div className="flex items-center gap-2 text-amber-500 font-semibold">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-semibold">
               <ShieldCheck size={16} />
               <span>Status: PENDING SUPER ADMIN VERIFICATION</span>
             </div>
@@ -218,8 +218,8 @@ export default function RegisterCollegePage() {
 
         {/* Error Alert */}
         {error && (
-          <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 text-rose-500 flex items-start gap-3 text-sm">
-            <AlertCircle size={20} className="shrink-0 mt-0.5" />
+          <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 text-rose-700 dark:text-rose-300 flex items-start gap-3 text-sm">
+            <AlertCircle size={20} className="shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
             <div className="flex-1">
               <span className="font-semibold">Submission Error: </span>
               {error}
@@ -517,7 +517,7 @@ export default function RegisterCollegePage() {
           {/* Card 3: Verification Information */}
           <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-2xl p-6 sm:p-8 space-y-6">
             <div className="flex items-center gap-3 pb-4 border-b border-[var(--border-default)]">
-              <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500">
+              <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
                 <ShieldCheck size={22} />
               </div>
               <div>

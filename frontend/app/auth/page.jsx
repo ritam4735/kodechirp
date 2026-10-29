@@ -125,7 +125,7 @@ export default function AuthPage() {
         </h1>
 
         {successMessage && (
-          <div className="bg-[rgba(74,222,128,0.1)] border border-[rgba(74,222,128,0.25)] text-[#4ade80] p-3 rounded-md mb-4 text-xs sm:text-sm" role="status">
+          <div className="bg-[var(--kc-success-subtle)] border border-[var(--kc-success-border)] text-[var(--kc-success-text)] font-medium p-3 rounded-md mb-4 text-xs sm:text-sm" role="status">
             {successMessage}
           </div>
         )}
@@ -178,12 +178,12 @@ export default function AuthPage() {
                 }}
                 className={`w-full bg-[var(--kc-surface-subtle)] text-[var(--kc-text-primary)] text-sm rounded-md px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
                   fieldErrors.name
-                    ? 'border-2 border-[var(--kc-error, #f85149)] focus:ring-1 focus:ring-[var(--kc-error, #f85149)]'
+                    ? 'border-2 border-[var(--kc-error-border)] focus:ring-1 focus:ring-[var(--kc-error-border)]'
                     : 'border border-[var(--kc-border)] focus:border-[var(--kc-accent)]'
                 }`}
               />
               {fieldErrors.name && (
-                <p id="username-error" role="alert" className="text-xs text-[var(--kc-error, #f87171)] mt-1.5 flex items-center gap-1">
+                <p id="username-error" role="alert" className="text-xs text-[var(--kc-error-text)] mt-1.5 flex items-center gap-1">
                   <span>{fieldErrors.name}</span>
                 </p>
               )}
@@ -209,12 +209,12 @@ export default function AuthPage() {
               }}
               className={`w-full bg-[var(--kc-surface-subtle)] text-[var(--kc-text-primary)] text-sm rounded-md px-3.5 py-2.5 focus:outline-none transition-colors disabled:opacity-50 ${
                 fieldErrors.identifier
-                  ? 'border-2 border-[var(--kc-error, #f85149)] focus:ring-1 focus:ring-[var(--kc-error, #f85149)]'
+                  ? 'border-2 border-[var(--kc-error-border)] focus:ring-1 focus:ring-[var(--kc-error-border)]'
                   : 'border border-[var(--kc-border)] focus:border-[var(--kc-accent)]'
               }`}
             />
             {fieldErrors.identifier && (
-              <p id="identifier-error" role="alert" className="text-xs text-[var(--kc-error, #f87171)] mt-1.5 flex items-center gap-1">
+              <p id="identifier-error" role="alert" className="text-xs text-[var(--kc-error-text)] mt-1.5 flex items-center gap-1">
                 <span>{fieldErrors.identifier}</span>
               </p>
             )}
@@ -247,7 +247,7 @@ export default function AuthPage() {
                 }}
                 className={`w-full bg-[var(--kc-surface-subtle)] text-[var(--kc-text-primary)] text-sm rounded-md px-3.5 py-2.5 pr-10 focus:outline-none transition-colors disabled:opacity-50 ${
                   fieldErrors.password
-                    ? 'border-2 border-[var(--kc-error, #f85149)] focus:ring-1 focus:ring-[var(--kc-error, #f85149)]'
+                    ? 'border-2 border-[var(--kc-error-border)] focus:ring-1 focus:ring-[var(--kc-error-border)]'
                     : 'border border-[var(--kc-border)] focus:border-[var(--kc-accent)]'
                 }`}
               />
@@ -261,7 +261,7 @@ export default function AuthPage() {
               </button>
             </div>
             {fieldErrors.password && (
-              <p id="password-error" role="alert" className="text-xs text-[var(--kc-error, #f87171)] mt-1.5 flex items-center gap-1">
+              <p id="password-error" role="alert" className="text-xs text-[var(--kc-error-text)] mt-1.5 flex items-center gap-1">
                 <span>{fieldErrors.password}</span>
               </p>
             )}
