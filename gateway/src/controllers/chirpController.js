@@ -1,25 +1,61 @@
 // gateway/src/controllers/chirpController.js
-const db = require('../config/database');
+// ─────────────────────────────────────────────────────────────────────────────
+// Chirp Controller — HTTP Request Handlers for Chirps Community Engine
+// ─────────────────────────────────────────────────────────────────────────────
+
+const chirpService = require('../services/chirpService');
 
 exports.getChirps = async (req, res, next) => {
   try {
-    const { problem_id } = req.query;
+    const { problem_id, sort, tag, search, parent_id, page, limit } = req.query;
+    const currentUserId = req.user ? req.user.id : null;
 
-    if (!problem_id) {
-      return res.status(400).json({ success: false, error: 'problem_id is required' });
+    const result = await chirpService.getChirps({
+      problem_id,
+      sort,
+      tag,
+      search,
+      parent_id,
+      page,
+      limit,
+      currentUserId,
+    });
+
+    return res.json({
+      success: true,
+      data: result.chirps,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getChirpById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const currentUserId = req.user ? req.user.id : null;
+
+    const chirp = await chirpService.getChirpById(id, currentUserId);
+    if (!chirp) {
+      return res.status(404).json({ success: false, error: 'Chirp not found' });
     }
 
-    const result = await db.query(
-      `SELECT c.id, c.content, c.code_snippet, c.approach_tag, c.upvote_count,
-              c.created_at AS "createdAt", COALESCE(u.username, 'anonymous') AS author, u.avatar_url
-       FROM chirps c
-       LEFT JOIN users u ON c.user_id = u.id
-       WHERE c.problem_id = $1
-       ORDER BY c.created_at DESC`,
-      [problem_id]
-    );
+    return res.json({ success: true, data: chirp });
+  } catch (err) {
+    next(err);
+  }
+};
 
-    return res.json({ success: true, data: result.rows });
+exports.getChirpReplies = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const currentUserId = req.user ? req.user.id : null;
+
+    const replies = await chirpService.getChirpReplies(id, currentUserId);
+    return res.json({ success: true, data: replies });
   } catch (err) {
     next(err);
   }
@@ -27,19 +63,76 @@ exports.getChirps = async (req, res, next) => {
 
 exports.postChirp = async (req, res, next) => {
   try {
-    const { problem_id, content, code_snippet, approach_tag } = req.body;
-    const userId = req.user ? req.user.id : null;
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
 
-    const result = await db.query(
-      `INSERT INTO chirps (problem_id, user_id, content, code_snippet, approach_tag)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id, content, code_snippet, approach_tag, upvote_count, created_at AS "createdAt"`,
-      [problem_id, userId, content, code_snippet, approach_tag]
+    const { problem_id, content, code_snippet, approach_tag, parent_id } = req.body;
+
+    const chirp = await chirpService.createChirp(
+      { problem_id, content, code_snippet, approach_tag, parent_id },
+      req.user
     );
-    
-    const chirp = result.rows[0];
-    chirp.author = req.user ? req.user.username : 'anonymous';
 
     return res.status(201).json({ success: true, data: chirp });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updateChirp = async (req, res, next) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    const { id } = req.params;
+    const { content, code_snippet, approach_tag } = req.body;
+
+    const updated = await chirpService.updateChirp(
+      id,
+      { content, code_snippet, approach_tag },
+      req.user
+    );
+
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.deleteChirp = async (req, res, next) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    const { id } = req.params;
+    const result = await chirpService.deleteChirp(id, req.user);
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.toggleUpvote = async (req, res, next) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    const { id } = req.params;
+    const result = await chirpService.toggleUpvote(id, req.user.id);
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getPopularTags = async (req, res, next) => {
+  try {
+    const tags = await chirpService.getPopularTags();
+    return res.json({ success: true, data: tags });
   } catch (err) {
     next(err);
   }

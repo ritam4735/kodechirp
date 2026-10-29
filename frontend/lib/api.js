@@ -318,10 +318,94 @@ export const api = {
     return data.data || [];
   },
 
-  // ── Chirps ──────────────────────────────────────────────────────────────────
+  // ── Chirps (Community Engine) ─────────────────────────────────────────────
 
-  getChirps: async (problemId) => {
-    const data = await request(`/api/chirps?problem_id=${problemId}`);
+  getChirps: async (params = {}) => {
+    let query = '';
+    if (typeof params === 'string') {
+      query = `?problem_id=${encodeURIComponent(params)}`;
+    } else if (params && typeof params === 'object') {
+      const qs = new URLSearchParams();
+      if (params.problem_id) qs.set('problem_id', params.problem_id);
+      if (params.sort) qs.set('sort', params.sort);
+      if (params.tag) qs.set('tag', params.tag);
+      if (params.search) qs.set('search', params.search);
+      if (params.parent_id) qs.set('parent_id', params.parent_id);
+      if (params.page) qs.set('page', params.page);
+      if (params.limit) qs.set('limit', params.limit);
+      const str = qs.toString();
+      if (str) query = `?${str}`;
+    }
+    const data = await request(`/api/chirps${query}`);
+    return data.data || [];
+  },
+
+  getChirpsFeed: async (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.problem_id) qs.set('problem_id', params.problem_id);
+    if (params.sort) qs.set('sort', params.sort);
+    if (params.tag) qs.set('tag', params.tag);
+    if (params.search) qs.set('search', params.search);
+    if (params.page) qs.set('page', params.page);
+    if (params.limit) qs.set('limit', params.limit);
+    const data = await request(`/api/chirps?${qs.toString()}`);
+    return data;
+  },
+
+  getChirp: async (id) => {
+    const data = await request(`/api/chirps/${id}`);
+    return data.data;
+  },
+
+  getChirpReplies: async (id) => {
+    const data = await request(`/api/chirps/${id}/replies`);
+    return data.data || [];
+  },
+
+  postChirp: async (payloadOrProblemId, content, codeSnippet, approachTag, parentId) => {
+    let bodyPayload = {};
+    if (typeof payloadOrProblemId === 'object' && payloadOrProblemId !== null) {
+      bodyPayload = payloadOrProblemId;
+    } else {
+      bodyPayload = {
+        problem_id: payloadOrProblemId,
+        content,
+        code_snippet: codeSnippet,
+        approach_tag: approachTag,
+        parent_id: parentId,
+      };
+    }
+    const data = await request('/api/chirps', {
+      method: 'POST',
+      body: JSON.stringify(bodyPayload),
+    });
+    return data.data;
+  },
+
+  updateChirp: async (id, payload) => {
+    const data = await request(`/api/chirps/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    return data.data;
+  },
+
+  deleteChirp: async (id) => {
+    const data = await request(`/api/chirps/${id}`, {
+      method: 'DELETE',
+    });
+    return data;
+  },
+
+  upvoteChirp: async (id) => {
+    const data = await request(`/api/chirps/${id}/upvote`, {
+      method: 'POST',
+    });
+    return data;
+  },
+
+  getChirpTags: async () => {
+    const data = await request('/api/chirps/tags');
     return data.data || [];
   },
 

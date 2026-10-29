@@ -200,7 +200,8 @@ CREATE INDEX IF NOT EXISTS idx_exec_metrics_submission ON execution_metrics(subm
 -- ── Chirps (Peer Explanations) ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS chirps (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    problem_id UUID NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
+    parent_id UUID REFERENCES chirps(id) ON DELETE CASCADE,
+    problem_id UUID REFERENCES problems(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     content TEXT NOT NULL,
     code_snippet TEXT,
@@ -210,7 +211,11 @@ CREATE TABLE IF NOT EXISTS chirps (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_chirps_parent ON chirps(parent_id);
 CREATE INDEX IF NOT EXISTS idx_chirps_problem ON chirps(problem_id);
+CREATE INDEX IF NOT EXISTS idx_chirps_user ON chirps(user_id);
+CREATE INDEX IF NOT EXISTS idx_chirps_created_at ON chirps(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chirps_tag ON chirps(approach_tag);
 CREATE INDEX IF NOT EXISTS idx_chirps_upvotes ON chirps(upvote_count DESC);
 
 -- ── Chirp Upvotes ───────────────────────────────────────────────────────────
@@ -220,6 +225,27 @@ CREATE TABLE IF NOT EXISTS chirp_upvotes (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (user_id, chirp_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_chirp_upvotes_chirp ON chirp_upvotes(chirp_id);
+
+CREATE OR REPLACE FUNCTION sync_chirp_upvote_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF (TG_OP = 'INSERT') THEN
+    UPDATE chirps SET upvote_count = upvote_count + 1 WHERE id = NEW.chirp_id;
+    RETURN NEW;
+  ELSIF (TG_OP = 'DELETE') THEN
+    UPDATE chirps SET upvote_count = GREATEST(0, upvote_count - 1) WHERE id = OLD.chirp_id;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_chirp_upvote_count ON chirp_upvotes;
+CREATE TRIGGER trg_sync_chirp_upvote_count
+AFTER INSERT OR DELETE ON chirp_upvotes
+FOR EACH ROW EXECUTE FUNCTION sync_chirp_upvote_count();
 
 -- ── Contests ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS contests (

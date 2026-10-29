@@ -12,6 +12,7 @@ import { User, Shield, Settings, FileCode2, BarChart3, LogOut, ChevronDown } fro
 const NAV_ITEMS = [
   { label: 'Home', href: '/' },
   { label: 'Questions', href: '/questions' },
+  { label: 'Chirps', href: '/chirps' },
   { label: 'Compete', href: '/compete' },
 ];
 
