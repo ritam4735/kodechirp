@@ -293,6 +293,8 @@ export const adminApi = {
   releaseAssessmentResults: (id) =>
     requestAdmin(`/assessments/${id}/release-results`, { method: 'POST' }),
   getAssessmentAttempts: (id) => requestAdmin(`/assessments/${id}/attempts`),
+  getAssessmentViolations: (id) => requestAdmin(`/assessments/${id}/violations`),
+  getAttemptViolations: (attemptId) => requestAdmin(`/assessments/attempts/${attemptId}/violations`),
 
   // Section Management
   createAssessmentSection: (assessmentId, data) =>

@@ -2,18 +2,21 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import { api } from '../../../../lib/api';
 import { SUPPORTED_LANGUAGES, DEFAULT_CODE_SNIPPETS } from '../../../../lib/constants';
 import { generateStarterCode } from '../../../../lib/codeGenerator';
-
-function getStarterCode(question, language) {
-  if (question?.judge_mode === 'FUNCTION') {
-    const gen = generateStarterCode(question.judge_mode, question.signature_metadata, language);
-    if (gen) return gen;
-  }
-  return DEFAULT_CODE_SNIPPETS[language] || '# Write your solution here\n';
-}
+import { CodingWorkspace, ResizeHandle } from '../../../../components/problem/CodingWorkspace';
+import { ProblemDescription } from '../../../../components/problem/ProblemDescription';
+import { AssessmentQuestionDrawer } from '../../../../components/problem/AssessmentQuestionDrawer';
+import { useProblemStore } from '../../../../store/problemStore';
+import { useEditorStore } from '../../../../store/editorStore';
+import { Panel, Group as PanelGroup } from 'react-resizable-panels';
+import {
+  isFullscreenActive,
+  enterFullscreen,
+  FULLSCREEN_CHANGE_EVENTS,
+  getViolationMeta,
+} from '../../../../lib/securityAssessment';
 import {
   Clock,
   CheckCircle2,
@@ -23,31 +26,27 @@ import {
   ChevronRight,
   Send,
   Code2,
-  Play,
-  RotateCcw,
   Check,
-  HelpCircle,
   Layers,
+  Cpu,
+  Menu,
+  FileCheck,
   Terminal,
-  Copy,
-  XCircle,
-  FileCode,
-  Sparkles,
-  Cpu
+  RotateCcw,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  Maximize,
+  ArrowRight,
 } from 'lucide-react';
 
-const CodeEditor = dynamic(
-  () => import('../../../../components/editor/CodeEditor').then((mod) => mod.CodeEditor),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex-1 min-h-[380px] flex flex-col items-center justify-center w-full bg-[var(--kc-surface)] gap-3 border border-[var(--border-default)] rounded-xl">
-        <div className="w-7 h-7 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin" />
-        <span className="text-[var(--text-muted)] font-mono text-xs uppercase tracking-wider animate-pulse">Initializing code editor…</span>
-      </div>
-    ),
+function getStarterCode(question, language) {
+  if (question?.judge_mode === 'FUNCTION') {
+    const gen = generateStarterCode(question.judge_mode, question.signature_metadata, language);
+    if (gen) return gen;
   }
-);
+  return DEFAULT_CODE_SNIPPETS[language] || '# Write your solution here\n';
+}
 
 function parseSelectedOptions(raw) {
   if (!raw) return [];
@@ -65,6 +64,39 @@ function parseSelectedOptions(raw) {
   return [];
 }
 
+const STORAGE_KEY_HORIZONTAL_SPLIT = 'kc_assessment_split_h_v1';
+const DEFAULT_HORIZONTAL_SPLIT = { 'assessment-problem-pane': 42, 'assessment-workspace-pane': 58 };
+
+function validateHorizontalSplit(layout) {
+  if (!layout || typeof layout !== 'object') return false;
+  const p = Number(layout['assessment-problem-pane']);
+  const w = Number(layout['assessment-workspace-pane']);
+  if (!Number.isFinite(p) || !Number.isFinite(w)) return false;
+  if (p < 25 || p > 65) return false;
+  if (w < 35 || w > 75) return false;
+  const sum = p + w;
+  if (sum < 90 || sum > 110) return false;
+  return true;
+}
+
+function loadStoredSplit(key, fallback, validator) {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (validator(parsed)) return parsed;
+    }
+  } catch (e) {}
+  return fallback;
+}
+
+function DifficultyBadge({ difficulty }) {
+  if (difficulty === 'Easy') return <span className="kc-diff-badge kc-diff-easy">Easy</span>;
+  if (difficulty === 'Hard') return <span className="kc-diff-badge kc-diff-hard">Hard</span>;
+  return <span className="kc-diff-badge kc-diff-medium">Medium</span>;
+}
+
 export default function AssessmentTakingArena() {
   const params = useParams();
   const router = useRouter();
@@ -75,30 +107,74 @@ export default function AssessmentTakingArena() {
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
 
-  // Remaining Seconds (server authoritative timer)
+  // Authoritative countdown timer (seconds)
   const [timeLeft, setTimeLeft] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState('Saved');
   const [isConfirmSubmitOpen, setIsConfirmSubmitOpen] = useState(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Local state for responses: { [itemKey]: { selected_options, text_response, code_submission_id, is_flagged_for_review } }
+  // Secure Assessment Mode state
+  const isSecureMode = Boolean(attempt?.is_secure_mode);
+  const [violationModal, setViolationModal] = useState({
+    open: false,
+    violationType: null,
+    violationDetails: '',
+    isFinalizing: false,
+    error: null,
+  });
+  const [toast, setToast] = useState(null);
+  const [needsFullscreenPrompt, setNeedsFullscreenPrompt] = useState(false);
+
+  const isSubmittingRef = useRef(false);
+  const hasTriggeredViolationRef = useRef(false);
+  const pendingSaveRef = useRef(null);
+  const isTransitioningFullscreenRef = useRef(false);
+
+  const showToast = useCallback((type, message) => {
+    setToast({ type, message });
+    setTimeout(() => {
+      setToast((prev) => (prev?.message === message ? null : prev));
+    }, 3500);
+  }, []);
+
+  // Mobile layout switcher for coding questions ('problem' | 'code')
+  const [mobileViewTab, setMobileViewTab] = useState('problem');
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Local student responses: { [itemKey]: { selected_options, text_response, code_submission_id, is_flagged_for_review } }
   const [responses, setResponses] = useState({});
 
-  // Coding execution state for DSA questions
+  // Coding draft code & languages per question: { [qId]: code / lang }
   const [codeDrafts, setCodeDrafts] = useState({});
   const [codeLanguages, setCodeLanguages] = useState({});
-  const [runningCode, setRunningCode] = useState(false);
-  const [submittingCode, setSubmittingCode] = useState(false);
-  const [runOutput, setRunOutput] = useState(null);
-  const [submissionVerdict, setSubmissionVerdict] = useState(null);
-  const [activeConsoleTab, setActiveConsoleTab] = useState('testcases');
-  const [selectedTestCaseIdx, setSelectedTestCaseIdx] = useState(0);
-  const [copiedInput, setCopiedInput] = useState(false);
+
+  // Resizable split layout
+  const [splitLayout, setSplitLayout] = useState(() =>
+    loadStoredSplit(STORAGE_KEY_HORIZONTAL_SPLIT, DEFAULT_HORIZONTAL_SPLIT, validateHorizontalSplit)
+  );
 
   const saveTimeoutRef = useRef(null);
+
+  const handleSplitLayoutChange = useCallback((layout) => {
+    if (validateHorizontalSplit(layout)) {
+      setSplitLayout(layout);
+      try {
+        localStorage.setItem(STORAGE_KEY_HORIZONTAL_SPLIT, JSON.stringify(layout));
+      } catch (e) {}
+    }
+  }, []);
+
+  // Screen resize listener for mobile breakpoint
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Load attempt data
   const loadAttempt = useCallback(async () => {
@@ -107,7 +183,7 @@ export default function AssessmentTakingArena() {
       setError(null);
       const data = await api.getAttemptData(attemptId);
 
-      if (data.attempt.is_finalized || data.attempt.status === 'evaluated') {
+      if (data.attempt.is_finalized || data.attempt.status === 'evaluated' || data.attempt.is_terminated_by_violation) {
         router.push(`/assessments/result/${attemptId}`);
         return;
       }
@@ -116,10 +192,15 @@ export default function AssessmentTakingArena() {
       setSections(data.sections || []);
       setTimeLeft(data.attempt.remaining_seconds || 0);
 
-      // Reconstruct student responses state
+      if (data.attempt.is_secure_mode && !isFullscreenActive()) {
+        setNeedsFullscreenPrompt(true);
+      }
+
+      // Reconstruct student responses state & code drafts
       const initialResp = {};
       const initialCode = {};
       const initialLang = {};
+
       for (const sec of data.sections || []) {
         for (const q of sec.questions || []) {
           const key = q.id;
@@ -138,12 +219,15 @@ export default function AssessmentTakingArena() {
               is_flagged_for_review: false,
             };
           }
+
           if (q.is_coding) {
             initialLang[key] = 'python';
-            initialCode[key] = q.saved_response?.text_response || DEFAULT_CODE_SNIPPETS['python'] || '# Write your solution here\n';
+            const starter = getStarterCode(q, 'python');
+            initialCode[key] = q.saved_response?.text_response || starter;
           }
         }
       }
+
       setResponses(initialResp);
       setCodeDrafts(initialCode);
       setCodeLanguages(initialLang);
@@ -158,27 +242,129 @@ export default function AssessmentTakingArena() {
     if (attemptId) loadAttempt();
   }, [attemptId, loadAttempt]);
 
-  // Handle final submission
-  const executeFinalSubmit = useCallback(async () => {
-    if (isSubmitting) return;
+  // Execute Final Submit (Standard / Manual)
+  const executeFinalSubmit = useCallback(async (reasonArg = 'manual') => {
+    const finalReason = (typeof reasonArg === 'string' && reasonArg.trim()) ? reasonArg.trim() : 'manual';
+    if (isSubmitting || isSubmittingRef.current || hasTriggeredViolationRef.current) return;
     try {
       setIsSubmitting(true);
-      await api.submitAssessmentAttempt(attemptId);
+      isSubmittingRef.current = true;
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+
+      // Flush pending save if any
+      if (pendingSaveRef.current?.itemKey && pendingSaveRef.current?.fields) {
+        try {
+          const { fields } = pendingSaveRef.current;
+          const curSec = sections[currentSectionIdx];
+          const curQ = curSec?.questions?.[currentQuestionIdx];
+          if (curSec && curQ) {
+            await api.saveAssessmentResponse(attemptId, {
+              section_id: curSec.id,
+              question_id: curQ.question_id || null,
+              problem_id: curQ.problem_id || null,
+              ...fields,
+            });
+          }
+        } catch (_) {}
+      }
+
+      await api.submitAssessmentAttempt(attemptId, {
+        submission_reason: finalReason,
+      });
       router.push(`/assessments/result/${attemptId}`);
     } catch (err) {
       alert('Error during submission: ' + err.message);
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
-  }, [attemptId, isSubmitting, router]);
+  }, [attemptId, isSubmitting, router, sections, currentSectionIdx, currentQuestionIdx]);
 
-  // Countdown Timer
+  // Trigger Immediate Automatic Violation Submission (Strict Mode)
+  const triggerViolationSubmission = useCallback(async (violationType, violationDetails) => {
+    if (hasTriggeredViolationRef.current || isSubmittingRef.current) return;
+    hasTriggeredViolationRef.current = true;
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    setViolationModal({
+      open: true,
+      violationType,
+      violationDetails: violationDetails || 'Security rule triggered automatic submission',
+      isFinalizing: true,
+      error: null,
+    });
+
+    // Flush any pending unsaved draft before finalizing
+    if (pendingSaveRef.current?.itemKey && pendingSaveRef.current?.fields) {
+      try {
+        const { fields } = pendingSaveRef.current;
+        const curSec = sections[currentSectionIdx];
+        const curQ = curSec?.questions?.[currentQuestionIdx];
+        if (curSec && curQ) {
+          await api.saveAssessmentResponse(attemptId, {
+            section_id: curSec.id,
+            question_id: curQ.question_id || null,
+            problem_id: curQ.problem_id || null,
+            ...fields,
+          });
+        }
+      } catch (flushErr) {
+        console.warn('[Security] Autosave flush failed before violation submission:', flushErr);
+      }
+    }
+
+    try {
+      await api.submitAssessmentAttempt(attemptId, {
+        submission_reason: violationType,
+        violation_type: violationType,
+        violation_details: {
+          reason: violationType,
+          details: violationDetails,
+          client_timestamp: new Date().toISOString(),
+        },
+      });
+      setViolationModal((prev) => ({ ...prev, isFinalizing: false }));
+    } catch (err) {
+      console.error('[Security] Finalize violation error:', err);
+      setViolationModal((prev) => ({
+        ...prev,
+        isFinalizing: false,
+        error: err.message || 'Assessment successfully recorded and finalized on server',
+      }));
+    }
+  }, [attemptId, sections, currentSectionIdx, currentQuestionIdx]);
+
+  // Re-enter Fullscreen Handler
+  const handleReEnterFullscreen = async () => {
+    try {
+      isTransitioningFullscreenRef.current = true;
+      await enterFullscreen();
+      setNeedsFullscreenPrompt(false);
+    } catch (err) {
+      showToast('error', 'Failed to enter full-screen mode: ' + (err.message || 'Permission denied'));
+    } finally {
+      setTimeout(() => {
+        isTransitioningFullscreenRef.current = false;
+      }, 500);
+    }
+  };
+
+  // Authoritative countdown timer
   useEffect(() => {
     if (timeLeft <= 0) return;
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          executeFinalSubmit();
+          executeFinalSubmit('timer_expired');
           return 0;
         }
         return prev - 1;
@@ -186,6 +372,129 @@ export default function AssessmentTakingArena() {
     }, 1000);
     return () => clearInterval(timer);
   }, [timeLeft, executeFinalSubmit]);
+
+  // Secure Mode Proactive Event Listeners
+  useEffect(() => {
+    if (!isSecureMode || !attempt || attempt.is_finalized || violationModal.open) return;
+
+    // 1. Initial fullscreen check
+    if (!isFullscreenActive()) {
+      setNeedsFullscreenPrompt(true);
+    }
+
+    // 2. Fullscreen change listener
+    const handleFullscreenChange = () => {
+      if (isTransitioningFullscreenRef.current) return;
+      const active = isFullscreenActive();
+      if (!active) {
+        if (!isSubmittingRef.current && !hasTriggeredViolationRef.current) {
+          triggerViolationSubmission('fullscreen_exited', 'Browser exited full-screen mode during active assessment.');
+        }
+      } else {
+        setNeedsFullscreenPrompt(false);
+      }
+    };
+
+    for (const evt of FULLSCREEN_CHANGE_EVENTS) {
+      document.addEventListener(evt, handleFullscreenChange);
+    }
+
+    // 3. Tab switch / document visibility listener
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (!isSubmittingRef.current && !hasTriggeredViolationRef.current) {
+          triggerViolationSubmission('tab_hidden', 'Document visibility changed to hidden (switched tabs or minimized browser).');
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 4. Popstate / back button trap
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = (e) => {
+      e.preventDefault();
+      window.history.pushState(null, '', window.location.href);
+      if (!isSubmittingRef.current && !hasTriggeredViolationRef.current) {
+        triggerViolationSubmission('navigation_attempt', 'Attempted browser back/forward navigation away from assessment.');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    // 5. Beforeunload confirmation & beacon
+    const handleBeforeUnload = (e) => {
+      if (!isSubmittingRef.current && !hasTriggeredViolationRef.current) {
+        try {
+          navigator.sendBeacon?.(
+            `/api/assessments/attempts/${attemptId}/violation`,
+            JSON.stringify({
+              violation_type: 'navigation_attempt',
+              details: { event: 'beforeunload', timestamp: new Date().toISOString() },
+            })
+          );
+        } catch (_) {}
+        e.preventDefault();
+        e.returnValue = 'Assessment is in progress. Leaving will submit your test.';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // 6. Scoped Clipboard & Context Menu listeners
+    const isMonacoEditorEvent = (target) => {
+      return Boolean(
+        target?.closest?.('.monaco-editor') ||
+        target?.closest?.('.monaco-inputbox') ||
+        target?.closest?.('.monaco-list')
+      );
+    };
+
+    const handleCopyCutPaste = (e) => {
+      if (isMonacoEditorEvent(e.target)) {
+        return; // Allow Monaco to handle normal editor code edits & shortcuts
+      }
+      e.preventDefault();
+      showToast('warning', `Action '${e.type.toUpperCase()}' is restricted in Secure Assessment Mode.`);
+      api.recordAssessmentViolation(attemptId, {
+        violation_type: 'clipboard_action',
+        details: { action: e.type, tag: e.target?.tagName || 'element' },
+      }).catch(() => {});
+    };
+
+    const handleContextMenu = (e) => {
+      if (isMonacoEditorEvent(e.target)) {
+        return;
+      }
+      e.preventDefault();
+      showToast('warning', 'Context menu is disabled in Secure Assessment Mode.');
+    };
+
+    const handleDragStart = (e) => {
+      if (isMonacoEditorEvent(e.target)) {
+        return;
+      }
+      e.preventDefault();
+    };
+
+    document.addEventListener('copy', handleCopyCutPaste);
+    document.addEventListener('cut', handleCopyCutPaste);
+    document.addEventListener('paste', handleCopyCutPaste);
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('dragstart', handleDragStart);
+
+    return () => {
+      for (const evt of FULLSCREEN_CHANGE_EVENTS) {
+        document.removeEventListener(evt, handleFullscreenChange);
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('copy', handleCopyCutPaste);
+      document.removeEventListener('cut', handleCopyCutPaste);
+      document.removeEventListener('paste', handleCopyCutPaste);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('dragstart', handleDragStart);
+    };
+  }, [isSecureMode, attempt, attemptId, triggerViolationSubmission, showToast, violationModal.open]);
 
   // Save response to backend
   const saveAnswer = async (itemKey, updatedFields) => {
@@ -215,6 +524,9 @@ export default function AssessmentTakingArena() {
         code_submission_id: newResp.code_submission_id,
         is_flagged_for_review: newResp.is_flagged_for_review,
       });
+      if (pendingSaveRef.current?.itemKey === itemKey) {
+        pendingSaveRef.current = null;
+      }
       setSaveStatus('Saved');
     } catch (err) {
       setSaveStatus('Save error');
@@ -227,6 +539,50 @@ export default function AssessmentTakingArena() {
   const currentSection = sections[currentSectionIdx];
   const currentQuestion = currentSection?.questions?.[currentQuestionIdx];
 
+  // Sync active question with useProblemStore & useEditorStore when question changes
+  useEffect(() => {
+    if (!currentQuestion) return;
+
+    if (currentQuestion.is_coding) {
+      const activeLang = codeLanguages[currentQuestion.id] || 'python';
+      const starter = getStarterCode(currentQuestion, activeLang);
+      const activeCode = codeDrafts[currentQuestion.id] ?? (currentQuestion.saved_response?.text_response || starter);
+
+      const probData = {
+        id: currentQuestion.problem_id || currentQuestion.id,
+        problem_id: currentQuestion.problem_id,
+        title: currentQuestion.title || 'Coding Problem',
+        slug: currentQuestion.slug,
+        difficulty: currentQuestion.difficulty || 'Medium',
+        description: currentQuestion.question_text,
+        input_format: currentQuestion.input_format,
+        output_format: currentQuestion.output_format,
+        constraints: currentQuestion.constraints,
+        judge_mode: currentQuestion.judge_mode || 'STDIN_STDOUT',
+        signature_metadata: currentQuestion.signature_metadata,
+        testCases: currentQuestion.sample_test_cases || [],
+        sample_test_cases: currentQuestion.sample_test_cases || [],
+        serial_number: currentQuestionIdx + 1,
+      };
+
+      useProblemStore.setState({ currentProblem: probData });
+
+      // Synchronize editor store language and code
+      const editorStore = useEditorStore.getState();
+      if (editorStore.language !== activeLang) {
+        editorStore.setLanguage(activeLang);
+      }
+
+      // Populate store code if not present
+      const userId = 'student';
+      const cacheKey = `${userId}_${probData.id}_${activeLang}`;
+      if (!editorStore.codes[cacheKey]) {
+        editorStore.setCode(cacheKey, activeCode);
+      }
+    }
+  }, [currentSectionIdx, currentQuestionIdx, currentQuestion, codeLanguages, codeDrafts]);
+
+  // Handle MCQ selection
   const handleSelectOption = (optId) => {
     const curQ = currentQuestion;
     if (!curQ) return;
@@ -247,6 +603,18 @@ export default function AssessmentTakingArena() {
     }
   };
 
+  // Handle numerical / short-answer text response
+  const handleTextAnswerChange = (val) => {
+    const curQ = currentQuestion;
+    if (!curQ) return;
+    pendingSaveRef.current = { itemKey: curQ.id, fields: { text_response: val || null } };
+    setSaveStatus('Unsaved');
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveAnswer(curQ.id, { text_response: val || null });
+    }, 800);
+  };
+
   const handleClearResponse = () => {
     const curQ = currentQuestion;
     if (!curQ) return;
@@ -263,6 +631,7 @@ export default function AssessmentTakingArena() {
   // Coding handlers
   const handleCodeChange = (qId, newCode) => {
     setCodeDrafts((prev) => ({ ...prev, [qId]: newCode }));
+    pendingSaveRef.current = { itemKey: qId, fields: { text_response: newCode } };
     setSaveStatus('Unsaved');
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
@@ -279,6 +648,7 @@ export default function AssessmentTakingArena() {
       curDraft.trim() === prevStarter.trim() ||
       Object.values(DEFAULT_CODE_SNIPPETS).some((s) => s.trim() === curDraft.trim()) ||
       curDraft.trim() === '# Write your solution here';
+
     if (isStarter) {
       const nextSnippet = getStarterCode(currentQuestion, newLang);
       setCodeDrafts((prev) => ({ ...prev, [qId]: nextSnippet }));
@@ -286,87 +656,52 @@ export default function AssessmentTakingArena() {
     }
   };
 
-  const handleResetCode = (qId) => {
+  const handleResetCode = (qId, resetCode) => {
     const lang = codeLanguages[qId] || 'python';
-    const nextSnippet = getStarterCode(currentQuestion, lang);
+    const nextSnippet = resetCode || getStarterCode(currentQuestion, lang);
     setCodeDrafts((prev) => ({ ...prev, [qId]: nextSnippet }));
     saveAnswer(qId, { text_response: nextSnippet });
   };
 
-  const handleRunCode = async () => {
-    const curQ = currentQuestion;
-    if (!curQ?.problem_id) return;
-    const lang = codeLanguages[curQ.id] || 'python';
-    const code = codeDrafts[curQ.id] ?? (curQ.saved_response?.text_response || getStarterCode(curQ, lang));
-
-    try {
-      setRunningCode(true);
-      setRunOutput(null);
-      setSubmissionVerdict(null);
-      setSelectedTestCaseIdx(0);
-
-      // Save draft immediately
-      await saveAnswer(curQ.id, { text_response: code });
-
-      const res = await api.runCode({
-        code,
-        language: lang,
-        problem_id: curQ.problem_id,
-        stdin: '',
-        judgeMode: curQ.judge_mode,
-        signatureMetadata: curQ.signature_metadata,
+  const handleAssessmentCodeSubmitted = async (qId, result) => {
+    const subId = result.submissionId || result.id;
+    const curCode = codeDrafts[qId];
+    if (subId) {
+      await saveAnswer(qId, {
+        code_submission_id: subId,
+        text_response: curCode,
       });
-
-      setRunOutput(res);
-      if (res.compileError || res.stderr || (res.error && (!res.testCaseResults || res.testCaseResults.length === 0))) {
-        setActiveConsoleTab('console');
-      } else {
-        setActiveConsoleTab('testcases');
-      }
-    } catch (err) {
-      setRunOutput({ error: err.message || 'Execution error' });
-      setActiveConsoleTab('console');
-    } finally {
-      setRunningCode(false);
     }
   };
 
-  const handleSubmitCode = async () => {
-    const curQ = currentQuestion;
-    if (!curQ?.problem_id) return;
-    const lang = codeLanguages[curQ.id] || 'python';
-    const code = codeDrafts[curQ.id] ?? (curQ.saved_response?.text_response || getStarterCode(curQ, lang));
-
-    try {
-      setSubmittingCode(true);
-      setSubmissionVerdict(null);
-      setActiveConsoleTab('verdict');
-
-      // Save draft
-      await saveAnswer(curQ.id, { text_response: code });
-
-      const res = await api.submitCode({
-        problem_id: curQ.problem_id,
-        code,
-        language: lang,
-      });
-
-      setSubmissionVerdict(res);
-      const subId = res.submissionId || res.id;
-      if (subId) {
-        await saveAnswer(curQ.id, {
-          code_submission_id: subId,
-          text_response: code,
-        });
-      }
-    } catch (err) {
-      setSubmissionVerdict({ error: err.message || 'Submission failed' });
-    } finally {
-      setSubmittingCode(false);
+  // Navigation handlers
+  const handleNavigateNext = () => {
+    if (currentQuestionIdx < currentSection.questions.length - 1) {
+      setCurrentQuestionIdx(currentQuestionIdx + 1);
+    } else if (currentSectionIdx < sections.length - 1) {
+      setCurrentSectionIdx(currentSectionIdx + 1);
+      setCurrentQuestionIdx(0);
+    } else {
+      setIsConfirmSubmitOpen(true);
     }
   };
 
-  // Helper stats
+  const handleNavigatePrev = () => {
+    if (currentQuestionIdx > 0) {
+      setCurrentQuestionIdx(currentQuestionIdx - 1);
+    } else if (currentSectionIdx > 0) {
+      const prevSec = sections[currentSectionIdx - 1];
+      setCurrentSectionIdx(currentSectionIdx - 1);
+      setCurrentQuestionIdx(prevSec.questions.length - 1);
+    }
+  };
+
+  const handleSelectFromDrawer = (secIdx, qIdx) => {
+    setCurrentSectionIdx(secIdx);
+    setCurrentQuestionIdx(qIdx);
+  };
+
+  // Statistics calculation
   const totalQuestions = sections.reduce((acc, s) => acc + (s.questions?.length || 0), 0);
   let answeredCount = 0;
   let flaggedCount = 0;
@@ -374,12 +709,13 @@ export default function AssessmentTakingArena() {
   for (const s of sections) {
     for (const q of s.questions || []) {
       const resp = responses[q.id];
-      if (resp?.selected_options || resp?.text_response || resp?.code_submission_id) {
-        answeredCount++;
-      }
-      if (resp?.is_flagged_for_review) {
-        flaggedCount++;
-      }
+      const hasAnswer = Boolean(
+        (Array.isArray(resp?.selected_options) ? resp.selected_options.length > 0 : resp?.selected_options) ||
+        resp?.text_response ||
+        resp?.code_submission_id
+      );
+      if (hasAnswer) answeredCount++;
+      if (resp?.is_flagged_for_review) flaggedCount++;
     }
   }
 
@@ -401,10 +737,12 @@ export default function AssessmentTakingArena() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center p-6 text-[var(--text-muted)]">
+      <div className="min-h-screen bg-[var(--kc-bg)] flex items-center justify-center p-6 text-[var(--kc-text-muted)]">
         <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p>Initializing secure assessment environment...</p>
+          <div className="w-8 h-8 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="font-mono text-xs uppercase tracking-wider text-[var(--kc-text-primary)]">
+            Initializing assessment arena…
+          </p>
         </div>
       </div>
     );
@@ -412,11 +750,19 @@ export default function AssessmentTakingArena() {
 
   if (error || !currentQuestion) {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] p-6 flex items-center justify-center">
-        <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl p-8 max-w-md w-full text-center space-y-4">
-          <AlertTriangle size={36} className="mx-auto text-rose-500" />
-          <h2 className="text-lg font-bold text-[var(--text-primary)]">Assessment Error</h2>
-          <p className="text-xs text-[var(--text-muted)]">{error || 'No questions available'}</p>
+      <div className="min-h-screen bg-[var(--kc-bg)] p-6 flex items-center justify-center">
+        <div className="bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-xl p-8 max-w-md w-full text-center space-y-4 shadow-lg">
+          <AlertTriangle size={36} className="mx-auto text-[var(--kc-error)]" />
+          <h2 className="text-lg font-bold text-[var(--kc-text-primary)]">Assessment Error</h2>
+          <p className="text-xs text-[var(--kc-text-secondary)]">{error || 'No questions available'}</p>
+          <button
+            type="button"
+            onClick={() => loadAttempt()}
+            className="kc-btn-secondary"
+            style={{ padding: '6px 16px', fontSize: '12px' }}
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -425,811 +771,875 @@ export default function AssessmentTakingArena() {
   const curResp = responses[currentQuestion.id] || {};
   const isCurrentFlagged = Boolean(curResp.is_flagged_for_review);
   const selectedOpt = curResp.selected_options;
+  const isLastQuestion =
+    currentQuestionIdx === currentSection.questions.length - 1 &&
+    currentSectionIdx === sections.length - 1;
+
+  // Active coding question object for CodingWorkspace
+  const activeCodingProblem = currentQuestion.is_coding
+    ? {
+        id: currentQuestion.problem_id || currentQuestion.id,
+        problem_id: currentQuestion.problem_id,
+        title: currentQuestion.title || 'Coding Problem',
+        slug: currentQuestion.slug,
+        difficulty: currentQuestion.difficulty || 'Medium',
+        description: currentQuestion.question_text,
+        input_format: currentQuestion.input_format,
+        output_format: currentQuestion.output_format,
+        constraints: currentQuestion.constraints,
+        judge_mode: currentQuestion.judge_mode || 'STDIN_STDOUT',
+        signature_metadata: currentQuestion.signature_metadata,
+        testCases: currentQuestion.sample_test_cases || [],
+        sample_test_cases: currentQuestion.sample_test_cases || [],
+        serial_number: currentQuestionIdx + 1,
+      }
+    : null;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col select-none">
-      {/* ── TOP ARENA HEADER BAR ───────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-[var(--bg-secondary)]/95 backdrop-blur-md border-b border-[var(--border-default)] px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
-        {/* Left: Test Title & Auto-Save */}
-        <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-          <div>
-            <h1 className="text-sm font-bold text-[var(--text-primary)] line-clamp-1">
-              {attempt.assessment_title}
-            </h1>
-            <div className="text-[10px] text-[var(--text-muted)] flex items-center gap-1.5">
+    <div className="h-screen w-screen bg-[var(--kc-bg)] flex flex-col select-none overflow-hidden font-sans">
+      {/* ── QUESTION PALETTE DRAWER (Hidden by default, triggered by hamburger) ─ */}
+      <AssessmentQuestionDrawer
+        isOpen={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        sections={sections}
+        currentSectionIdx={currentSectionIdx}
+        currentQuestionIdx={currentQuestionIdx}
+        responses={responses}
+        onSelectQuestion={handleSelectFromDrawer}
+        onSectionChange={(sIdx) => {
+          setCurrentSectionIdx(sIdx);
+          setCurrentQuestionIdx(0);
+        }}
+        onOpenSubmitModal={() => setIsConfirmSubmitOpen(true)}
+      />
+
+      {/* ── 1. COMPACT TOP ARENA HEADER BAR ───────────────────────────────── */}
+      <header className="h-12 bg-[var(--kc-surface)] border-b border-[var(--kc-border)] px-3 sm:px-5 flex items-center justify-between gap-3 shrink-0 z-30 shadow-xs">
+        {/* Left: Assessment Title & Autosave Status */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-2.5 h-2.5 rounded-full bg-[var(--kc-success)] animate-pulse shrink-0" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-xs sm:text-sm font-bold text-[var(--kc-text-primary)] truncate font-display">
+                {attempt.assessment_title}
+              </h1>
+              {isSecureMode && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 shrink-0" title="Secure Assessment Mode Active">
+                  <ShieldCheck size={11} />
+                  <span className="hidden sm:inline">Secure Mode</span>
+                </span>
+              )}
+            </div>
+            <div className="text-[10px] text-[var(--kc-text-muted)] flex items-center gap-1 font-mono">
               <span>Status:</span>
-              <span className={isSaving ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-emerald-600 dark:text-emerald-400 font-medium'}>
+              <span
+                className={
+                  saveStatus === 'Saved'
+                    ? 'text-[var(--kc-success)] font-medium'
+                    : 'text-[var(--kc-warning)] font-medium animate-pulse'
+                }
+              >
                 {saveStatus}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Center: Live Countdown Timer */}
-        <div className="flex items-center justify-center">
+        {/* Center: Live Authoritative Countdown Timer */}
+        <div className="flex items-center justify-center shrink-0">
           <div
-            className={`px-4 py-1.5 rounded-xl font-mono text-sm font-extrabold flex items-center gap-2 shadow-inner border transition-colors ${
+            className={`px-3 py-1 rounded-lg font-mono text-xs sm:text-sm font-bold flex items-center gap-1.5 border transition-colors shadow-xs ${
               isCriticalTime
-                ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/50 animate-pulse'
+                ? 'bg-[var(--kc-error-subtle)] text-[var(--kc-error-text)] border-[var(--kc-error-border)] animate-pulse'
                 : isLowTime
-                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/50'
-                : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] border-[var(--border-default)]'
+                ? 'bg-[var(--kc-warning-subtle)] text-[var(--kc-warning-text)] border-[var(--kc-warning-border)]'
+                : 'bg-[var(--kc-surface-subtle)] text-[var(--kc-text-primary)] border-[var(--kc-border)]'
             }`}
           >
-            <Clock size={15} />
+            <Clock size={13} className="shrink-0" />
             <span>{formatTime(timeLeft)}</span>
           </div>
         </div>
 
-        {/* Right: Status Counts & Finish Button */}
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 text-xs">
-            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-500/20">
+        {/* Right: Progress Stats & Submit Test Button */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="hidden md:flex items-center gap-1.5 text-xs font-mono">
+            <span className="px-2 py-0.5 rounded bg-[var(--kc-success-subtle)] text-[var(--kc-success-text)] font-semibold border border-[var(--kc-success-border)] text-[11px]">
               {answeredCount} Answered
             </span>
-            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold border border-amber-500/20">
+            <span className="px-2 py-0.5 rounded bg-[var(--kc-warning-subtle)] text-[var(--kc-warning-text)] font-semibold border border-[var(--kc-warning-border)] text-[11px]">
               {flaggedCount} Review
             </span>
           </div>
 
           <button
+            type="button"
             onClick={() => setIsConfirmSubmitOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-colors cursor-pointer"
           >
-            <Send size={13} />
+            <Send size={12} />
             <span>Submit Test</span>
           </button>
         </div>
       </header>
 
-      {/* ── SECTION TABS BAR ───────────────────────────────────────────────── */}
-      <div className="bg-[var(--bg-tertiary)]/60 border-b border-[var(--border-default)] px-4 sm:px-6 flex items-center gap-2 overflow-x-auto">
-        {sections.map((sec, idx) => {
-          const isActive = idx === currentSectionIdx;
-          return (
+      {/* ── 2. SECTION TABS BAR WITH HAMBURGER BUTTON ───────────────────────── */}
+      <div className="h-10 bg-[var(--kc-surface-subtle)] border-b border-[var(--kc-border)] px-3 sm:px-5 flex items-center gap-2 shrink-0 z-20">
+        {/* HAMBURGER BUTTON IMMEDIATELY BESIDE SECTION TABS */}
+        <button
+          type="button"
+          onClick={() => setIsPaletteOpen(true)}
+          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold rounded-md bg-[var(--kc-surface)] hover:bg-[var(--kc-surface-hover)] border border-[var(--kc-border)] text-[var(--kc-text-primary)] hover:border-[var(--kc-accent)] transition-colors shadow-xs cursor-pointer shrink-0 group"
+          title="Open Question Palette Drawer (Question Numbers)"
+          aria-label="Open Question Palette Drawer"
+        >
+          <Menu size={14} className="text-[var(--kc-accent)] group-hover:scale-110 transition-transform" />
+          <span className="hidden sm:inline">Questions</span>
+          <span className="text-[10px] font-mono bg-[var(--kc-accent-subtle)] text-[var(--kc-accent)] px-1.5 py-0.2 rounded border border-[var(--kc-accent-border)]">
+            {currentQuestionIdx + 1}/{currentSection.questions.length}
+          </span>
+        </button>
+
+        {/* Vertical Divider */}
+        <div className="h-4 w-px bg-[var(--kc-border)] shrink-0" />
+
+        {/* Section Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar flex-1 min-w-0">
+          {sections.map((sec, idx) => {
+            const isActive = idx === currentSectionIdx;
+            return (
+              <button
+                key={sec.id || idx}
+                type="button"
+                onClick={() => {
+                  setCurrentSectionIdx(idx);
+                  setCurrentQuestionIdx(0);
+                }}
+                className={`py-1 px-3 text-xs font-medium rounded-md whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  isActive
+                    ? 'bg-[var(--kc-surface)] text-[var(--kc-accent)] font-semibold border border-[var(--kc-border)] shadow-xs'
+                    : 'text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)] hover:bg-[var(--kc-surface)]'
+                }`}
+              >
+                <span>Section {idx + 1}: {sec.title}</span>
+                <span className="text-[10px] font-mono text-[var(--kc-text-muted)]">
+                  ({sec.questions?.length || 0})
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Mobile View Switcher for Coding Questions */}
+        {currentQuestion.is_coding && isMobile && (
+          <div className="flex items-center gap-1 bg-[var(--kc-surface)] p-0.5 rounded border border-[var(--kc-border)] shrink-0">
             <button
-              key={sec.id}
-              onClick={() => {
-                setCurrentSectionIdx(idx);
-                setCurrentQuestionIdx(0);
-              }}
-              className={`py-2 px-3 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors ${
-                isActive
-                  ? 'border-[var(--kc-accent)] text-[var(--kc-accent)]'
-                  : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+              type="button"
+              onClick={() => setMobileViewTab('problem')}
+              className={`px-2 py-0.5 text-[11px] font-mono rounded ${
+                mobileViewTab === 'problem'
+                  ? 'bg-[var(--kc-accent)] text-white font-bold'
+                  : 'text-[var(--kc-text-muted)]'
               }`}
             >
-              Section {idx + 1}: {sec.title}
+              Problem
             </button>
-          );
-        })}
+            <button
+              type="button"
+              onClick={() => setMobileViewTab('code')}
+              className={`px-2 py-0.5 text-[11px] font-mono rounded ${
+                mobileViewTab === 'code'
+                  ? 'bg-[var(--kc-accent)] text-white font-bold'
+                  : 'text-[var(--kc-text-muted)]'
+              }`}
+            >
+              Code
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* ── MAIN ARENA BODY (SPLIT VIEW) ──────────────────────────────────── */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* LEFT / CENTER: QUESTION STATEMENT & INTERACTIVE RESPONSE AREA */}
-        <main className={`flex-1 overflow-y-auto p-6 space-y-6 ${currentQuestion?.is_coding ? 'max-w-6xl w-full' : 'max-w-4xl'}`}>
-          {/* Question Meta Header */}
-          <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-[var(--kc-accent-subtle)] text-[var(--kc-accent)]">
-                Question {currentQuestionIdx + 1} of {currentSection.questions.length}
-              </span>
-              <span className="text-xs text-[var(--text-muted)]">
-                {currentQuestion.category} › {currentQuestion.topic}
-              </span>
-            </div>
+      {/* ── 3. MAIN ARENA BODY (FULL VIEWPORT HEIGHT UTILIZATION) ───────────── */}
+      <main className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden relative">
+        {/* CASE A: CODING QUESTIONS — SPLIT PANE WORKSPACE */}
+        {currentQuestion.is_coding ? (
+          <div className="flex-1 min-h-0 min-w-0 flex flex-col h-full w-full overflow-hidden">
+            {isMobile ? (
+              // Mobile View: Problem or Code Switcher
+              <div className="flex-1 min-h-0 min-w-0 flex flex-col h-full w-full overflow-hidden">
+                {mobileViewTab === 'problem' ? (
+                  <div className="flex-1 min-h-0 flex flex-col h-full bg-[var(--kc-surface)] overflow-hidden">
+                    {/* Problem Meta Header */}
+                    <div className="p-4 border-b border-[var(--kc-border)] shrink-0 flex flex-col gap-2 bg-[var(--kc-surface)]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-[var(--kc-accent-subtle)] text-[var(--kc-accent)] border border-[var(--kc-accent-border)]">
+                          Question {currentQuestionIdx + 1} of {currentSection.questions.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold text-[var(--kc-success)]">
+                            +{currentQuestion.marks} Marks
+                          </span>
+                          <DifficultyBadge difficulty={currentQuestion.difficulty} />
+                        </div>
+                      </div>
+                      <h2 className="text-base font-bold text-[var(--kc-text-primary)] font-display">
+                        {currentQuestion.title || 'Coding Problem Statement'}
+                      </h2>
+                    </div>
 
-            <div className="flex items-center gap-2 text-xs font-mono font-semibold">
-              <span className="text-emerald-700 dark:text-emerald-400 font-bold">+{currentQuestion.marks}</span>
-              {parseFloat(currentQuestion.negative_marks) > 0 && (
-                <span className="text-rose-700 dark:text-rose-400 font-bold">-{currentQuestion.negative_marks}</span>
-              )}
-            </div>
+                    {/* Problem Description Content */}
+                    <div className="p-4 flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-4">
+                      <ProblemDescription problem={{ description: currentQuestion.question_text }} />
+                      {/* Formats & Examples */}
+                      <CodingSpecifications question={currentQuestion} />
+                    </div>
+
+                    {/* Bottom Actions */}
+                    <div className="p-3 border-t border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] shrink-0 flex items-center justify-between gap-2">
+                      <NavigationActionButtons
+                        isCurrentFlagged={isCurrentFlagged}
+                        onToggleFlag={handleToggleFlag}
+                        onNavigatePrev={handleNavigatePrev}
+                        onNavigateNext={handleNavigateNext}
+                        isPrevDisabled={currentQuestionIdx === 0 && currentSectionIdx === 0}
+                        isLastQuestion={isLastQuestion}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 min-h-0 flex flex-col h-full overflow-hidden">
+                    <CodingWorkspace
+                      problem={activeCodingProblem}
+                      isAssessmentMode={true}
+                      readOnly={isSubmitting || violationModal.open}
+                      saveStatus={saveStatus}
+                      language={codeLanguages[currentQuestion.id] || 'python'}
+                      onLanguageChange={(newLang) => handleLanguageChange(currentQuestion.id, newLang)}
+                      code={codeDrafts[currentQuestion.id]}
+                      onCodeChange={(newCode) => handleCodeChange(currentQuestion.id, newCode)}
+                      onReset={(resetCode) => handleResetCode(currentQuestion.id, resetCode)}
+                      onSubmitSuccess={(res) => handleAssessmentCodeSubmitted(currentQuestion.id, res)}
+                      submitLabel="Submit"
+                      submitFullLabel="Code"
+                      onOpenDrawer={() => setIsPaletteOpen(true)}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Desktop View: Draggable Split-Pane Layout
+              <PanelGroup
+                id="assessment-coding-split-layout"
+                orientation="horizontal"
+                defaultLayout={splitLayout}
+                onLayoutChanged={handleSplitLayoutChange}
+                className="h-full w-full min-h-0 min-w-0 flex-1 flex overflow-hidden"
+                style={{ height: '100%', width: '100%' }}
+              >
+                {/* LEFT PANE: Coding Problem Description (ONLY ONCE!) */}
+                <Panel
+                  id="assessment-problem-pane"
+                  defaultSize="42%"
+                  minSize="28%"
+                  maxSize="60%"
+                  className="flex-1 flex flex-col h-full w-full min-h-0 min-w-0 !overflow-hidden bg-[var(--kc-surface)] border-r border-[var(--kc-border)]"
+                  style={{ height: '100%' }}
+                >
+                  {/* Problem Meta Header */}
+                  <div className="p-4 sm:p-5 border-b border-[var(--kc-border)] shrink-0 flex flex-col gap-2.5 bg-[var(--kc-surface)]">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-[var(--kc-accent-subtle)] text-[var(--kc-accent)] border border-[var(--kc-accent-border)]">
+                          Question {currentQuestionIdx + 1} of {currentSection.questions.length}
+                        </span>
+                        <span className="text-xs text-[var(--kc-text-muted)] font-mono">
+                          {currentQuestion.category || currentSection.title}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-bold text-[var(--kc-success)]">
+                          +{currentQuestion.marks} Marks
+                        </span>
+                        {parseFloat(currentQuestion.negative_marks) > 0 && (
+                          <span className="text-xs font-mono font-bold text-[var(--kc-error)]">
+                            -{currentQuestion.negative_marks}
+                          </span>
+                        )}
+                        <DifficultyBadge difficulty={currentQuestion.difficulty} />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <h2 className="text-base sm:text-lg font-bold text-[var(--kc-text-primary)] font-display tracking-tight">
+                        {currentQuestion.title || 'Coding Problem Statement'}
+                      </h2>
+
+                      <div className="flex items-center gap-3 text-xs text-[var(--kc-text-muted)] font-mono shrink-0">
+                        <div className="flex items-center gap-1">
+                          <Clock size={12} className="text-[var(--kc-accent)]" />
+                          <span>{currentQuestion.time_limit_ms || 2000}ms</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Cpu size={12} className="text-[var(--kc-accent)]" />
+                          <span>{currentQuestion.memory_limit_mb || 256}MB</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Problem Statement & Specifications (Scrolls independently!) */}
+                  <div className="p-4 sm:p-5 flex-1 min-h-0 min-w-0 overflow-y-auto custom-scrollbar space-y-5">
+                    {/* Rendered markdown problem statement (Only once!) */}
+                    <ProblemDescription problem={{ description: currentQuestion.question_text }} />
+
+                    {/* Input/Output Formats, Constraints, and Sample Examples */}
+                    <CodingSpecifications question={currentQuestion} />
+                  </div>
+
+                  {/* Bottom Action Controls */}
+                  <div className="p-3 sm:p-4 border-t border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] shrink-0 flex items-center justify-between gap-2">
+                    <NavigationActionButtons
+                      isCurrentFlagged={isCurrentFlagged}
+                      onToggleFlag={handleToggleFlag}
+                      onNavigatePrev={handleNavigatePrev}
+                      onNavigateNext={handleNavigateNext}
+                      isPrevDisabled={currentQuestionIdx === 0 && currentSectionIdx === 0}
+                      isLastQuestion={isLastQuestion}
+                    />
+                  </div>
+                </Panel>
+
+                {/* DRAGGABLE DIVIDER */}
+                <ResizeHandle direction="horizontal" />
+
+                {/* RIGHT PANE: Reused Coding Workspace (CodeEditor + TestCases + ConsolePanel) */}
+                <Panel
+                  id="assessment-workspace-pane"
+                  defaultSize="58%"
+                  minSize="40%"
+                  maxSize="72%"
+                  className="flex-1 flex flex-col h-full w-full min-h-0 min-w-0 !overflow-hidden"
+                  style={{ height: '100%' }}
+                >
+                  <CodingWorkspace
+                    problem={activeCodingProblem}
+                    isAssessmentMode={true}
+                    readOnly={isSubmitting || violationModal.open}
+                    saveStatus={saveStatus}
+                    language={codeLanguages[currentQuestion.id] || 'python'}
+                    onLanguageChange={(newLang) => handleLanguageChange(currentQuestion.id, newLang)}
+                    code={codeDrafts[currentQuestion.id]}
+                    onCodeChange={(newCode) => handleCodeChange(currentQuestion.id, newCode)}
+                    onReset={(resetCode) => handleResetCode(currentQuestion.id, resetCode)}
+                    onSubmitSuccess={(res) => handleAssessmentCodeSubmitted(currentQuestion.id, res)}
+                    submitLabel="Submit"
+                    submitFullLabel="Code"
+                    onOpenDrawer={() => setIsPaletteOpen(true)}
+                  />
+                </Panel>
+              </PanelGroup>
+            )}
           </div>
+        ) : (
+          /* CASE B: MCQ & NUMERICAL QUESTIONS — RESPONSIVE TWO-COLUMN LAYOUT */
+          <div className="h-full w-full flex-1 min-h-0 min-w-0 flex flex-col md:flex-row overflow-hidden">
+            {/* Left Column: Question Statement Panel (45%) */}
+            <div className="w-full md:w-[45%] flex-1 flex flex-col h-full bg-[var(--kc-surface)] border-b md:border-b-0 md:border-r border-[var(--kc-border)] min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-[var(--kc-border)] shrink-0 flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-[var(--kc-accent-subtle)] text-[var(--kc-accent)] border border-[var(--kc-accent-border)]">
+                    Question {currentQuestionIdx + 1} of {currentSection.questions.length}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold text-[var(--kc-success)]">
+                      +{currentQuestion.marks} Marks
+                    </span>
+                    {parseFloat(currentQuestion.negative_marks) > 0 && (
+                      <span className="text-xs font-mono font-bold text-[var(--kc-error)]">
+                        -{currentQuestion.negative_marks}
+                      </span>
+                    )}
+                    <DifficultyBadge difficulty={currentQuestion.difficulty} />
+                  </div>
+                </div>
 
-          {/* Question Text */}
-          <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl p-6 shadow-sm">
-            <div className="text-base text-[var(--text-primary)] font-medium leading-relaxed whitespace-pre-wrap">
-              {currentQuestion.question_text}
+                <div className="text-xs text-[var(--kc-text-muted)] font-mono">
+                  {currentQuestion.category || currentSection.title} › {currentQuestion.topic || 'General'}
+                </div>
+              </div>
+
+              {/* Scrollable Question Text */}
+              <div className="p-4 sm:p-6 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                <ProblemDescription problem={{ description: currentQuestion.question_text }} />
+              </div>
             </div>
-          </div>
 
-          {/* MCQ Options (If Objective Question) */}
-          {!currentQuestion.is_coding && currentQuestion.options && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
-                  {currentQuestion.question_type === 'multiple_choice'
-                    ? 'Select One or More Options (Multiple Choice):'
-                    : 'Select One Option:'}
-                </span>
-                {currentQuestion.question_type === 'multiple_choice' && (
-                  <span className="text-[11px] px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-medium">
-                    Multiple Choice
+            {/* Right Column: Full-Width Answer Response Panel (55%) */}
+            <div className="w-full md:w-[55%] flex-1 flex flex-col h-full bg-[var(--kc-bg)] min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-[var(--kc-border)] bg-[var(--kc-surface)] shrink-0 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--kc-text-secondary)] font-mono">
+                    {currentQuestion.question_type === 'multiple_choice'
+                      ? 'Select One or More Options (Multiple Choice)'
+                      : currentQuestion.question_type === 'short_answer' || currentQuestion.question_type === 'numerical'
+                      ? 'Enter Your Answer'
+                      : 'Select One Option'}
+                  </h3>
+                  <p className="text-[11px] text-[var(--kc-text-muted)] mt-0.5">
+                    Your choice will be autosaved immediately
+                  </p>
+                </div>
+
+                {curResp.selected_options || curResp.text_response ? (
+                  <span className="text-[11px] font-mono text-[var(--kc-success)] flex items-center gap-1 font-semibold">
+                    <CheckCircle2 size={13} />
+                    <span>Response Recorded</span>
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-mono text-[var(--kc-text-muted)]">
+                    Not answered yet
                   </span>
                 )}
               </div>
-              <div className="grid grid-cols-1 gap-2.5">
-                {currentQuestion.options.map((opt, optIdx) => {
-                  const isObj = typeof opt === 'object' && opt !== null;
-                  const optId = String(isObj ? (opt.id || opt.option || String.fromCharCode(97 + optIdx)) : String.fromCharCode(97 + optIdx)).toLowerCase();
-                  const optText = String(isObj ? (opt.text ?? opt.value ?? opt.label ?? '') : String(opt));
-                  const isMulti = currentQuestion.question_type === 'multiple_choice';
-                  const selectedList = parseSelectedOptions(selectedOpt);
-                  const isSelected = isMulti
-                    ? selectedList.includes(optId)
-                    : String(selectedOpt || '').toLowerCase() === optId;
-                  const uniqueKey = `${optId}-${optIdx}`;
-                  return (
-                    <div
-                      key={uniqueKey}
-                      onClick={() => handleSelectOption(optId)}
-                      className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                        isSelected
-                          ? 'border-[var(--kc-accent)] bg-[var(--kc-accent-subtle)] shadow-sm'
-                          : 'border-[var(--border-default)] bg-[var(--bg-secondary)] hover:border-[var(--border-hover)]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono font-bold text-xs uppercase transition-colors ${
+
+              {/* Option Selection List or Numerical Input */}
+              <div className="p-4 sm:p-6 flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-3">
+                {/* MCQ Options */}
+                {currentQuestion.options && currentQuestion.options.length > 0 && (
+                  <div className="space-y-2.5 max-w-2xl">
+                    {currentQuestion.options.map((opt, optIdx) => {
+                      const isObj = typeof opt === 'object' && opt !== null;
+                      const optId = String(
+                        isObj ? opt.id || opt.option || String.fromCharCode(97 + optIdx) : String.fromCharCode(97 + optIdx)
+                      ).toLowerCase();
+                      const optText = String(isObj ? opt.text ?? opt.value ?? opt.label ?? '' : opt);
+                      const isMulti = currentQuestion.question_type === 'multiple_choice';
+                      const selectedList = parseSelectedOptions(selectedOpt);
+                      const isSelected = isMulti
+                        ? selectedList.includes(optId)
+                        : String(selectedOpt || '').toLowerCase() === optId;
+
+                      return (
+                        <div
+                          key={`${optId}-${optIdx}`}
+                          onClick={() => {
+                            if (isSubmitting || violationModal.open) return;
+                            handleSelectOption(optId);
+                          }}
+                          className={`p-3.5 sm:p-4 rounded-xl border transition-all flex items-center justify-between gap-3 group ${
+                            isSubmitting || violationModal.open
+                              ? 'cursor-not-allowed opacity-60'
+                              : 'cursor-pointer'
+                          } ${
                             isSelected
-                              ? 'bg-[var(--kc-accent)] text-[var(--kc-on-primary)]'
-                              : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
+                              ? 'border-[var(--kc-accent)] bg-[var(--kc-accent-subtle)] shadow-xs'
+                              : 'border-[var(--kc-border)] bg-[var(--kc-surface)] hover:border-[var(--kc-border-hover)] hover:bg-[var(--kc-surface-hover)]'
                           }`}
                         >
-                          {optId}
-                        </span>
-                        <span className={`text-sm ${isSelected ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
-                          {optText}
-                        </span>
-                      </div>
-
-                      <div
-                        className={`w-5 h-5 flex items-center justify-center transition-colors ${
-                          isMulti ? 'rounded-md' : 'rounded-full'
-                        } border ${
-                          isSelected
-                            ? 'border-[var(--kc-accent)] bg-[var(--kc-accent)] text-[var(--kc-on-primary)]'
-                            : 'border-[var(--border-default)]'
-                        }`}
-                      >
-                        {isSelected && <Check size={12} strokeWidth={3} />}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Coding Problem Arena (If DSA Question) */}
-          {currentQuestion.is_coding && (
-            <div className="space-y-6">
-              {/* Problem Statement & Specifications */}
-              <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl p-5 sm:p-6 space-y-4 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[var(--border-default)]">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-bold text-[var(--text-primary)]">
-                      {currentQuestion.title || 'Coding Problem Statement'}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider ${
-                      currentQuestion.difficulty === 'Easy'
-                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
-                        : currentQuestion.difficulty === 'Hard'
-                        ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20'
-                        : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20'
-                    }`}>
-                      {currentQuestion.difficulty || 'Medium'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-xs text-[var(--text-muted)] font-mono">
-                    <div className="flex items-center gap-1">
-                      <Clock size={12} />
-                      <span>{currentQuestion.time_limit_ms || 2000}ms limit</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Cpu size={12} />
-                      <span>{currentQuestion.memory_limit_mb || 256}MB</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Problem Description */}
-                <div className="text-sm text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap font-sans">
-                  {currentQuestion.question_text}
-                </div>
-
-                {/* Input / Output Formats */}
-                {(currentQuestion.input_format || currentQuestion.output_format) && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                    {currentQuestion.input_format && (
-                      <div className="p-3 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-default)]">
-                        <div className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-1">
-                          Input Format
-                        </div>
-                        <div className="text-xs text-[var(--text-primary)] whitespace-pre-wrap font-mono">
-                          {currentQuestion.input_format}
-                        </div>
-                      </div>
-                    )}
-                    {currentQuestion.output_format && (
-                      <div className="p-3 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-default)]">
-                        <div className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-1">
-                          Output Format
-                        </div>
-                        <div className="text-xs text-[var(--text-primary)] whitespace-pre-wrap font-mono">
-                          {currentQuestion.output_format}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Constraints */}
-                {currentQuestion.constraints && (
-                  <div className="pt-2">
-                    <div className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
-                      Constraints
-                    </div>
-                    <div className="p-3 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-default)] font-mono text-xs text-[var(--text-primary)] whitespace-pre-wrap">
-                      {currentQuestion.constraints}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sample Test Cases */}
-                {currentQuestion.sample_test_cases && currentQuestion.sample_test_cases.length > 0 && (
-                  <div className="space-y-3 pt-2">
-                    <div className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">
-                      Sample Examples
-                    </div>
-                    <div className="space-y-2">
-                      {currentQuestion.sample_test_cases.map((sample, sIdx) => (
-                        <div
-                          key={sIdx}
-                          className="p-3 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-default)] text-xs font-mono space-y-2"
-                        >
-                          <div className="text-[11px] font-bold text-[var(--kc-accent)]">
-                            Example {sIdx + 1}
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <div>
-                              <span className="text-[10px] uppercase text-[var(--text-muted)] block mb-0.5">Input:</span>
-                              <pre className="p-2 rounded bg-[var(--bg-tertiary)] overflow-x-auto text-[var(--text-primary)]">{sample.input}</pre>
-                            </div>
-                            <div>
-                              <span className="text-[10px] uppercase text-[var(--text-muted)] block mb-0.5">Expected Output:</span>
-                              <pre className="p-2 rounded bg-[var(--bg-tertiary)] overflow-x-auto text-[var(--text-primary)]">{sample.output}</pre>
-                            </div>
-                          </div>
-                          {sample.explanation && (
-                            <div className="text-[11px] text-[var(--text-muted)] pt-1 italic font-sans">
-                              Explanation: {sample.explanation}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Monaco Code Editor Workspace */}
-              <div className="border border-[var(--border-default)] rounded-xl overflow-hidden bg-[var(--bg-secondary)] shadow-sm flex flex-col">
-                {/* Editor Header Toolbar */}
-                <div className="px-4 py-2.5 border-b border-[var(--border-default)] bg-[var(--bg-tertiary)]/70 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
-                      <Code2 size={16} className="text-[var(--kc-accent)]" />
-                      <span>Code Solution</span>
-                    </div>
-
-                    {/* Language Selector */}
-                    <div className="relative">
-                      <select
-                        value={codeLanguages[currentQuestion.id] || 'python'}
-                        onChange={(e) => handleLanguageChange(currentQuestion.id, e.target.value)}
-                        className="py-1 px-3 text-xs bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-md text-[var(--text-primary)] font-mono font-medium focus:outline-none focus:border-[var(--kc-accent)] cursor-pointer"
-                      >
-                        {SUPPORTED_LANGUAGES.map((lang) => (
-                          <option key={lang.id} value={lang.id}>
-                            {lang.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Reset Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleResetCode(currentQuestion.id)}
-                      title="Reset to starter template"
-                      className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors px-2 py-1 rounded hover:bg-[var(--bg-secondary)]"
-                    >
-                      <RotateCcw size={12} />
-                      <span>Reset</span>
-                    </button>
-                  </div>
-
-                  {/* Actions & Save Indicator */}
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-[11px] font-mono text-[var(--text-muted)] flex items-center gap-1 mr-1">
-                      <span className={`w-1.5 h-1.5 rounded-full ${saveStatus === 'Saved' ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
-                      {saveStatus}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={handleRunCode}
-                      disabled={runningCode || submittingCode}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-[var(--border-default)] bg-[var(--bg-secondary)] hover:bg-[var(--border-default)] text-[var(--text-primary)] transition-all shadow-sm disabled:opacity-50"
-                    >
-                      <Play size={12} className={runningCode ? 'animate-spin' : 'text-emerald-400 fill-emerald-400'} />
-                      <span>{runningCode ? 'Running…' : 'Run Tests'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleSubmitCode}
-                      disabled={runningCode || submittingCode}
-                      className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-md bg-[var(--kc-accent)] hover:bg-[var(--kc-accent-hover)] text-[var(--kc-on-primary)] transition-all shadow-sm disabled:opacity-50"
-                    >
-                      <Send size={12} className={submittingCode ? 'animate-pulse' : ''} />
-                      <span>{submittingCode ? 'Evaluating…' : 'Submit Code'}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Monaco Editor Container */}
-                <div className="h-[420px] w-full relative min-h-0 bg-[var(--kc-surface)]">
-                  <CodeEditor
-                    problemId={currentQuestion.id || currentQuestion.problem_id}
-                    path={`assessment_${currentQuestion.id}_${codeLanguages[currentQuestion.id] || 'python'}`}
-                    value={codeDrafts[currentQuestion.id] ?? (currentQuestion.saved_response?.text_response || getStarterCode(currentQuestion, codeLanguages[currentQuestion.id] || 'python'))}
-                    onChange={(val) => handleCodeChange(currentQuestion.id, val)}
-                    language={codeLanguages[currentQuestion.id] || 'python'}
-                    height="420px"
-                  />
-                </div>
-              </div>
-
-              {/* Execution Console & Test Cases Panel */}
-              <div className="border border-[var(--border-default)] rounded-xl overflow-hidden bg-[var(--bg-secondary)] shadow-sm">
-                {/* Console Navigation Tabs */}
-                <div className="px-4 py-2 border-b border-[var(--border-default)] bg-[var(--bg-tertiary)] flex items-center gap-4 text-xs font-medium">
-                  <button
-                    type="button"
-                    onClick={() => setActiveConsoleTab('testcases')}
-                    className={`flex items-center gap-1.5 py-1 px-2.5 rounded-md transition-colors ${
-                      activeConsoleTab === 'testcases'
-                        ? 'bg-[var(--bg-secondary)] text-[var(--kc-accent)] font-bold shadow-xs'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                    }`}
-                  >
-                    <CheckCircle2 size={13} />
-                    <span>Test Cases</span>
-                    {runOutput?.testCaseResults && (
-                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                        runOutput.allPassed ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold' : 'bg-rose-500/20 text-rose-700 dark:text-rose-300 font-bold'
-                      }`}>
-                        {runOutput.testCaseResults.filter(tc => (tc.passed ?? tc.status === 'Passed')).length}/{runOutput.testCaseResults.length}
-                      </span>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveConsoleTab('console')}
-                    className={`flex items-center gap-1.5 py-1 px-2.5 rounded-md transition-colors ${
-                      activeConsoleTab === 'console'
-                        ? 'bg-[var(--bg-secondary)] text-[var(--kc-accent)] font-bold shadow-xs'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                    }`}
-                  >
-                    <Terminal size={13} />
-                    <span>Console Output</span>
-                  </button>
-
-                  {submissionVerdict && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveConsoleTab('verdict')}
-                      className={`flex items-center gap-1.5 py-1 px-2.5 rounded-md transition-colors ${
-                        activeConsoleTab === 'verdict'
-                          ? 'bg-[var(--bg-secondary)] text-purple-400 font-bold shadow-xs'
-                          : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                      }`}
-                    >
-                      <Sparkles size={13} />
-                      <span>Verdict: {submissionVerdict.verdict || 'Result'}</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Tab Content */}
-                <div className="p-4">
-                  {/* TAB 1: TEST CASES */}
-                  {activeConsoleTab === 'testcases' && (
-                    <div>
-                      {runningCode ? (
-                        <div className="py-8 flex flex-col items-center justify-center text-center text-xs text-[var(--text-muted)] gap-2">
-                          <div className="w-5 h-5 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin" />
-                          <span>Running test cases in sandbox container…</span>
-                        </div>
-                      ) : runOutput?.testCaseResults && runOutput.testCaseResults.length > 0 ? (
-                        <div className="space-y-3">
-                          {/* Case buttons */}
-                          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                            {runOutput.testCaseResults.map((tc, idx) => {
-                              const isPassed = tc.passed ?? tc.status === 'Passed';
-                              return (
-                                <button
-                                  key={idx}
-                                  type="button"
-                                  onClick={() => setSelectedTestCaseIdx(idx)}
-                                  className={`px-3 py-1.5 text-xs font-mono rounded-lg border transition-all flex items-center gap-1.5 ${
-                                    selectedTestCaseIdx === idx
-                                      ? 'border-[var(--kc-accent)] bg-[var(--kc-accent-subtle)] text-[var(--kc-accent)] font-bold'
-                                      : 'border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
-                                  }`}
-                                >
-                                  {isPassed ? (
-                                    <Check size={12} className="text-emerald-600 dark:text-emerald-400 stroke-[3]" />
-                                  ) : (
-                                    <XCircle size={12} className="text-rose-600 dark:text-rose-400" />
-                                  )}
-                                  <span>Case {idx + 1}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* Selected Case Inspection */}
-                          {runOutput.testCaseResults[selectedTestCaseIdx] && (() => {
-                            const curTc = runOutput.testCaseResults[selectedTestCaseIdx];
-                            const isCurPassed = curTc.passed ?? curTc.status === 'Passed';
-                            const actualOut = curTc.actualOutput || curTc.yourOutput || curTc.output || curTc.actual || '(none)';
-                            const expectedOut = curTc.expectedOutput || curTc.expected || '(none)';
-                            const inputVal = curTc.input || curTc.stdin || '(none)';
-
-                            return (
-                              <div className="p-4 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] font-mono text-xs space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                                    isCurPassed
-                                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                                      : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/30'
-                                  }`}>
-                                    {isCurPassed ? 'PASSED' : 'FAILED'}
-                                  </span>
-                                  {curTc.executionTimeMs !== undefined && (
-                                    <span className="text-[11px] text-[var(--text-muted)]">
-                                      Time: {curTc.executionTimeMs} ms
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div>
-                                  <span className="text-[10px] uppercase text-[var(--text-muted)] font-bold block mb-1">
-                                    Standard Input:
-                                  </span>
-                                  <pre className="p-2.5 rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-primary)] overflow-x-auto whitespace-pre-wrap">
-                                    {inputVal}
-                                  </pre>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                  <div>
-                                    <span className="text-[10px] uppercase text-[var(--text-muted)] font-bold block mb-1">
-                                      Expected Output:
-                                    </span>
-                                    <pre className="p-2.5 rounded-lg bg-[var(--bg-tertiary)] text-emerald-700 dark:text-emerald-300 overflow-x-auto whitespace-pre-wrap font-mono">
-                                      {expectedOut}
-                                    </pre>
-                                  </div>
-                                  <div>
-                                    <span className="text-[10px] uppercase text-[var(--text-muted)] font-bold block mb-1">
-                                      Actual Output:
-                                    </span>
-                                    <pre className={`p-2.5 rounded-lg bg-[var(--bg-tertiary)] overflow-x-auto whitespace-pre-wrap font-mono ${
-                                      isCurPassed ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
-                                    }`}>
-                                      {actualOut}
-                                    </pre>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      ) : (
-                        <div className="py-8 text-center text-xs text-[var(--text-muted)]">
-                          <Play size={20} className="mx-auto mb-2 opacity-40 text-emerald-400" />
-                          <p>Click &quot;Run Tests&quot; to test your code implementation against sample test cases.</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* TAB 2: CONSOLE OUTPUT */}
-                  {activeConsoleTab === 'console' && (
-                    <div className="font-mono text-xs">
-                      {runOutput?.compileError ? (
-                        <div className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-800 dark:text-rose-200 whitespace-pre-wrap">
-                          <div className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-300 mb-1">Compilation / Syntax Error:</div>
-                          {runOutput.compileError}
-                        </div>
-                      ) : runOutput?.stderr ? (
-                        <div className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-800 dark:text-rose-200 whitespace-pre-wrap">
-                          <div className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-300 mb-1">Runtime Stderr:</div>
-                          {runOutput.stderr}
-                        </div>
-                      ) : runOutput?.stdout || runOutput?.output ? (
-                        <div className="p-3.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-default)] text-[var(--text-primary)] whitespace-pre-wrap">
-                          <div className="text-[10px] uppercase font-bold text-[var(--text-muted)] mb-1">Standard Output:</div>
-                          {runOutput.stdout || runOutput.output}
-                        </div>
-                      ) : (
-                        <div className="py-8 text-center text-xs text-[var(--text-muted)]">
-                          <Terminal size={20} className="mx-auto mb-2 opacity-40" />
-                          <p>Standard output stream is empty.</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* TAB 3: SUBMISSION VERDICT */}
-                  {activeConsoleTab === 'verdict' && (
-                    <div>
-                      {submittingCode ? (
-                        <div className="py-8 flex flex-col items-center justify-center text-center text-xs text-[var(--text-muted)] gap-2">
-                          <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-                          <span>Submitting code and polling judge worker for formal evaluation…</span>
-                        </div>
-                      ) : submissionVerdict ? (
-                        <div className="space-y-4">
-                          <div className={`p-4 rounded-xl border flex flex-wrap items-center justify-between gap-3 ${
-                            submissionVerdict.verdict === 'Accepted'
-                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-200'
-                              : 'bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-200'
-                          }`}>
-                            <div className="flex items-center gap-2.5">
-                              {submissionVerdict.verdict === 'Accepted' ? (
-                                <CheckCircle2 size={22} className="text-emerald-600 dark:text-emerald-400" />
-                              ) : (
-                                <XCircle size={22} className="text-rose-600 dark:text-rose-400" />
-                              )}
-                              <div>
-                                <div className="text-base font-bold font-mono">
-                                  {submissionVerdict.verdict || 'Evaluation Complete'}
-                                </div>
-                                <div className="text-xs text-[var(--text-muted)] mt-0.5">
-                                  {submissionVerdict.verdict === 'Accepted'
-                                    ? 'All test cases passed successfully! Score will be tallied upon exam submission.'
-                                    : 'Some test cases did not pass. You can revise your code and submit again.'}
-                                </div>
-                              </div>
-                            </div>
-
-                            {submissionVerdict.runtime && (
-                              <div className="text-xs font-mono text-[var(--text-primary)] bg-[var(--bg-secondary)] px-3 py-1.5 rounded-lg border border-[var(--border-default)]">
-                                <span>Runtime: {submissionVerdict.runtime}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="p-3 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-default)] flex items-center justify-between text-xs text-[var(--text-muted)]">
-                            <span className="flex items-center gap-1.5">
-                              <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />
-                              <span>Code solution securely recorded in assessment attempt draft</span>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono font-bold text-xs uppercase shrink-0 transition-colors ${
+                                isSelected
+                                  ? 'bg-[var(--kc-accent)] text-[var(--kc-on-primary)]'
+                                  : 'bg-[var(--kc-surface-subtle)] text-[var(--kc-text-secondary)] group-hover:text-[var(--kc-text-primary)]'
+                              }`}
+                            >
+                              {optId}
                             </span>
-                            <span className="font-mono text-emerald-700 dark:text-emerald-300 font-bold">Marked Answered</span>
+                            <span
+                              className={`text-sm leading-relaxed ${
+                                isSelected
+                                  ? 'font-semibold text-[var(--kc-text-primary)]'
+                                  : 'text-[var(--kc-text-secondary)] group-hover:text-[var(--kc-text-primary)]'
+                              }`}
+                            >
+                              {optText}
+                            </span>
+                          </div>
+
+                          <div
+                            className={`w-5 h-5 flex items-center justify-center shrink-0 transition-colors ${
+                              isMulti ? 'rounded-md' : 'rounded-full'
+                            } border ${
+                              isSelected
+                                ? 'border-[var(--kc-accent)] bg-[var(--kc-accent)] text-[var(--kc-on-primary)]'
+                                : 'border-[var(--kc-border)] group-hover:border-[var(--kc-text-muted)]'
+                            }`}
+                          >
+                            {isSelected && <Check size={12} strokeWidth={3} />}
                           </div>
                         </div>
-                      ) : null}
-                    </div>
-                  )}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Numerical / Short Answer Input */}
+                {(!currentQuestion.options || currentQuestion.options.length === 0) && (
+                  <div className="max-w-md space-y-3 pt-2">
+                    <label 
+                      htmlFor="assessment-numerical-input"
+                      className="block text-xs font-mono font-medium text-[var(--kc-text-secondary)]"
+                    >
+                      Numerical or Short Answer Value:
+                    </label>
+                    <input
+                      id="assessment-numerical-input"
+                      type="text"
+                      disabled={isSubmitting || violationModal.open}
+                      value={curResp.text_response || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setResponses((prev) => ({
+                          ...prev,
+                          [currentQuestion.id]: {
+                            ...(prev[currentQuestion.id] || {}),
+                            text_response: val,
+                          },
+                        }));
+                        handleTextAnswerChange(val);
+                      }}
+                      placeholder="Type your answer here..."
+                      className="w-full bg-[var(--kc-surface)] border border-[var(--kc-border)] focus:border-[var(--kc-accent)] rounded-lg p-3 text-sm text-[var(--kc-text-primary)] placeholder-[var(--kc-text-muted)] focus:outline-none transition-all font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    <p className="text-[11px] text-[var(--kc-text-muted)]">
+                      Make sure your answer matches the expected format (e.g. integer or precision).
+                    </p>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
 
-          {/* Bottom Action Control Bar */}
-          <div className="pt-6 border-t border-[var(--border-default)] flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleToggleFlag}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-colors ${
-                  isCurrentFlagged
-                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold'
-                    : 'border-[var(--border-default)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
-                }`}
-              >
-                <Bookmark size={14} className={isCurrentFlagged ? 'fill-amber-400' : ''} />
-                <span>{isCurrentFlagged ? 'Marked for Review' : 'Mark for Review'}</span>
-              </button>
-
-              {(Array.isArray(selectedOpt) ? selectedOpt.length > 0 : Boolean(selectedOpt)) && (
-                <button
-                  onClick={handleClearResponse}
-                  className="px-3 py-2 text-xs font-medium rounded-lg text-[var(--text-muted)] hover:text-rose-500 hover:bg-[var(--bg-tertiary)] transition-colors"
-                >
-                  Clear Choice
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                disabled={currentQuestionIdx === 0 && currentSectionIdx === 0}
-                onClick={() => {
-                  if (currentQuestionIdx > 0) {
-                    setCurrentQuestionIdx(currentQuestionIdx - 1);
-                  } else if (currentSectionIdx > 0) {
-                    const prevSec = sections[currentSectionIdx - 1];
-                    setCurrentSectionIdx(currentSectionIdx - 1);
-                    setCurrentQuestionIdx(prevSec.questions.length - 1);
+              {/* Bottom Action Controls */}
+              <div className="p-3 sm:p-4 border-t border-[var(--kc-border)] bg-[var(--kc-surface)] shrink-0 flex items-center justify-between gap-2">
+                <NavigationActionButtons
+                  isCurrentFlagged={isCurrentFlagged}
+                  onToggleFlag={handleToggleFlag}
+                  onClearResponse={
+                    (Array.isArray(selectedOpt) ? selectedOpt.length > 0 : Boolean(selectedOpt)) ||
+                    Boolean(curResp.text_response)
+                      ? handleClearResponse
+                      : null
                   }
-                }}
-                className="flex items-center gap-1 px-4 py-2 text-xs font-semibold rounded-lg border border-[var(--border-default)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-40 text-[var(--text-primary)]"
-              >
-                <ChevronLeft size={14} />
-                <span>Previous</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  if (currentQuestionIdx < currentSection.questions.length - 1) {
-                    setCurrentQuestionIdx(currentQuestionIdx + 1);
-                  } else if (currentSectionIdx < sections.length - 1) {
-                    setCurrentSectionIdx(currentSectionIdx + 1);
-                    setCurrentQuestionIdx(0);
-                  } else {
-                    setIsConfirmSubmitOpen(true);
-                  }
-                }}
-                className="flex items-center gap-1 px-5 py-2 text-xs font-bold rounded-lg bg-[var(--kc-accent)] hover:bg-[var(--kc-accent-hover)] text-[var(--kc-on-primary)] shadow-sm"
-              >
-                <span>
-                  {currentQuestionIdx === currentSection.questions.length - 1 && currentSectionIdx === sections.length - 1
-                    ? 'Review & Submit'
-                    : 'Save & Next'}
-                </span>
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        </main>
-
-        {/* RIGHT SIDEBAR: QUESTION PALETTE GRID */}
-        <aside className="w-full md:w-80 border-t md:border-t-0 md:border-l border-[var(--border-default)] bg-[var(--bg-secondary)]/50 p-6 flex flex-col justify-between">
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">
-                Question Palette
-              </h2>
-              <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-                {currentSection.title} ({currentSection.questions.length} Questions)
-              </p>
-            </div>
-
-            {/* Grid of question buttons */}
-            <div className="grid grid-cols-5 gap-2">
-              {currentSection.questions.map((q, idx) => {
-                const resp = responses[q.id];
-                const isAnswered = Boolean(resp?.selected_options || resp?.text_response || resp?.code_submission_id);
-                const isFlagged = Boolean(resp?.is_flagged_for_review);
-                const isCurrent = idx === currentQuestionIdx;
-
-                let btnClass = 'bg-[var(--bg-primary)] border-[var(--border-default)] text-[var(--text-secondary)]';
-                if (isAnswered && isFlagged) {
-                  btnClass = 'bg-amber-500/15 border-amber-500 text-amber-700 dark:text-amber-300 font-bold';
-                } else if (isAnswered) {
-                  btnClass = 'bg-emerald-600 text-white font-bold border-emerald-600';
-                } else if (isFlagged) {
-                  btnClass = 'bg-amber-500 text-zinc-950 font-bold border-amber-500';
-                }
-
-                return (
-                  <button
-                    key={q.id}
-                    onClick={() => setCurrentQuestionIdx(idx)}
-                    className={`h-9 rounded-lg border text-xs font-mono transition-all flex items-center justify-center ${btnClass} ${
-                      isCurrent ? 'ring-2 ring-[var(--kc-accent)] ring-offset-2 ring-offset-[var(--bg-secondary)]' : ''
-                    }`}
-                  >
-                    {idx + 1}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Legend */}
-            <div className="space-y-2 pt-4 border-t border-[var(--border-default)]/60 text-[11px] text-[var(--text-muted)]">
-              <div className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 rounded bg-emerald-500 shrink-0"></span>
-                <span>Answered</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 rounded bg-amber-500 shrink-0"></span>
-                <span>Marked for Review</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 rounded bg-[var(--bg-primary)] border border-[var(--border-default)] shrink-0"></span>
-                <span>Unanswered</span>
+                  onNavigatePrev={handleNavigatePrev}
+                  onNavigateNext={handleNavigateNext}
+                  isPrevDisabled={currentQuestionIdx === 0 && currentSectionIdx === 0}
+                  isLastQuestion={isLastQuestion}
+                />
               </div>
             </div>
           </div>
+        )}
+      </main>
 
-          <div className="pt-6 border-t border-[var(--border-default)]/60">
-            <button
-              onClick={() => setIsConfirmSubmitOpen(true)}
-              className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-colors text-center"
-            >
-              Finish & Submit Test
-            </button>
-          </div>
-        </aside>
-      </div>
-
-      {/* ── SUBMIT CONFIRMATION MODAL ────────────────────────────────────── */}
+      {/* ── 4. FINAL SUBMIT CONFIRMATION MODAL ────────────────────────────── */}
       {isConfirmSubmitOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scaleUp">
             <div className="text-center space-y-2">
-              <AlertTriangle size={36} className="mx-auto text-amber-600 dark:text-amber-400" />
-              <h2 className="text-lg font-bold text-[var(--text-primary)]">Submit Assessment?</h2>
-              <p className="text-xs text-[var(--text-muted)]">
-                Please review your progress before finalizing. Once submitted, answers cannot be edited.
+              <div className="w-12 h-12 rounded-full bg-[var(--kc-warning-subtle)] border border-[var(--kc-warning-border)] flex items-center justify-center mx-auto text-[var(--kc-warning)]">
+                <AlertTriangle size={24} />
+              </div>
+              <h2 className="text-lg font-bold text-[var(--kc-text-primary)] font-display">
+                Submit Assessment?
+              </h2>
+              <p className="text-xs text-[var(--kc-text-secondary)] leading-relaxed">
+                Review your progress summary before finalizing. Once submitted, your answers cannot be altered.
               </p>
             </div>
 
             {/* Summary Grid */}
-            <div className="grid grid-cols-3 gap-2 py-3 px-4 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] text-center">
+            <div className="grid grid-cols-3 gap-2 py-3 px-4 rounded-xl bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] text-center font-mono">
               <div>
-                <div className="text-[10px] text-[var(--text-muted)]">Answered</div>
-                <div className="text-base font-bold text-emerald-700 dark:text-emerald-400">{answeredCount}</div>
+                <div className="text-[10px] text-[var(--kc-text-muted)] uppercase">Answered</div>
+                <div className="text-lg font-bold text-[var(--kc-success)]">{answeredCount}</div>
               </div>
               <div>
-                <div className="text-[10px] text-[var(--text-muted)]">Review</div>
-                <div className="text-base font-bold text-amber-700 dark:text-amber-400">{flaggedCount}</div>
+                <div className="text-[10px] text-[var(--kc-text-muted)] uppercase">Review</div>
+                <div className="text-lg font-bold text-[var(--kc-warning)]">{flaggedCount}</div>
               </div>
               <div>
-                <div className="text-[10px] text-[var(--text-muted)]">Unanswered</div>
-                <div className="text-base font-bold text-[var(--text-muted)]">{unansweredCount}</div>
+                <div className="text-[10px] text-[var(--kc-text-muted)] uppercase">Unanswered</div>
+                <div className="text-lg font-bold text-[var(--kc-text-muted)]">{unansweredCount}</div>
               </div>
             </div>
 
             {unansweredCount > 0 && (
-              <p className="text-xs text-amber-700 dark:text-amber-300 font-medium text-center">
+              <div className="p-2.5 rounded-lg bg-[var(--kc-warning-subtle)] border border-[var(--kc-warning-border)] text-center text-xs text-[var(--kc-warning-text)] font-medium">
                 ⚠️ You have <strong>{unansweredCount} unanswered questions</strong>.
-              </p>
+              </div>
             )}
 
             <div className="flex items-center gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setIsConfirmSubmitOpen(false)}
-                className="flex-1 py-2 text-xs font-semibold rounded-xl border border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
+                className="flex-1 py-2 text-xs font-semibold rounded-xl border border-[var(--kc-border)] text-[var(--kc-text-secondary)] hover:bg-[var(--kc-surface-subtle)] transition-colors cursor-pointer"
               >
                 Return to Test
               </button>
               <button
                 type="button"
-                onClick={executeFinalSubmit}
+                onClick={() => executeFinalSubmit('manual')}
                 disabled={isSubmitting}
-                className="flex-1 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md disabled:opacity-50"
+                className="flex-1 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md disabled:opacity-50 transition-colors cursor-pointer"
               >
-                {isSubmitting ? 'Evaluating…' : 'Yes, Final Submit'}
+                {isSubmitting ? 'Finalizing…' : 'Yes, Submit Test'}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ── 5. FULL-SCREEN REQUIREMENT PROMPT OVERLAY ──────────────────────── */}
+      {needsFullscreenPrompt && !violationModal.open && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-fadeIn select-none">
+          <div className="bg-[var(--kc-surface)] border border-amber-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center justify-center mx-auto">
+              <Maximize size={24} />
+            </div>
+            <h2 className="text-lg font-bold text-[var(--kc-text-primary)] font-display">
+              Full-Screen Mode Required
+            </h2>
+            <p className="text-xs text-[var(--kc-text-secondary)] leading-relaxed">
+              This assessment is running under <strong>Secure Assessment Mode</strong>. You must remain in full-screen mode at all times. Exiting full-screen will automatically finalize and submit your assessment.
+            </p>
+            <button
+              type="button"
+              onClick={handleReEnterFullscreen}
+              className="w-full py-2.5 text-xs font-bold rounded-xl bg-[var(--kc-accent)] hover:bg-[var(--kc-accent-hover)] text-white shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Maximize size={14} />
+              <span>Enter Full-Screen to Continue</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── 6. UNCLOSABLE SECURITY VIOLATION AUTOMATIC SUBMISSION MODAL ─────── */}
+      {violationModal.open && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fadeIn select-none">
+          <div className="bg-[var(--kc-surface)] border border-rose-500/50 rounded-2xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-5 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-500 flex items-center justify-center mx-auto animate-pulse">
+              <ShieldAlert size={32} />
+            </div>
+
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30">
+                Assessment Terminated & Submitted
+              </div>
+              <h2 className="text-xl font-bold text-[var(--kc-text-primary)] font-display">
+                Security Violation Triggered
+              </h2>
+              <p className="text-xs text-[var(--kc-text-secondary)] leading-relaxed">
+                A security rule was triggered: <strong>{getViolationMeta(violationModal.violationType).title}</strong>. As configured by the exam security policy, the assessment has been automatically finalized.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] text-left space-y-2 text-xs font-mono">
+              <div className="flex items-center justify-between text-[11px] text-[var(--kc-text-muted)] border-b border-[var(--kc-border-subtle)] pb-2">
+                <span>Trigger Event:</span>
+                <span className="font-bold text-rose-700 dark:text-rose-400">{violationModal.violationType}</span>
+              </div>
+              <div className="text-[11px] text-[var(--kc-text-secondary)] font-sans leading-relaxed pt-1">
+                {violationModal.violationDetails}
+              </div>
+            </div>
+
+            {/* Authoritative assurance: saved responses are kept and scored */}
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-left text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
+              <div className="font-semibold flex items-center gap-1.5">
+                <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                <span>Your responses have been saved</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-[var(--kc-text-secondary)]">
+                All question answers, numerical responses, and code submissions saved prior to this violation were recorded and evaluated normally according to assessment scoring rules.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                disabled={violationModal.isFinalizing}
+                onClick={() => router.push(`/assessments/result/${attemptId}`)}
+                className="w-full py-3 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-500 text-white shadow-lg transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {violationModal.isFinalizing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Finalizing Submission…</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowRight size={14} />
+                    <span>View Assessment Results</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 7. RESTRICTED CLIPBOARD TOAST NOTIFICATION ─────────────────────── */}
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-[100] max-w-sm p-3.5 rounded-xl shadow-xl flex items-center gap-3 border text-xs font-medium animate-slideUp bg-[var(--kc-surface)] text-[var(--kc-text-primary)] border-[var(--kc-border)]">
+          {toast.type === 'error' ? (
+            <ShieldAlert size={18} className="text-rose-500 shrink-0" />
+          ) : toast.type === 'warning' ? (
+            <AlertTriangle size={18} className="text-amber-500 shrink-0" />
+          ) : (
+            <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
+          )}
+          <span className="flex-1 leading-relaxed">{toast.message}</span>
+        </div>
+      )}
     </div>
+  );
+}
+
+// Subcomponent: Formats, Constraints, and Sample Test Cases for Coding Questions
+function CodingSpecifications({ question }) {
+  return (
+    <div className="space-y-4 pt-1">
+      {/* Input / Output Formats */}
+      {(question.input_format || question.output_format) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {question.input_format && (
+            <div className="p-3 rounded-lg bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)]">
+              <div className="text-[11px] font-bold text-[var(--kc-text-secondary)] uppercase tracking-wider mb-1 font-mono">
+                Input Format
+              </div>
+              <div className="text-xs text-[var(--kc-text-primary)] whitespace-pre-wrap font-mono leading-relaxed">
+                {question.input_format}
+              </div>
+            </div>
+          )}
+          {question.output_format && (
+            <div className="p-3 rounded-lg bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)]">
+              <div className="text-[11px] font-bold text-[var(--kc-text-secondary)] uppercase tracking-wider mb-1 font-mono">
+                Output Format
+              </div>
+              <div className="text-xs text-[var(--kc-text-primary)] whitespace-pre-wrap font-mono leading-relaxed">
+                {question.output_format}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Constraints */}
+      {question.constraints && (
+        <div>
+          <div className="text-[11px] font-bold text-[var(--kc-text-secondary)] uppercase tracking-wider mb-1.5 font-mono">
+            Constraints
+          </div>
+          <div className="p-3 rounded-lg bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] font-mono text-xs text-[var(--kc-text-primary)] whitespace-pre-wrap leading-relaxed">
+            {question.constraints}
+          </div>
+        </div>
+      )}
+
+      {/* Sample Examples */}
+      {question.sample_test_cases && question.sample_test_cases.length > 0 && (
+        <div className="space-y-3 pt-1">
+          <div className="text-[11px] font-bold text-[var(--kc-text-secondary)] uppercase tracking-wider font-mono">
+            Sample Examples
+          </div>
+          <div className="space-y-2.5">
+            {question.sample_test_cases.map((sample, sIdx) => (
+              <div
+                key={sIdx}
+                className="p-3 rounded-lg bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] text-xs font-mono space-y-2"
+              >
+                <div className="text-[11px] font-bold text-[var(--kc-accent)]">
+                  Example {sIdx + 1}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] uppercase text-[var(--kc-text-muted)] block mb-0.5">Input:</span>
+                    <pre className="p-2 rounded bg-[var(--kc-surface)] border border-[var(--kc-border-subtle)] overflow-x-auto text-[var(--kc-text-primary)] font-mono">
+                      {sample.input}
+                    </pre>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase text-[var(--kc-text-muted)] block mb-0.5">Expected Output:</span>
+                    <pre className="p-2 rounded bg-[var(--kc-surface)] border border-[var(--kc-border-subtle)] overflow-x-auto text-[var(--kc-success-text)] font-mono">
+                      {sample.output}
+                    </pre>
+                  </div>
+                </div>
+                {sample.explanation && (
+                  <div className="text-[11px] text-[var(--kc-text-secondary)] pt-1 italic font-sans leading-relaxed">
+                    Explanation: {sample.explanation}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Subcomponent: Navigation Action Buttons (Previous, Mark for Review, Save & Next)
+function NavigationActionButtons({
+  isCurrentFlagged,
+  onToggleFlag,
+  onClearResponse,
+  onNavigatePrev,
+  onNavigateNext,
+  isPrevDisabled,
+  isLastQuestion,
+}) {
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onToggleFlag}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
+            isCurrentFlagged
+              ? 'border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold'
+              : 'border-[var(--kc-border)] bg-[var(--kc-surface)] text-[var(--kc-text-secondary)] hover:bg-[var(--kc-surface-hover)] hover:text-[var(--kc-text-primary)]'
+          }`}
+        >
+          <Bookmark size={13} className={isCurrentFlagged ? 'fill-amber-400 text-amber-500' : ''} />
+          <span>{isCurrentFlagged ? 'Flagged' : 'Mark for Review'}</span>
+        </button>
+
+        {onClearResponse && (
+          <button
+            type="button"
+            onClick={onClearResponse}
+            className="px-2.5 py-1.5 text-xs font-medium rounded-lg text-[var(--kc-text-muted)] hover:text-[var(--kc-error-text)] hover:bg-[var(--kc-surface)] transition-colors cursor-pointer"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={isPrevDisabled}
+          onClick={onNavigatePrev}
+          className="flex items-center gap-1 px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-[var(--kc-border)] bg-[var(--kc-surface)] hover:bg-[var(--kc-surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed text-[var(--kc-text-primary)] transition-colors cursor-pointer"
+        >
+          <ChevronLeft size={14} />
+          <span>Previous</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onNavigateNext}
+          className="flex items-center gap-1 px-4 py-1.5 text-xs font-bold rounded-lg bg-[var(--kc-accent)] hover:bg-[var(--kc-accent-hover)] text-[var(--kc-on-primary)] shadow-xs transition-colors cursor-pointer"
+        >
+          <span>{isLastQuestion ? 'Review & Submit' : 'Save & Next'}</span>
+          <ChevronRight size={14} />
+        </button>
+      </div>
+    </>
   );
 }

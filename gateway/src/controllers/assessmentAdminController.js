@@ -235,6 +235,8 @@ async function createAssessment(req, res) {
       organization_id,
       is_public,
       target_audience,
+      is_secure_mode = false,
+      security_policy = null,
     } = req.body;
 
     if (!title || !title.trim()) {
@@ -284,13 +286,15 @@ async function createAssessment(req, res) {
         duration_minutes, status, starts_at, ends_at, max_attempts,
         randomize_questions, randomize_options, default_negative_marking,
         show_results_immediately, show_answers_mode, pass_percentage, created_by,
-        organization_id, is_public, target_audience
+        organization_id, is_public, target_audience,
+        is_secure_mode, security_policy
       ) VALUES (
         $1, $2, $3, $4, $5,
         $6, 'Draft', $7, $8, $9,
         $10, $11, $12,
         $13, $14, $15, $16,
-        $17, $18, $19
+        $17, $18, $19,
+        $20, $21
       ) RETURNING *;
     `;
 
@@ -314,6 +318,8 @@ async function createAssessment(req, res) {
       finalOrgId,
       finalIsPublic,
       finalAudience,
+      Boolean(is_secure_mode),
+      security_policy ? JSON.stringify(security_policy) : null,
     ]);
 
     const created = result.rows[0];
@@ -364,6 +370,8 @@ async function updateAssessment(req, res) {
       organization_id,
       is_public,
       target_audience,
+      is_secure_mode,
+      security_policy,
     } = req.body;
 
     const existingRes = await db.query(`SELECT * FROM assessments WHERE id = $1;`, [id]);
@@ -435,8 +443,10 @@ async function updateAssessment(req, res) {
         organization_id = $17,
         is_public = $18,
         target_audience = $19,
+        is_secure_mode = $20,
+        security_policy = $21,
         updated_at = NOW()
-      WHERE id = $20
+      WHERE id = $22
       RETURNING *;
     `;
 
@@ -460,6 +470,8 @@ async function updateAssessment(req, res) {
       finalOrgId,
       finalIsPublic,
       finalAudience,
+      is_secure_mode !== undefined ? Boolean(is_secure_mode) : current.is_secure_mode,
+      security_policy !== undefined ? (security_policy ? JSON.stringify(security_policy) : null) : current.security_policy,
       id,
     ]);
 
@@ -1837,6 +1849,89 @@ async function releaseResults(req, res) {
   }
 }
 
+/**
+ * Retrieve granular violation audit trail for an entire assessment
+ */
+async function getAssessmentViolations(req, res) {
+  try {
+    const { id } = req.params;
+
+    const assessRes = await db.query('SELECT organization_id FROM assessments WHERE id = $1;', [id]);
+    if (assessRes.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Assessment not found' });
+    }
+
+    if (!canModifyAssessment(req.user, assessRes.rows[0].organization_id, req.organizationId)) {
+      return res.status(403).json({ success: false, error: 'Cannot view violation logs for another organization\'s assessment' });
+    }
+
+    const result = await db.query(
+      `
+      SELECT
+        vl.*,
+        u.username,
+        u.email,
+        u.display_name,
+        att.attempt_number,
+        att.status AS attempt_status
+      FROM assessment_violation_logs vl
+      JOIN users u ON vl.user_id = u.id
+      JOIN assessment_attempts att ON vl.attempt_id = att.id
+      WHERE vl.assessment_id = $1
+      ORDER BY vl.occurred_at DESC;
+    `,
+      [id]
+    );
+
+    res.json({ success: true, violations: result.rows });
+  } catch (err) {
+    logger.error({ err, id: req.params.id }, '[AssessmentAdmin] getAssessmentViolations failed');
+    res.status(500).json({ success: false, error: 'Failed to retrieve assessment violations' });
+  }
+}
+
+/**
+ * Retrieve granular violation audit trail for a specific candidate attempt
+ */
+async function getAttemptViolations(req, res) {
+  try {
+    const { attemptId } = req.params;
+
+    const attRes = await db.query(
+      `SELECT att.*, a.organization_id FROM assessment_attempts att JOIN assessments a ON att.assessment_id = a.id WHERE att.id = $1;`,
+      [attemptId]
+    );
+    if (attRes.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Attempt not found' });
+    }
+    const attempt = attRes.rows[0];
+
+    if (!canModifyAssessment(req.user, attempt.organization_id, req.organizationId)) {
+      return res.status(403).json({ success: false, error: 'Cannot view attempt violations for another organization' });
+    }
+
+    const result = await db.query(
+      `
+      SELECT
+        vl.*,
+        u.username,
+        u.email,
+        u.display_name
+      FROM assessment_violation_logs vl
+      JOIN users u ON vl.user_id = u.id
+      WHERE vl.attempt_id = $1
+      ORDER BY vl.occurred_at ASC;
+    `,
+      [attemptId]
+    );
+
+    res.json({ success: true, violations: result.rows });
+  } catch (err) {
+    logger.error({ err, attemptId: req.params.attemptId }, '[AssessmentAdmin] getAttemptViolations failed');
+    res.status(500).json({ success: false, error: 'Failed to retrieve attempt violations' });
+  }
+}
+
 module.exports = {
   getAssessments,
   getAssessment,
@@ -1861,5 +1956,7 @@ module.exports = {
   createAssignment,
   revokeAssignment,
   releaseResults,
+  getAssessmentViolations,
+  getAttemptViolations,
 };
 

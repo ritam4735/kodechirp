@@ -17,6 +17,7 @@ import {
   Trash2,
   ArrowRight,
   ShieldAlert,
+  ShieldCheck,
   HelpCircle,
   FileText
 } from 'lucide-react';
@@ -37,6 +38,7 @@ const initialFormData = {
   show_answers_mode: 'after_submission',
   is_public: false,
   target_audience: 'organization',
+  is_secure_mode: false,
 };
 
 export default function AdminAssessmentsPage() {
@@ -245,9 +247,17 @@ export default function AdminAssessmentsPage() {
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="px-2 py-0.5 text-xs font-semibold rounded bg-[var(--bg-tertiary)] text-[var(--kc-accent)] border border-[var(--border-default)]">
-                      {a.category}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="px-2 py-0.5 text-xs font-semibold rounded bg-[var(--bg-tertiary)] text-[var(--kc-accent)] border border-[var(--border-default)]">
+                        {a.category}
+                      </span>
+                      {a.is_secure_mode && (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30 flex items-center gap-1" title="Strict Full-Screen Secure Assessment Mode">
+                          <ShieldCheck size={11} />
+                          <span>Secure</span>
+                        </span>
+                      )}
+                    </div>
                     <span
                       className={`px-2.5 py-0.5 text-xs font-semibold rounded-full border ${isPub
                           ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
@@ -527,6 +537,25 @@ export default function AdminAssessmentsPage() {
                   />
                   <span>Make assessment publicly accessible to all platform students</span>
                 </label>
+
+                {/* Secure Assessment Mode Toggle Card */}
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-1">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_secure_mode}
+                      onChange={(e) => setFormData({ ...formData, is_secure_mode: e.target.checked })}
+                      disabled={submitting}
+                    />
+                    <span className="flex items-center gap-1.5">
+                      <ShieldCheck size={13} className="text-amber-600 dark:text-amber-400" />
+                      <span>Enable Secure Assessment Mode (Strict Anti-Cheating)</span>
+                    </span>
+                  </label>
+                  <p className="text-[11px] text-[var(--text-muted)] pl-5 leading-relaxed">
+                    Enforces mandatory full-screen mode, restricts copy/paste on question text, and automatically submits the attempt if the student switches tabs, minimizes the window, or exits full-screen.
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-4 border-t border-[var(--border-default)]">

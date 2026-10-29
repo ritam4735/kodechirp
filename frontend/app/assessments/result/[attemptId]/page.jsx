@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../../lib/api';
+import { getViolationMeta } from '../../../../lib/securityAssessment';
 import {
   Award,
   CheckCircle2,
@@ -17,7 +18,9 @@ import {
   FileText,
   AlertTriangle,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  ShieldAlert,
+  ShieldCheck,
 } from 'lucide-react';
 
 export default function AssessmentResultPage() {
@@ -86,6 +89,17 @@ export default function AssessmentResultPage() {
           <div className="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
             Submission Received — Results Pending Release
           </div>
+          {result.is_terminated_by_violation && (
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs text-left space-y-1">
+              <div className="font-bold flex items-center gap-1.5">
+                <ShieldAlert size={14} />
+                <span>Automatically Finalized by Security Rule</span>
+              </div>
+              <p className="text-[11px] text-[var(--text-secondary)]">
+                Violation reason: {getViolationMeta(result.terminated_reason || result.submission_reason).title}. All answers saved prior to finalization were retained and scored.
+              </p>
+            </div>
+          )}
           <p className="text-sm text-[var(--text-secondary)]">
             {result.message || 'Results for this assessment have not been released yet by your instructor or college administrator. Please check back later.'}
           </p>
@@ -123,6 +137,52 @@ export default function AssessmentResultPage() {
           <ArrowLeft size={14} />
           <span>Assessments Portal</span>
         </Link>
+
+        {/* Security Violation Notice Banner */}
+        {result.is_terminated_by_violation && (
+          <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-5 sm:p-6 shadow-sm space-y-3">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                <ShieldAlert size={22} />
+              </div>
+              <div className="space-y-1 flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 uppercase tracking-wider">
+                    Automatic Submission — Security Rule Triggered
+                  </span>
+                  <span className="text-xs font-mono text-[var(--text-muted)]">
+                    Code: {result.terminated_reason || result.submission_reason}
+                  </span>
+                </div>
+                <h2 className="text-sm sm:text-base font-bold text-[var(--text-primary)]">
+                  {getViolationMeta(result.terminated_reason || result.submission_reason).title}
+                </h2>
+                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                  {getViolationMeta(result.terminated_reason || result.submission_reason).description}
+                </p>
+              </div>
+            </div>
+            <div className="p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-default)] flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300">
+              <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+              <span>
+                <strong>Preserved Responses:</strong> All question responses and code submissions saved prior to the security event were preserved and scored according to normal assessment evaluation criteria.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Timer Expired Banner */}
+        {!result.is_terminated_by_violation && result.submission_reason === 'timer_expired' && (
+          <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-5 shadow-sm flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <Clock size={18} />
+            </div>
+            <div className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              <span className="font-bold text-[var(--text-primary)] block">Exam Time Expired</span>
+              The assessment timer reached zero and your test was automatically submitted. All saved responses were scored.
+            </div>
+          </div>
+        )}
 
         {/* ── SCORE BANNER ─────────────────────────────────────────────────── */}
         <div

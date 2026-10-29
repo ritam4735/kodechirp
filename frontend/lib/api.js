@@ -442,9 +442,27 @@ export const api = {
     return data;
   },
 
-  submitAssessmentAttempt: async (attemptId) => {
+  submitAssessmentAttempt: async (attemptId, payload = {}) => {
+    const safePayload = (payload && typeof payload === 'object' && !payload.nativeEvent && !payload.target)
+      ? { ...payload }
+      : {};
+    if (typeof safePayload.submission_reason !== 'string') {
+      safePayload.submission_reason = 'manual';
+    }
     const data = await request(`/api/assessments/attempts/${attemptId}/submit`, {
       method: 'POST',
+      body: JSON.stringify(safePayload),
+    });
+    return data;
+  },
+
+  recordAssessmentViolation: async (attemptId, payload = {}) => {
+    const safePayload = (payload && typeof payload === 'object' && !payload.nativeEvent && !payload.target)
+      ? { ...payload }
+      : {};
+    const data = await request(`/api/assessments/attempts/${attemptId}/violation`, {
+      method: 'POST',
+      body: JSON.stringify(safePayload),
     });
     return data;
   },

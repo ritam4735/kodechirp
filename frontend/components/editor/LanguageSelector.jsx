@@ -2,16 +2,25 @@ import { SUPPORTED_LANGUAGES } from '../../lib/constants';
 import { useEditor } from '../../hooks/useEditor';
 import { Code2 } from 'lucide-react';
 
-export const LanguageSelector = () => {
+export const LanguageSelector = ({ value: propValue, onChange: propOnChange }) => {
   const { language, setLanguage } = useEditor();
+  const activeLanguage = propValue !== undefined ? propValue : language;
+  const handleChange = (e) => {
+    const nextLang = e.target.value;
+    if (propOnChange) {
+      propOnChange(nextLang);
+    } else {
+      setLanguage(nextLang);
+    }
+  };
 
   return (
     <div className="flex items-center gap-2">
       <Code2 size={15} className="text-[var(--kc-accent)] shrink-0" aria-hidden="true" />
       <div className="relative">
         <select 
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
+          value={activeLanguage}
+          onChange={handleChange}
           aria-label="Programming language selector"
           className="appearance-none bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] text-xs sm:text-sm text-[var(--kc-text-primary)] font-medium rounded-md pl-2.5 sm:pl-3 pr-7 sm:pr-8 py-1.5 focus:outline-none focus:border-[var(--kc-accent)] hover:border-[var(--kc-border-hover)] transition-all cursor-pointer shadow-sm max-w-[115px] sm:max-w-none truncate font-mono"
         >

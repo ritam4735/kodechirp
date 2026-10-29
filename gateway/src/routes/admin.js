@@ -136,6 +136,8 @@ router.delete('/assessments/:id', requireCollegeAdmin, assessmentAdminController
 router.post('/assessments/:id/status', requireCollegeAdmin, assessmentAdminController.toggleStatus);
 router.post('/assessments/:id/release-results', requireCollegeAdmin, assessmentAdminController.releaseResults);
 router.get('/assessments/:id/attempts', requireCollegeAdmin, assessmentAdminController.getAssessmentAttempts);
+router.get('/assessments/:id/violations', requireCollegeAdmin, assessmentAdminController.getAssessmentViolations);
+router.get('/assessments/attempts/:attemptId/violations', requireCollegeAdmin, assessmentAdminController.getAttemptViolations);
 
 // Assessment Sections & Question Population
 router.post('/assessments/:id/sections', requireCollegeAdmin, assessmentAdminController.createSection);

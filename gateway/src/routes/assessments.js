@@ -27,6 +27,9 @@ router.post('/attempts/:attemptId/save-response', requireAuth, studentController
 // Final submit attempt (requires auth)
 router.post('/attempts/:attemptId/submit', requireAuth, studentController.submitAttempt);
 
+// Record security violation / trigger auto-submit (requires auth)
+router.post('/attempts/:attemptId/violation', requireAuth, studentController.recordViolation);
+
 // View attempt results and performance breakdown (requires auth)
 router.get('/attempts/:attemptId/result', requireAuth, studentController.getAttemptResult);
 

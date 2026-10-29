@@ -68,6 +68,8 @@ async function getPublishedAssessments(req, res) {
         a.total_marks,
         a.pass_percentage,
         a.show_results_immediately,
+        a.is_secure_mode,
+        a.security_policy,
         a.created_at,
         a.organization_id,
         a.is_public,
@@ -137,6 +139,8 @@ async function getAssessmentOverview(req, res) {
         a.total_marks,
         a.pass_percentage,
         a.show_results_immediately,
+        a.is_secure_mode,
+        a.security_policy,
         a.organization_id,
         a.is_public,
         a.target_audience,
@@ -358,6 +362,8 @@ async function startAttempt(req, res) {
       attemptId: attempt.id,
       startedAt: attempt.started_at,
       expiresAt: attempt.expires_at,
+      is_secure_mode: Boolean(assessment.is_secure_mode),
+      security_policy: assessment.security_policy,
     });
   } catch (err) {
     logger.error({ err, id: req.params.id }, '[AssessmentStudent] startAttempt failed');
@@ -376,7 +382,7 @@ async function getAttemptData(req, res) {
     const attRes = await db.query(
       `
       SELECT att.*, a.title AS assessment_title, a.slug AS assessment_slug, a.instructions AS assessment_instructions,
-             a.randomize_questions, a.randomize_options
+             a.randomize_questions, a.randomize_options, a.is_secure_mode, a.security_policy
       FROM assessment_attempts att
       JOIN assessments a ON att.assessment_id = a.id
       WHERE att.id = $1;
@@ -531,6 +537,12 @@ async function getAttemptData(req, res) {
         expires_at: attempt.expires_at,
         remaining_seconds: remainingSeconds,
         is_finalized: attempt.is_finalized,
+        is_secure_mode: Boolean(attempt.is_secure_mode),
+        security_policy: attempt.security_policy,
+        submission_reason: attempt.submission_reason,
+        is_terminated_by_violation: Boolean(attempt.is_terminated_by_violation),
+        terminated_reason: attempt.terminated_reason,
+        violations: attempt.violations || [],
       },
       sections,
     });
@@ -572,7 +584,7 @@ async function saveResponse(req, res) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
-    if (attempt.status !== 'in_progress' || attempt.is_finalized) {
+    if (attempt.status !== 'in_progress' || attempt.is_finalized || attempt.is_terminated_by_violation) {
       return res.status(400).json({ success: false, error: 'Cannot modify responses on a submitted attempt' });
     }
 
@@ -726,6 +738,7 @@ async function submitAttempt(req, res) {
   try {
     const { attemptId } = req.params;
     const userId = req.user.id;
+    const { submission_reason = 'manual', violation_type, violation_details, terminated_reason } = req.body || {};
 
     const attRes = await db.query(`SELECT * FROM assessment_attempts WHERE id = $1;`, [attemptId]);
     if (attRes.rowCount === 0) {
@@ -742,14 +755,29 @@ async function submitAttempt(req, res) {
         success: true,
         message: 'Assessment is already submitted',
         attemptId: attempt.id,
+        result: attempt,
       });
     }
 
-    const evaluatedAttempt = await finalizeAndScoreAttempt(attemptId);
+    const isViolation = Boolean(
+      (submission_reason && submission_reason !== 'manual' && submission_reason !== 'timer_expired') ||
+      violation_type
+    );
+    const finalReason = isViolation ? (violation_type || submission_reason) : submission_reason;
+
+    const userAgent = typeof req.get === 'function' ? req.get('user-agent') : (req.headers && req.headers['user-agent']) || null;
+    const evaluatedAttempt = await finalizeAndScoreAttempt(attemptId, {
+      submission_reason: finalReason,
+      is_violation: isViolation,
+      violation_details,
+      terminated_reason,
+      ip: req.ip || null,
+      userAgent,
+    });
 
     res.json({
       success: true,
-      message: 'Assessment submitted and scored successfully',
+      message: isViolation ? 'Assessment terminated and submitted' : 'Assessment submitted and scored successfully',
       result: evaluatedAttempt,
     });
   } catch (err) {
@@ -759,12 +787,165 @@ async function submitAttempt(req, res) {
 }
 
 /**
+ * Record a security violation event during assessment attempt
+ * In strict secure mode, automatically triggers finalization and scoring.
+ */
+async function recordViolation(req, res) {
+  try {
+    const { attemptId } = req.params;
+    const userId = req.user.id;
+    const { event_type, details } = req.body || {};
+
+    if (!event_type) {
+      return res.status(400).json({ success: false, error: 'Missing event_type' });
+    }
+
+    const attRes = await db.query(
+      `
+      SELECT att.*, a.is_secure_mode, a.security_policy
+      FROM assessment_attempts att
+      JOIN assessments a ON att.assessment_id = a.id
+      WHERE att.id = $1;
+    `,
+      [attemptId]
+    );
+
+    if (attRes.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Attempt not found' });
+    }
+    const attempt = attRes.rows[0];
+
+    if (attempt.user_id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    if (attempt.is_finalized) {
+      return res.json({
+        success: true,
+        message: 'Assessment is already submitted',
+        attemptId: attempt.id,
+        is_finalized: true,
+        result: attempt,
+      });
+    }
+
+    const secPolicy = attempt.security_policy || {};
+    const terminatingEvents = ['tab_hidden', 'fullscreen_exited', 'navigation_attempt', 'security_violation'];
+    const isStrictTermination = Boolean(
+      attempt.is_secure_mode &&
+      secPolicy.auto_submit_on_violation !== false &&
+      terminatingEvents.includes(event_type)
+    );
+
+    const userAgent = typeof req.get === 'function' ? req.get('user-agent') : (req.headers && req.headers['user-agent']) || null;
+
+    if (isStrictTermination) {
+      const evaluated = await finalizeAndScoreAttempt(attemptId, {
+        submission_reason: event_type,
+        is_violation: true,
+        violation_details: details,
+        ip: req.ip || null,
+        userAgent,
+      });
+
+      return res.json({
+        success: true,
+        terminated: true,
+        submission_reason: event_type,
+        message: 'Assessment automatically submitted due to security violation',
+        result: evaluated,
+      });
+    } else {
+      // Non-terminating violation (e.g. copy attempt warning or audit logging)
+      const currentViolations = Array.isArray(attempt.violations) ? attempt.violations : [];
+      const updatedViolations = [
+        ...currentViolations,
+        {
+          event_type,
+          occurred_at: new Date().toISOString(),
+          details: details || {},
+        },
+      ];
+
+      await db.query(
+        `UPDATE assessment_attempts SET violations = $1, updated_at = NOW() WHERE id = $2;`,
+        [JSON.stringify(updatedViolations), attemptId]
+      );
+
+      try {
+        await db.query(
+          `
+          INSERT INTO assessment_violation_logs (
+            attempt_id, assessment_id, user_id, event_type, details, ip_address, user_agent, occurred_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW());
+        `,
+          [
+            attempt.id,
+            attempt.assessment_id,
+            attempt.user_id,
+            event_type,
+            JSON.stringify(details || {}),
+            req.ip || null,
+            userAgent,
+          ]
+        );
+      } catch (logErr) {
+        logger.warn({ logErr, attemptId }, '[AssessmentStudent] Failed to insert into assessment_violation_logs');
+      }
+
+      return res.json({
+        success: true,
+        terminated: false,
+        message: 'Violation recorded',
+      });
+    }
+  } catch (err) {
+    logger.error({ err, attemptId: req.params.attemptId }, '[AssessmentStudent] recordViolation failed');
+    res.status(500).json({ success: false, error: 'Failed to record violation' });
+  }
+}
+
+/**
  * Core Evaluation Engine: Calculates score, section breakdown, percentages securely
  */
-async function finalizeAndScoreAttempt(attemptId) {
+async function finalizeAndScoreAttempt(attemptId, options = {}) {
   const attRes = await db.query(`SELECT * FROM assessment_attempts WHERE id = $1;`, [attemptId]);
   if (attRes.rowCount === 0) throw new Error('Attempt not found');
   const attempt = attRes.rows[0];
+
+  // Idempotent safeguard: if already finalized, return existing attempt
+  if (attempt.is_finalized) {
+    return attempt;
+  }
+
+  const now = new Date();
+  const isExpired = new Date(attempt.expires_at) < now;
+  const isViolation = Boolean(
+    options.is_violation ||
+    (options.submission_reason && options.submission_reason !== 'manual' && options.submission_reason !== 'timer_expired')
+  );
+
+  let submissionReason = options.submission_reason || (isExpired ? 'timer_expired' : 'manual');
+  let terminatedReason = options.terminated_reason || null;
+  if (isViolation && !terminatedReason) {
+    if (submissionReason === 'tab_hidden') terminatedReason = 'Assessment document was hidden (switched tabs or minimized browser).';
+    else if (submissionReason === 'fullscreen_exited') terminatedReason = 'Full-screen mode was exited during strict secure assessment.';
+    else if (submissionReason === 'navigation_attempt') terminatedReason = 'Browser navigation or reload was attempted during assessment.';
+    else terminatedReason = 'A confirmed security violation occurred during strict assessment.';
+  }
+
+  let currentViolations = Array.isArray(attempt.violations) ? attempt.violations : [];
+  if (isViolation || options.violation_details) {
+    currentViolations = [
+      ...currentViolations,
+      {
+        event_type: submissionReason,
+        occurred_at: now.toISOString(),
+        details: options.violation_details || {},
+        reason: terminatedReason,
+      },
+    ];
+  }
 
   // Get all sections for this assessment
   const secRes = await db.query(
@@ -853,11 +1034,9 @@ async function finalizeAndScoreAttempt(attemptId) {
         const expected = item.correct_answer;
 
         if (expected === null || expected === undefined) {
-          // If no answer key is set (e.g. from raw practice booklet), label pending or award 0
           isCorrect = false;
           scoreAwarded = 0;
         } else if (qType === 'single_choice' || qType === 'true_false') {
-          // Normalize both expected and received
           const selected = typeof response.selected_options === 'string'
             ? response.selected_options.toLowerCase().trim()
             : (Array.isArray(response.selected_options) ? response.selected_options[0]?.toLowerCase() : null);
@@ -877,7 +1056,6 @@ async function finalizeAndScoreAttempt(attemptId) {
             scoreAwarded = -negMarks;
           }
         } else if (qType === 'multiple_choice') {
-          // Multi-select MCQ: all correct must match, no wrong options
           const selectedArr = Array.isArray(response.selected_options)
             ? response.selected_options.map(s => String(s).toLowerCase().trim()).sort()
             : [];
@@ -903,7 +1081,6 @@ async function finalizeAndScoreAttempt(attemptId) {
             scoreAwarded = -negMarks;
           }
         } else {
-          // Descriptive / theory question: keep pending evaluation
           isCorrect = false;
           scoreAwarded = 0;
         }
@@ -987,8 +1164,12 @@ async function finalizeAndScoreAttempt(attemptId) {
       unanswered_count = $8,
       section_scores = $9,
       is_finalized = TRUE,
+      submission_reason = $10,
+      is_terminated_by_violation = $11,
+      terminated_reason = $12,
+      violations = $13,
       updated_at = NOW()
-    WHERE id = $10
+    WHERE id = $14
     RETURNING *;
   `;
 
@@ -1002,8 +1183,35 @@ async function finalizeAndScoreAttempt(attemptId) {
     overallIncorrect,
     overallUnanswered,
     JSON.stringify(sectionScores),
+    submissionReason,
+    isViolation,
+    terminatedReason,
+    JSON.stringify(currentViolations),
     attemptId,
   ]);
+
+  if (isViolation || options.violation_details) {
+    try {
+      await db.query(
+        `
+        INSERT INTO assessment_violation_logs (
+          attempt_id, assessment_id, user_id, event_type, details, ip_address, user_agent, occurred_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW());
+      `,
+        [
+          attempt.id,
+          attempt.assessment_id,
+          attempt.user_id,
+          submissionReason,
+          JSON.stringify(options.violation_details || { reason: terminatedReason }),
+          options.ip || null,
+          options.userAgent || null,
+        ]
+      );
+    } catch (logErr) {
+      logger.warn({ logErr, attemptId }, '[AssessmentStudent] Failed to insert into assessment_violation_logs');
+    }
+  }
 
   return finalRes.rows[0];
 }
@@ -1027,7 +1235,9 @@ async function getAttemptResult(req, res) {
         a.ends_at AS assessment_ends_at,
         a.pass_percentage,
         a.organization_id,
-        a.results_released_at
+        a.results_released_at,
+        a.is_secure_mode,
+        a.security_policy
       FROM assessment_attempts att
       JOIN assessments a ON att.assessment_id = a.id
       WHERE att.id = $1;
@@ -1159,6 +1369,12 @@ async function getAttemptResult(req, res) {
         section_scores: attempt.section_scores,
         can_view_answers: canViewAnswers,
         questions_review: questionsReview,
+        submission_reason: attempt.submission_reason,
+        is_terminated_by_violation: Boolean(attempt.is_terminated_by_violation),
+        terminated_reason: attempt.terminated_reason,
+        violations: attempt.violations || [],
+        is_secure_mode: Boolean(attempt.is_secure_mode),
+        security_policy: attempt.security_policy,
       },
     });
   } catch (err) {
@@ -1174,5 +1390,6 @@ module.exports = {
   getAttemptData,
   saveResponse,
   submitAttempt,
+  recordViolation,
   getAttemptResult,
 };

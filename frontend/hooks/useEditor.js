@@ -35,7 +35,7 @@ export const useEditor = () => {
 
   const code = store.codes[cacheKey] ?? defaultCode;
 
-  const handleRunCode = async () => {
+  const handleRunCode = async (onComplete) => {
     const reqId = store.startExecution('testcases');
     try {
       const result = await api.runCode(code, language, '', currentProblem?.id, judgeMode, signature);
@@ -63,30 +63,56 @@ export const useEditor = () => {
           store.setActivePanel('console');
         }
       }
+
+      if (onComplete) {
+        onComplete(result);
+      }
     } catch (error) {
       if (reqId === useEditorStore.getState().requestId) {
         store.setExecutionError(reqId, `Failed to execute code: ${error.message}`);
+        if (onComplete) {
+          onComplete({ error: error.message });
+        }
       }
     }
   };
 
-  const handleSubmitCode = async (probId) => {
+  const handleSubmitCode = async (probId, onComplete) => {
     const reqId = store.startExecution('console');
     try {
-      const result = await api.submitCode(probId, code, language);
+      const targetProblemId = probId || currentProblem?.id;
+      const result = await api.submitCode(targetProblemId, code, language);
       if (reqId === useEditorStore.getState().requestId) {
         store.setSubmissionSuccess(reqId, result);
+        if (onComplete) {
+          onComplete(result);
+        }
       }
     } catch (error) {
       if (reqId === useEditorStore.getState().requestId) {
         store.setSubmissionError(reqId, `Failed to submit code: ${error.message}`);
+        if (onComplete) {
+          onComplete({ error: error.message });
+        }
       }
     }
+  };
+
+  const handleResetCode = () => {
+    let initialSnippet;
+    if (judgeMode === 'FUNCTION') {
+      initialSnippet = generateStarterCode(judgeMode, signature, language) || templates[language] || DEFAULT_CODE_SNIPPETS[language] || '';
+    } else {
+      initialSnippet = templates[language] || DEFAULT_CODE_SNIPPETS[language] || '';
+    }
+    store.setCode(cacheKey, initialSnippet);
+    return initialSnippet;
   };
 
   const setCode = (newCode) => {
     store.setCode(cacheKey, newCode);
   };
 
-  return { ...store, code, setCode, handleRunCode, handleSubmitCode, editorPath: cacheKey };
+  return { ...store, code, setCode, handleRunCode, handleSubmitCode, handleResetCode, editorPath: cacheKey };
 };
+

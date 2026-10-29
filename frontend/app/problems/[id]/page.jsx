@@ -4,44 +4,22 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useProblem } from '../../../hooks/useProblem';
 import { ProblemDescription } from '../../../components/problem/ProblemDescription';
-import { TestCases } from '../../../components/problem/TestCases';
 import { ChirpsSection } from '../../../components/chirps/ChirpsSection';
 import { QuestionNavigatorDrawer } from '../../../components/problem/QuestionNavigatorDrawer';
-import dynamic from 'next/dynamic';
-import { LanguageSelector } from '../../../components/editor/LanguageSelector';
-
-const CodeEditor = dynamic(
-  () => import('../../../components/editor/CodeEditor').then((mod) => mod.CodeEditor),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col items-center justify-center h-full w-full bg-[var(--kc-surface)] gap-3">
-        <div className="w-7 h-7 border-2 border-[var(--kc-accent)] border-t-transparent rounded-full animate-spin" />
-        <span className="text-[var(--kc-text-muted)] font-mono text-xs uppercase tracking-wider animate-pulse">Initializing editor…</span>
-      </div>
-    ),
-  }
-);
-import { RunButton } from '../../../components/editor/RunButton';
-import { SubmitButton } from '../../../components/editor/SubmitButton';
-import { ConsolePanel } from '../../../components/editor/ConsolePanel';
+import { CodingWorkspace, ResizeHandle } from '../../../components/problem/CodingWorkspace';
 import { useEditor } from '../../../hooks/useEditor';
-import { useAuth } from '../../../hooks/useAuth';
 import { 
   Code2, 
   Activity, 
-  FileCheck, 
   Target, 
   ChevronRight, 
   ChevronLeft,
-  Terminal, 
-  Lock, 
   AlertTriangle,
   Layers,
   CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
-import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
+import { Panel, Group as PanelGroup } from 'react-resizable-panels';
 
 const STORAGE_KEY_HORIZONTAL = 'kc_ide_layout_h_v5';
 const STORAGE_KEY_VERTICAL = 'kc_ide_layout_v_v5';
@@ -251,13 +229,17 @@ export default function ProblemPage() {
                 />
               )}
               {activeTab === 'editor' && (
-                <EditorContent 
-                  problemId={currentProblem.id} 
-                  currentProblem={currentProblem}
+                <CodingWorkspace 
+                  problem={currentProblem}
                   onOpenDrawer={() => setIsDrawerOpen(true)}
                 />
               )}
-              {activeTab === 'tests' && <BottomContent testCases={currentProblem.testCases} problem={currentProblem} />}
+              {activeTab === 'tests' && (
+                <CodingWorkspace 
+                  problem={currentProblem}
+                  onOpenDrawer={() => setIsDrawerOpen(true)}
+                />
+              )}
             </div>
 
             {/* Mobile CTA: Switch to Editor */}
@@ -311,38 +293,10 @@ export default function ProblemPage() {
               className="flex-1 flex flex-col h-full w-full min-h-0 min-w-0 !overflow-hidden"
               style={{ height: '100%' }}
             >
-              <PanelGroup
-                id="kodechirp-ide-layout-right"
-                orientation="vertical"
-                defaultLayout={verticalLayout}
-                onLayoutChanged={handleVerticalLayoutChange}
-                className="h-full w-full min-h-0 min-w-0 flex-1"
-                style={{ height: '100%', width: '100%' }}
-              >
-                <Panel
-                  id="editor-panel"
-                  defaultSize="65%"
-                  minSize="35%"
-                  maxSize="80%"
-                  className="flex-1 flex flex-col h-full w-full min-h-0 min-w-0 !overflow-hidden"
-                  style={{ height: '100%' }}
-                >
-                  <EditorContent problemId={currentProblem.id} />
-                </Panel>
-
-                <ResizeHandle direction="vertical" />
-
-                <Panel
-                  id="console-panel"
-                  defaultSize="35%"
-                  minSize="20%"
-                  maxSize="65%"
-                  className="flex-1 flex flex-col h-full w-full min-h-0 min-w-0 !overflow-hidden"
-                  style={{ height: '100%' }}
-                >
-                  <BottomContent testCases={currentProblem.testCases} problem={currentProblem} />
-                </Panel>
-              </PanelGroup>
+              <CodingWorkspace 
+                problem={currentProblem} 
+                onOpenDrawer={() => setIsDrawerOpen(true)} 
+              />
             </Panel>
           </PanelGroup>
         )}
@@ -464,122 +418,3 @@ const LeftPanelContent = ({
   </div>
 );
 
-// Editor Content Panel
-const EditorContent = ({ problemId, currentProblem, onOpenDrawer }) => {
-  const { isAuthenticated } = useAuth();
-  return (
-    <div className="flex-1 flex flex-col h-full w-full bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg overflow-hidden min-h-0 min-w-0 relative">
-      {/* Editor Control Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] shrink-0">
-        <div className="flex items-center gap-2">
-          {onOpenDrawer && (
-            <button
-              type="button"
-              onClick={onOpenDrawer}
-              className="md:hidden p-1.5 rounded text-[var(--kc-text-secondary)] hover:text-[var(--kc-text-primary)] hover:bg-[var(--kc-surface)] transition-colors flex items-center gap-1 text-xs font-mono border border-[var(--kc-border-subtle)]"
-              title="Open Question Navigator"
-              aria-label="Open Question Navigator"
-            >
-              <Layers size={13} className="text-[var(--kc-accent)]" />
-              <span>#{String(currentProblem?.serial_number || 1).padStart(2, '0')}</span>
-            </button>
-          )}
-          <LanguageSelector />
-        </div>
-        <div className="flex items-center gap-2">
-          <RunButton disabled={!isAuthenticated} />
-          <SubmitButton problemId={problemId} disabled={!isAuthenticated} />
-        </div>
-      </div>
-
-      {/* Editor Canvas Area */}
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col relative w-full overflow-hidden">
-        <CodeEditor problemId={problemId} />
-        {!isAuthenticated && (
-          <div className="absolute inset-0 bg-[var(--kc-surface)]/85 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-6 text-center">
-            <Lock className="w-7 h-7 text-[var(--kc-text-muted)] mb-3" />
-            <h3 className="text-base font-semibold text-[var(--kc-text-primary)] mb-1">Authentication Required</h3>
-            <p className="text-xs text-[var(--kc-text-muted)] mb-4 max-w-xs">
-              Log in to run code against the judge sandbox cluster and submit verified solutions.
-            </p>
-            <Link 
-              href="/auth" 
-              className="kc-btn-primary" 
-              style={{ padding: '8px 18px', fontSize: '12px' }}
-            >
-              Sign In to Code
-            </Link>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Bottom Panel: Test Cases & Console Output
-const BottomContent = ({ testCases, problem }) => {
-  const { activePanel, setActivePanel, output, verdict, execution } = useEditor();
-  const isConsole = activePanel === 'console';
-  const hasConsoleContent = Boolean(output || verdict || execution?.error);
-
-  return (
-    <div className="flex-1 flex flex-col h-full w-full bg-[var(--kc-surface)] border border-[var(--kc-border)] rounded-lg overflow-hidden min-h-0 min-w-0">
-      {/* Tab Switcher */}
-      <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-[var(--kc-border)] bg-[var(--kc-surface-subtle)] shrink-0" role="tablist" aria-label="Editor panels">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={!isConsole}
-          aria-label="Test Cases panel"
-          onClick={() => setActivePanel('testcases')}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-mono font-medium transition-colors cursor-pointer ${
-            !isConsole
-              ? 'bg-[var(--kc-surface)] text-[var(--kc-text-primary)] border border-[var(--kc-border)] shadow-sm'
-              : 'text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)]'
-          }`}
-        >
-          <FileCheck size={13} aria-hidden="true" className={!isConsole ? 'text-[var(--kc-accent)]' : 'text-[var(--kc-text-muted)]'} />
-          <span>Test Cases</span>
-        </button>
-
-        <button
-          type="button"
-          role="tab"
-          aria-selected={isConsole}
-          aria-label="Execution Console panel"
-          onClick={() => setActivePanel('console')}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-mono font-medium transition-colors relative cursor-pointer ${
-            isConsole
-              ? 'bg-[var(--kc-surface)] text-[var(--kc-text-primary)] border border-[var(--kc-border)] shadow-sm'
-              : 'text-[var(--kc-text-muted)] hover:text-[var(--kc-text-primary)]'
-          }`}
-        >
-          <Terminal size={13} aria-hidden="true" className={isConsole ? 'text-[var(--kc-accent)]' : 'text-[var(--kc-text-muted)]'} />
-          <span>Console</span>
-          {hasConsoleContent && !isConsole && (
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--kc-accent)]" aria-hidden="true" />
-          )}
-        </button>
-      </div>
-
-      <div className="flex-1 min-h-0 min-w-0 overflow-y-auto custom-scrollbar p-3.5">
-        {!isConsole ? (
-          <TestCases testCases={testCases} problem={problem} />
-        ) : (
-          <ConsolePanel />
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Resizable Divider Handle
-const ResizeHandle = ({ direction }) => (
-  <PanelResizeHandle className={`group flex items-center justify-center transition-colors hover:bg-[var(--kc-surface-subtle)]/60 shrink-0 ${
-    direction === 'horizontal' ? 'w-2 cursor-col-resize mx-0.5' : 'h-2 cursor-row-resize my-0.5'
-  }`}>
-    <div className={`rounded-full transition-colors bg-[var(--kc-border)] group-hover:bg-[var(--kc-accent)] ${
-      direction === 'horizontal' ? 'w-1 h-8 group-hover:h-12' : 'h-1 w-8 group-hover:w-12'
-    }`} />
-  </PanelResizeHandle>
-);

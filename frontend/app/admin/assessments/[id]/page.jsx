@@ -28,6 +28,8 @@ import {
   GraduationCap,
   UserCheck,
   Shield,
+  ShieldAlert,
+  ShieldCheck,
   X,
   SlidersHorizontal,
   ArrowUpDown,
@@ -418,6 +420,7 @@ export default function AssessmentBuilderPage() {
       show_answers_mode: assessment.show_answers_mode || 'after_submission',
       is_public: !!assessment.is_public,
       target_audience: assessment.target_audience || (assessment.is_public ? 'public' : 'organization'),
+      is_secure_mode: !!assessment.is_secure_mode,
     });
     setIsEditSettingsOpen(true);
   };
@@ -444,6 +447,7 @@ export default function AssessmentBuilderPage() {
         show_answers_mode: settingsFormData.show_answers_mode,
         is_public: Boolean(settingsFormData.is_public),
         target_audience: settingsFormData.is_public ? 'public' : (settingsFormData.target_audience || 'organization'),
+        is_secure_mode: Boolean(settingsFormData.is_secure_mode),
       };
       const res = await adminApi.updateAssessment(assessmentId, payload);
       setAssessment((prev) => ({ ...prev, ...res.assessment, sections: prev?.sections || [] }));
@@ -1587,6 +1591,7 @@ export default function AssessmentBuilderPage() {
                     <th className="py-2.5 px-3 text-center">Correct</th>
                     <th className="py-2.5 px-3 text-center">Incorrect</th>
                     <th className="py-2.5 px-3 text-center">Status</th>
+                    <th className="py-2.5 px-3 text-center">Submission Mode</th>
                     <th className="py-2.5 px-3 text-right">Submitted At</th>
                   </tr>
                 </thead>
@@ -1619,6 +1624,26 @@ export default function AssessmentBuilderPage() {
                           >
                             {isPassed ? 'PASSED' : 'FAILED'}
                           </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          {att.is_terminated_by_violation ? (
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30"
+                              title={att.terminated_reason || att.submission_reason}
+                            >
+                              <ShieldAlert size={10} />
+                              <span>Violation ({att.terminated_reason || att.submission_reason})</span>
+                            </span>
+                          ) : att.submission_reason === 'timer_expired' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                              <Clock size={10} />
+                              <span>Timer Expired</span>
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-[var(--text-muted)] font-mono">
+                              Manual
+                            </span>
+                          )}
                         </td>
                         <td className="py-2.5 px-3 text-right text-[var(--text-muted)]">
                           {att.submitted_at ? new Date(att.submitted_at).toLocaleString() : 'In Progress'}
@@ -2814,6 +2839,25 @@ export default function AssessmentBuilderPage() {
                     />
                     <span className="text-xs text-[var(--text-primary)]">Publicly Accessible to All Students</span>
                   </label>
+                </div>
+
+                {/* Strict Secure Assessment Mode Toggle */}
+                <div className="md:col-span-2 p-3 bg-amber-500/10 border border-amber-500/25 rounded-xl space-y-1">
+                  <label className="flex items-center gap-2 cursor-pointer font-semibold text-amber-700 dark:text-amber-300">
+                    <input
+                      type="checkbox"
+                      checked={settingsFormData.is_secure_mode}
+                      onChange={(e) => setSettingsFormData({ ...settingsFormData, is_secure_mode: e.target.checked })}
+                      className="rounded border-amber-500/40"
+                    />
+                    <span className="flex items-center gap-1.5">
+                      <ShieldCheck size={14} className="text-amber-600 dark:text-amber-400" />
+                      <span>Strict Secure Assessment Mode (Anti-Cheating & Fullscreen)</span>
+                    </span>
+                  </label>
+                  <p className="text-[11px] text-[var(--text-muted)] pl-5 leading-relaxed">
+                    Mandates browser full-screen, blocks clipboard actions on questions, and automatically submits the attempt if the student leaves full-screen or switches tabs.
+                  </p>
                 </div>
               </div>
 
