@@ -298,6 +298,27 @@ async function createAssessment(req, res) {
       ) RETURNING *;
     `;
 
+    let finalCreatePolicy = null;
+    if (security_policy && typeof security_policy === 'object') {
+      finalCreatePolicy = JSON.stringify({
+        require_fullscreen: security_policy.require_fullscreen !== false,
+        prevent_tab_switch: security_policy.prevent_tab_switch !== false,
+        prevent_clipboard: security_policy.prevent_clipboard !== false,
+        prevent_navigation: security_policy.prevent_navigation !== false,
+        auto_submit_on_violation: security_policy.auto_submit_on_violation !== false,
+        max_violations: Math.max(1, parseInt(security_policy.max_violations, 10) || 1),
+      });
+    } else if (Boolean(is_secure_mode)) {
+      finalCreatePolicy = JSON.stringify({
+        require_fullscreen: true,
+        prevent_tab_switch: true,
+        prevent_clipboard: true,
+        prevent_navigation: true,
+        auto_submit_on_violation: true,
+        max_violations: 1,
+      });
+    }
+
     const result = await db.query(insertSql, [
       title.trim(),
       finalSlug,
@@ -319,7 +340,7 @@ async function createAssessment(req, res) {
       finalIsPublic,
       finalAudience,
       Boolean(is_secure_mode),
-      security_policy ? JSON.stringify(security_policy) : null,
+      finalCreatePolicy,
     ]);
 
     const created = result.rows[0];
@@ -450,6 +471,22 @@ async function updateAssessment(req, res) {
       RETURNING *;
     `;
 
+    let finalUpdatePolicy = current.security_policy;
+    if (security_policy !== undefined) {
+      if (security_policy && typeof security_policy === 'object') {
+        finalUpdatePolicy = JSON.stringify({
+          require_fullscreen: security_policy.require_fullscreen !== false,
+          prevent_tab_switch: security_policy.prevent_tab_switch !== false,
+          prevent_clipboard: security_policy.prevent_clipboard !== false,
+          prevent_navigation: security_policy.prevent_navigation !== false,
+          auto_submit_on_violation: security_policy.auto_submit_on_violation !== false,
+          max_violations: Math.max(1, parseInt(security_policy.max_violations, 10) || 1),
+        });
+      } else {
+        finalUpdatePolicy = null;
+      }
+    }
+
     const result = await db.query(updateSql, [
       title !== undefined ? title.trim() : current.title,
       finalSlug,
@@ -471,7 +508,7 @@ async function updateAssessment(req, res) {
       finalIsPublic,
       finalAudience,
       is_secure_mode !== undefined ? Boolean(is_secure_mode) : current.is_secure_mode,
-      security_policy !== undefined ? (security_policy ? JSON.stringify(security_policy) : null) : current.security_policy,
+      finalUpdatePolicy,
       id,
     ]);
 

@@ -421,6 +421,12 @@ export default function AssessmentBuilderPage() {
       is_public: !!assessment.is_public,
       target_audience: assessment.target_audience || (assessment.is_public ? 'public' : 'organization'),
       is_secure_mode: !!assessment.is_secure_mode,
+      max_violations: assessment.security_policy?.max_violations ?? 1,
+      require_fullscreen: assessment.security_policy?.require_fullscreen !== false,
+      prevent_tab_switch: assessment.security_policy?.prevent_tab_switch !== false,
+      prevent_clipboard: assessment.security_policy?.prevent_clipboard !== false,
+      prevent_navigation: assessment.security_policy?.prevent_navigation !== false,
+      auto_submit_on_violation: assessment.security_policy?.auto_submit_on_violation !== false,
     });
     setIsEditSettingsOpen(true);
   };
@@ -448,6 +454,16 @@ export default function AssessmentBuilderPage() {
         is_public: Boolean(settingsFormData.is_public),
         target_audience: settingsFormData.is_public ? 'public' : (settingsFormData.target_audience || 'organization'),
         is_secure_mode: Boolean(settingsFormData.is_secure_mode),
+        security_policy: settingsFormData.is_secure_mode
+          ? {
+              require_fullscreen: Boolean(settingsFormData.require_fullscreen),
+              prevent_tab_switch: Boolean(settingsFormData.prevent_tab_switch),
+              prevent_clipboard: Boolean(settingsFormData.prevent_clipboard),
+              prevent_navigation: Boolean(settingsFormData.prevent_navigation),
+              auto_submit_on_violation: Boolean(settingsFormData.auto_submit_on_violation),
+              max_violations: Math.max(1, parseInt(settingsFormData.max_violations, 10) || 1),
+            }
+          : null,
       };
       const res = await adminApi.updateAssessment(assessmentId, payload);
       setAssessment((prev) => ({ ...prev, ...res.assessment, sections: prev?.sections || [] }));
@@ -2841,8 +2857,8 @@ export default function AssessmentBuilderPage() {
                   </label>
                 </div>
 
-                {/* Strict Secure Assessment Mode Toggle */}
-                <div className="md:col-span-2 p-3 bg-amber-500/10 border border-amber-500/25 rounded-xl space-y-1">
+                {/* Strict Secure Assessment Mode & Configurable Violation Policy */}
+                <div className="md:col-span-2 p-3.5 bg-amber-500/10 border border-amber-500/25 rounded-xl space-y-3">
                   <label className="flex items-center gap-2 cursor-pointer font-semibold text-amber-700 dark:text-amber-300">
                     <input
                       type="checkbox"
@@ -2858,6 +2874,77 @@ export default function AssessmentBuilderPage() {
                   <p className="text-[11px] text-[var(--text-muted)] pl-5 leading-relaxed">
                     Mandates browser full-screen, blocks clipboard actions on questions, and automatically submits the attempt if the student leaves full-screen or switches tabs.
                   </p>
+
+                  {settingsFormData.is_secure_mode && (
+                    <div className="pt-2.5 border-t border-amber-500/20 space-y-3 pl-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[var(--text-primary)] mb-1">
+                            Violation Threshold (Strikes Before Auto-Submit)
+                          </label>
+                          <select
+                            value={settingsFormData.max_violations}
+                            onChange={(e) => setSettingsFormData({ ...settingsFormData, max_violations: parseInt(e.target.value, 10) || 1 })}
+                            className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                          >
+                            <option value={1}>1 Strike (Zero-Tolerance: Immediate Submission)</option>
+                            <option value={2}>2 Strikes (1 Warning Allowed)</option>
+                            <option value={3}>3 Strikes (2 Warnings Allowed)</option>
+                            <option value={4}>4 Strikes (3 Warnings Allowed)</option>
+                            <option value={5}>5 Strikes (4 Warnings Allowed)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[var(--text-secondary)]">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={settingsFormData.require_fullscreen}
+                            onChange={(e) => setSettingsFormData({ ...settingsFormData, require_fullscreen: e.target.checked })}
+                            className="rounded border-amber-500/40"
+                          />
+                          <span>Mandate Full-Screen Mode</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={settingsFormData.prevent_tab_switch}
+                            onChange={(e) => setSettingsFormData({ ...settingsFormData, prevent_tab_switch: e.target.checked })}
+                            className="rounded border-amber-500/40"
+                          />
+                          <span>Prevent Tab Switching / Blur</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={settingsFormData.prevent_clipboard}
+                            onChange={(e) => setSettingsFormData({ ...settingsFormData, prevent_clipboard: e.target.checked })}
+                            className="rounded border-amber-500/40"
+                          />
+                          <span>Restrict Copy / Paste on Questions</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={settingsFormData.prevent_navigation}
+                            onChange={(e) => setSettingsFormData({ ...settingsFormData, prevent_navigation: e.target.checked })}
+                            className="rounded border-amber-500/40"
+                          />
+                          <span>Block Browser Back & Leaving</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer sm:col-span-2">
+                          <input
+                            type="checkbox"
+                            checked={settingsFormData.auto_submit_on_violation}
+                            onChange={(e) => setSettingsFormData({ ...settingsFormData, auto_submit_on_violation: e.target.checked })}
+                            className="rounded border-amber-500/40"
+                          />
+                          <span>Automatically Submit Attempt on Threshold Reached</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

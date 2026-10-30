@@ -30,19 +30,6 @@ export const Navbar = () => {
     setMounted(true);
   }, []);
 
-  // Admin tab visible for Super Admin, Admin, and College Admin
-  const isAdmin = mounted && isAuthenticated && (user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'college_admin');
-
-  const isActive = (href) => {
-    if (href === '/') return pathname === '/';
-    if (href === '/compete') return pathname.startsWith('/compete') || pathname.startsWith('/assessments');
-    return pathname.startsWith(href);
-  };
-
-  const navItems = isAdmin
-    ? [...NAV_ITEMS, { label: 'Admin', href: '/admin' }]
-    : NAV_ITEMS;
-
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -68,6 +55,25 @@ export const Navbar = () => {
     setMobileNavOpen(false);
     await handleLogout();
   };
+
+  // Admin tab visible for Super Admin, Admin, and College Admin
+  const isAdmin = mounted && isAuthenticated && (user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'college_admin');
+
+  const isActive = (href) => {
+    if (href === '/') return pathname === '/';
+    if (href === '/compete') return pathname?.startsWith('/compete') || pathname?.startsWith('/assessments');
+    return pathname?.startsWith(href);
+  };
+
+  const navItems = isAdmin
+    ? [...NAV_ITEMS, { label: 'Admin', href: '/admin' }]
+    : NAV_ITEMS;
+
+  // Isolate assessment arena: completely hide global navbar during active assessment
+  // (Must be returned AFTER all hooks to adhere to React Rules of Hooks)
+  if (pathname?.startsWith('/assessments/take/')) {
+    return null;
+  }
 
   return (
     <>

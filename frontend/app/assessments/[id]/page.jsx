@@ -279,9 +279,15 @@ export default function AssessmentInstructionsPage() {
                 <div className="p-3.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-default)] flex items-start gap-3">
                   <Maximize2 size={16} className="text-rose-500 shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-semibold text-[var(--text-primary)]">Full-Screen Mode Required</div>
+                    <div className="font-semibold text-[var(--text-primary)]">
+                      {assessment.security_policy?.max_violations > 1
+                        ? `Violation Policy: ${assessment.security_policy.max_violations} Strikes Allowed`
+                        : 'Full-Screen Strict Enforcement'}
+                    </div>
                     <p className="text-[var(--text-muted)] mt-0.5 leading-relaxed">
-                      The assessment runs exclusively in full-screen. Exiting full-screen at any time will trigger automatic submission.
+                      {assessment.security_policy?.max_violations > 1
+                        ? `The assessment requires full-screen. You are granted up to ${assessment.security_policy.max_violations - 1} warning(s); reaching ${assessment.security_policy.max_violations} violations automatically finalizes and submits your attempt.`
+                        : 'The assessment runs exclusively in full-screen. Exiting full-screen or switching tabs will immediately finalize and submit your assessment.'}
                     </p>
                   </div>
                 </div>
@@ -289,9 +295,9 @@ export default function AssessmentInstructionsPage() {
                 <div className="p-3.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-default)] flex items-start gap-3">
                   <EyeOff size={16} className="text-rose-500 shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-semibold text-[var(--text-primary)]">Tab Switching Prohibited</div>
+                    <div className="font-semibold text-[var(--text-primary)]">Tab Switching Monitored</div>
                     <p className="text-[var(--text-muted)] mt-0.5 leading-relaxed">
-                      Switching to another browser tab, minimizing the window, or losing document visibility causes immediate finalization.
+                      Switching to another browser tab, minimizing the window, or navigating away records a violation against your attempt limit.
                     </p>
                   </div>
                 </div>

@@ -12,6 +12,9 @@ const router = express.Router();
 // List published assessments (optionalAuth to attach user status if logged in)
 router.get('/', optionalAuth, studentController.getPublishedAssessments);
 
+// Check if authenticated candidate has an active in-progress attempt
+router.get('/active-attempt', requireAuth, studentController.getActiveAttempt);
+
 // Get assessment overview/instructions
 router.get('/:id', optionalAuth, studentController.getAssessmentOverview);
 

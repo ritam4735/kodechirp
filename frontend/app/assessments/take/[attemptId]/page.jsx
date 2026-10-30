@@ -126,13 +126,35 @@ export default function AssessmentTakingArena() {
     isFinalizing: false,
     error: null,
   });
+  const [warningModal, setWarningModal] = useState({
+    open: false,
+    violationType: null,
+    violationDetails: '',
+    violationCount: 0,
+    maxViolations: 1,
+    remainingWarnings: 0,
+  });
   const [toast, setToast] = useState(null);
   const [needsFullscreenPrompt, setNeedsFullscreenPrompt] = useState(false);
+  const [fullscreenError, setFullscreenError] = useState(null);
 
   const isSubmittingRef = useRef(false);
   const hasTriggeredViolationRef = useRef(false);
   const pendingSaveRef = useRef(null);
   const isTransitioningFullscreenRef = useRef(false);
+  const lastViolationTimeRef = useRef(0);
+
+  // Strict 100dvh viewport isolation: prevent document & body scroll
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.add('assessment-mode-active');
+      document.body.classList.add('assessment-mode-active');
+      return () => {
+        document.documentElement.classList.remove('assessment-mode-active');
+        document.body.classList.remove('assessment-mode-active');
+      };
+    }
+  }, []);
 
   const showToast = useCallback((type, message) => {
     setToast({ type, message });
@@ -228,6 +250,33 @@ export default function AssessmentTakingArena() {
         }
       }
 
+      // Merge any offline local backup in case of client refresh or temporary network disconnect
+      try {
+        const backupRaw = localStorage.getItem(`kc_assessment_backup_${attemptId}`);
+        if (backupRaw) {
+          const backup = JSON.parse(backupRaw);
+          if (backup?.responses) {
+            for (const [key, bResp] of Object.entries(backup.responses)) {
+              if (initialResp[key]) {
+                if (!initialResp[key].selected_options && bResp.selected_options) {
+                  initialResp[key].selected_options = bResp.selected_options;
+                }
+                if (!initialResp[key].text_response && bResp.text_response) {
+                  initialResp[key].text_response = bResp.text_response;
+                }
+              }
+            }
+          }
+          if (backup?.codeDrafts) {
+            for (const [key, bCode] of Object.entries(backup.codeDrafts)) {
+              if (bCode && (!initialCode[key] || initialCode[key].trim() === getStarterCode(null, 'python').trim())) {
+                initialCode[key] = bCode;
+              }
+            }
+          }
+        }
+      } catch (_) {}
+
       setResponses(initialResp);
       setCodeDrafts(initialCode);
       setCodeLanguages(initialLang);
@@ -241,6 +290,24 @@ export default function AssessmentTakingArena() {
   useEffect(() => {
     if (attemptId) loadAttempt();
   }, [attemptId, loadAttempt]);
+
+  // Submission with automatic exponential-backoff retry
+  const submitWithRetry = useCallback(async (payload, maxRetries = 3) => {
+    let lastErr = null;
+    for (let attemptNum = 1; attemptNum <= maxRetries; attemptNum++) {
+      try {
+        const res = await api.submitAssessmentAttempt(attemptId, payload);
+        return res;
+      } catch (err) {
+        lastErr = err;
+        console.warn(`[Submission] Attempt ${attemptNum} failed:`, err);
+        if (attemptNum < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, attemptNum * 1000));
+        }
+      }
+    }
+    throw lastErr;
+  }, [attemptId]);
 
   // Execute Final Submit (Standard / Manual)
   const executeFinalSubmit = useCallback(async (reasonArg = 'manual') => {
@@ -271,20 +338,30 @@ export default function AssessmentTakingArena() {
         } catch (_) {}
       }
 
-      await api.submitAssessmentAttempt(attemptId, {
+      // Persist emergency responses backup to localStorage
+      try {
+        localStorage.setItem(`kc_assessment_backup_${attemptId}`, JSON.stringify({
+          responses,
+          codeDrafts,
+          codeLanguages,
+          timestamp: new Date().toISOString(),
+        }));
+      } catch (_) {}
+
+      await submitWithRetry({
         submission_reason: finalReason,
-      });
+      }, 3);
       router.push(`/assessments/result/${attemptId}`);
     } catch (err) {
-      alert('Error during submission: ' + err.message);
+      alert('Error during submission: ' + (err.message || 'Network error') + '\nYour answers are preserved in local backup.');
       setIsSubmitting(false);
       isSubmittingRef.current = false;
     }
-  }, [attemptId, isSubmitting, router, sections, currentSectionIdx, currentQuestionIdx]);
+  }, [attemptId, isSubmitting, router, sections, currentSectionIdx, currentQuestionIdx, responses, codeDrafts, codeLanguages, submitWithRetry]);
 
-  // Trigger Immediate Automatic Violation Submission (Strict Mode)
+  // Trigger Automatic Violation Submission (Terminating Strike)
   const triggerViolationSubmission = useCallback(async (violationType, violationDetails) => {
-    if (hasTriggeredViolationRef.current || isSubmittingRef.current) return;
+    if (hasTriggeredViolationRef.current) return;
     hasTriggeredViolationRef.current = true;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
@@ -321,8 +398,18 @@ export default function AssessmentTakingArena() {
       }
     }
 
+    // Persist emergency responses backup to localStorage
     try {
-      await api.submitAssessmentAttempt(attemptId, {
+      localStorage.setItem(`kc_assessment_backup_${attemptId}`, JSON.stringify({
+        responses,
+        codeDrafts,
+        codeLanguages,
+        timestamp: new Date().toISOString(),
+      }));
+    } catch (_) {}
+
+    try {
+      await submitWithRetry({
         submission_reason: violationType,
         violation_type: violationType,
         violation_details: {
@@ -330,26 +417,57 @@ export default function AssessmentTakingArena() {
           details: violationDetails,
           client_timestamp: new Date().toISOString(),
         },
-      });
-      setViolationModal((prev) => ({ ...prev, isFinalizing: false }));
+      }, 3);
+      setViolationModal((prev) => ({ ...prev, isFinalizing: false, error: null }));
     } catch (err) {
       console.error('[Security] Finalize violation error:', err);
       setViolationModal((prev) => ({
         ...prev,
         isFinalizing: false,
-        error: err.message || 'Assessment successfully recorded and finalized on server',
+        error: 'Network connection issue during submission. Your responses are preserved locally in offline storage. Click "Retry Submission Now" to finalize.',
       }));
     }
-  }, [attemptId, sections, currentSectionIdx, currentQuestionIdx]);
+  }, [attemptId, sections, currentSectionIdx, currentQuestionIdx, responses, codeDrafts, codeLanguages, submitWithRetry]);
 
-  // Re-enter Fullscreen Handler
+  // Retry final submission after network failure
+  const handleRetryFinalSubmission = async () => {
+    if (!violationModal.open) return;
+    setViolationModal((prev) => ({ ...prev, isFinalizing: true, error: null }));
+    try {
+      await submitWithRetry({
+        submission_reason: violationModal.violationType || 'security_violation',
+        violation_type: violationModal.violationType,
+        violation_details: {
+          reason: violationModal.violationType,
+          details: violationModal.violationDetails,
+          client_timestamp: new Date().toISOString(),
+          retry: true,
+        },
+      }, 3);
+      setViolationModal((prev) => ({ ...prev, isFinalizing: false, error: null }));
+      router.push(`/assessments/result/${attemptId}`);
+    } catch (err) {
+      setViolationModal((prev) => ({
+        ...prev,
+        isFinalizing: false,
+        error: 'Submission retry failed: ' + (err.message || 'Network unavailable. Please try again.'),
+      }));
+    }
+  };
+
+  // Re-enter Fullscreen Handler with proper denial handling
   const handleReEnterFullscreen = async () => {
     try {
       isTransitioningFullscreenRef.current = true;
+      setFullscreenError(null);
       await enterFullscreen();
       setNeedsFullscreenPrompt(false);
+      setFullscreenError(null);
     } catch (err) {
-      showToast('error', 'Failed to enter full-screen mode: ' + (err.message || 'Permission denied'));
+      const errMsg = err?.message || 'Full-screen permission was denied. Please enable full-screen in your browser and click Retry.';
+      setFullscreenError(errMsg);
+      setNeedsFullscreenPrompt(true);
+      showToast('error', 'Full-screen mode required: ' + errMsg);
     } finally {
       setTimeout(() => {
         isTransitioningFullscreenRef.current = false;
@@ -373,6 +491,79 @@ export default function AssessmentTakingArena() {
     return () => clearInterval(timer);
   }, [timeLeft, executeFinalSubmit]);
 
+  // Handle security violation with deduplication/coalescing and configurable policy check
+  const handleSecurityViolation = useCallback(async (violationType, violationDetails) => {
+    if (isSubmittingRef.current || hasTriggeredViolationRef.current) return;
+
+    const now = Date.now();
+    // Coalesce rapid cascade events (e.g. window blur + visibilitychange + fullscreenchange)
+    if (now - lastViolationTimeRef.current < 2000) {
+      return;
+    }
+    lastViolationTimeRef.current = now;
+
+    // Flush any pending unsaved draft before recording
+    if (pendingSaveRef.current?.itemKey && pendingSaveRef.current?.fields) {
+      try {
+        const { fields } = pendingSaveRef.current;
+        const curSec = sections[currentSectionIdx];
+        const curQ = curSec?.questions?.[currentQuestionIdx];
+        if (curSec && curQ) {
+          await api.saveAssessmentResponse(attemptId, {
+            section_id: curSec.id,
+            question_id: curQ.question_id || null,
+            problem_id: curQ.problem_id || null,
+            ...fields,
+          });
+        }
+      } catch (flushErr) {
+        console.warn('[Security] Autosave flush error before violation:', flushErr);
+      }
+    }
+
+    // Persist emergency responses backup to localStorage
+    try {
+      localStorage.setItem(`kc_assessment_backup_${attemptId}`, JSON.stringify({
+        responses,
+        codeDrafts,
+        codeLanguages,
+        timestamp: new Date().toISOString(),
+      }));
+    } catch (_) {}
+
+    try {
+      const res = await api.recordAssessmentViolation(attemptId, {
+        event_type: violationType,
+        violation_type: violationType,
+        details: {
+          reason: violationType,
+          details: violationDetails,
+          client_timestamp: new Date().toISOString(),
+        },
+      });
+
+      if (res?.terminated) {
+        triggerViolationSubmission(violationType, violationDetails);
+      } else {
+        setWarningModal({
+          open: true,
+          violationType,
+          violationDetails: violationDetails || 'Security violation warning recorded.',
+          violationCount: res?.violation_count || 1,
+          maxViolations: res?.max_violations || 1,
+          remainingWarnings: res?.remaining_warnings || 0,
+        });
+      }
+    } catch (err) {
+      console.error('[Security] Failed to record violation with backend:', err);
+      if (err.message && err.message.toLowerCase().includes('terminated')) {
+        triggerViolationSubmission(violationType, violationDetails);
+      } else {
+        showToast('error', 'Security check: ' + (err.message || 'Violation recorded'));
+      }
+    }
+  }, [attemptId, sections, currentSectionIdx, currentQuestionIdx, responses, codeDrafts, codeLanguages, triggerViolationSubmission, showToast]);
+
   // Secure Mode Proactive Event Listeners
   useEffect(() => {
     if (!isSecureMode || !attempt || attempt.is_finalized || violationModal.open) return;
@@ -387,11 +578,12 @@ export default function AssessmentTakingArena() {
       if (isTransitioningFullscreenRef.current) return;
       const active = isFullscreenActive();
       if (!active) {
-        if (!isSubmittingRef.current && !hasTriggeredViolationRef.current) {
-          triggerViolationSubmission('fullscreen_exited', 'Browser exited full-screen mode during active assessment.');
+        if (!isSubmittingRef.current && !hasTriggeredViolationRef.current && !warningModal.open) {
+          handleSecurityViolation('fullscreen_exited', 'Browser exited full-screen mode during active assessment.');
         }
       } else {
         setNeedsFullscreenPrompt(false);
+        setFullscreenError(null);
       }
     };
 
@@ -401,13 +593,33 @@ export default function AssessmentTakingArena() {
 
     // 3. Tab switch / document visibility listener
     const handleVisibilityChange = () => {
-      if (document.hidden) {
+      if (document.hidden || document.visibilityState === 'hidden') {
         if (!isSubmittingRef.current && !hasTriggeredViolationRef.current) {
-          triggerViolationSubmission('tab_hidden', 'Document visibility changed to hidden (switched tabs or minimized browser).');
+          try {
+            navigator.sendBeacon?.(
+              `/api/assessments/attempts/${attemptId}/violation`,
+              JSON.stringify({
+                event_type: 'tab_hidden',
+                violation_type: 'tab_hidden',
+                details: { event: 'visibilitychange', visibilityState: document.visibilityState, timestamp: new Date().toISOString() },
+              })
+            );
+          } catch (_) {}
+          handleSecurityViolation('tab_hidden', 'Document visibility changed to hidden (switched tabs or minimized browser).');
         }
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Complementary check: if window loses focus and document is hidden (switched tabs)
+    const handleWindowBlur = () => {
+      if (document.hidden || document.visibilityState === 'hidden') {
+        if (!isSubmittingRef.current && !hasTriggeredViolationRef.current) {
+          handleSecurityViolation('tab_hidden', 'Document visibility changed to hidden on focus loss (switched tabs).');
+        }
+      }
+    };
+    window.addEventListener('blur', handleWindowBlur);
 
     // 4. Popstate / back button trap
     window.history.pushState(null, '', window.location.href);
@@ -415,7 +627,7 @@ export default function AssessmentTakingArena() {
       e.preventDefault();
       window.history.pushState(null, '', window.location.href);
       if (!isSubmittingRef.current && !hasTriggeredViolationRef.current) {
-        triggerViolationSubmission('navigation_attempt', 'Attempted browser back/forward navigation away from assessment.');
+        handleSecurityViolation('navigation_attempt', 'Attempted browser back/forward navigation away from assessment.');
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -427,6 +639,7 @@ export default function AssessmentTakingArena() {
           navigator.sendBeacon?.(
             `/api/assessments/attempts/${attemptId}/violation`,
             JSON.stringify({
+              event_type: 'navigation_attempt',
               violation_type: 'navigation_attempt',
               details: { event: 'beforeunload', timestamp: new Date().toISOString() },
             })
@@ -438,6 +651,23 @@ export default function AssessmentTakingArena() {
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // 5b. Pagehide beacon
+    const handlePageHide = () => {
+      if (!isSubmittingRef.current && !hasTriggeredViolationRef.current) {
+        try {
+          navigator.sendBeacon?.(
+            `/api/assessments/attempts/${attemptId}/violation`,
+            JSON.stringify({
+              event_type: 'tab_hidden',
+              violation_type: 'tab_hidden',
+              details: { event: 'pagehide', timestamp: new Date().toISOString() },
+            })
+          );
+        } catch (_) {}
+      }
+    };
+    window.addEventListener('pagehide', handlePageHide);
 
     // 6. Scoped Clipboard & Context Menu listeners
     const isMonacoEditorEvent = (target) => {
@@ -455,6 +685,7 @@ export default function AssessmentTakingArena() {
       e.preventDefault();
       showToast('warning', `Action '${e.type.toUpperCase()}' is restricted in Secure Assessment Mode.`);
       api.recordAssessmentViolation(attemptId, {
+        event_type: 'clipboard_action',
         violation_type: 'clipboard_action',
         details: { action: e.type, tag: e.target?.tagName || 'element' },
       }).catch(() => {});
@@ -486,15 +717,17 @@ export default function AssessmentTakingArena() {
         document.removeEventListener(evt, handleFullscreenChange);
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
       document.removeEventListener('copy', handleCopyCutPaste);
       document.removeEventListener('cut', handleCopyCutPaste);
       document.removeEventListener('paste', handleCopyCutPaste);
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('dragstart', handleDragStart);
     };
-  }, [isSecureMode, attempt, attemptId, triggerViolationSubmission, showToast, violationModal.open]);
+  }, [isSecureMode, attempt, attemptId, handleSecurityViolation, showToast, violationModal.open, warningModal.open]);
 
   // Save response to backend
   const saveAnswer = async (itemKey, updatedFields) => {
@@ -796,7 +1029,7 @@ export default function AssessmentTakingArena() {
     : null;
 
   return (
-    <div className="h-screen w-screen bg-[var(--kc-bg)] flex flex-col select-none overflow-hidden font-sans">
+    <div className="kc-assessment-shell fixed inset-0 z-50 h-[100dvh] max-h-[100dvh] w-screen max-w-full overflow-hidden bg-[var(--kc-bg)] flex flex-col select-none font-sans">
       {/* ── QUESTION PALETTE DRAWER (Hidden by default, triggered by hamburger) ─ */}
       <AssessmentQuestionDrawer
         isOpen={isPaletteOpen}
@@ -1402,15 +1635,60 @@ export default function AssessmentTakingArena() {
               Full-Screen Mode Required
             </h2>
             <p className="text-xs text-[var(--kc-text-secondary)] leading-relaxed">
-              This assessment is running under <strong>Secure Assessment Mode</strong>. You must remain in full-screen mode at all times. Exiting full-screen will automatically finalize and submit your assessment.
+              This assessment is running under <strong>Secure Assessment Mode</strong>. You must remain in full-screen mode at all times. Exiting full-screen will trigger policy strikes or automatically finalize your assessment.
             </p>
+            {fullscreenError && (
+              <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs text-left font-mono">
+                {fullscreenError}
+              </div>
+            )}
             <button
               type="button"
               onClick={handleReEnterFullscreen}
               className="w-full py-2.5 text-xs font-bold rounded-xl bg-[var(--kc-accent)] hover:bg-[var(--kc-accent-hover)] text-white shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2"
             >
               <Maximize size={14} />
-              <span>Enter Full-Screen to Continue</span>
+              <span>{fullscreenError ? 'Retry Entering Full-Screen' : 'Enter Full-Screen to Continue'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── 5.5 SECURITY VIOLATION WARNING MODAL (When policy allows strikes before termination) ─ */}
+      {warningModal.open && !violationModal.open && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-fadeIn select-none">
+          <div className="bg-[var(--kc-surface)] border border-amber-500/50 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center justify-center mx-auto animate-bounce">
+              <AlertTriangle size={26} />
+            </div>
+            <div className="space-y-1">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/15 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                Warning Strike {warningModal.violationCount} of {warningModal.maxViolations}
+              </span>
+              <h2 className="text-lg font-bold text-[var(--kc-text-primary)] font-display pt-1">
+                Security Policy Warning
+              </h2>
+            </div>
+            <p className="text-xs text-[var(--kc-text-secondary)] leading-relaxed">
+              You left full-screen or navigated away from the assessment window. A security violation strike has been recorded.
+            </p>
+            <div className="p-3 rounded-xl bg-[var(--kc-surface-subtle)] border border-[var(--kc-border)] text-left text-xs font-mono space-y-1">
+              <div className="text-[11px] text-[var(--kc-text-muted)]">Event: <span className="text-amber-600 dark:text-amber-400 font-bold">{warningModal.violationType}</span></div>
+              <div className="text-[11px] text-[var(--kc-text-secondary)] font-sans">{warningModal.violationDetails}</div>
+            </div>
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-left text-xs text-amber-800 dark:text-amber-300">
+              <strong>Caution:</strong> You have <strong>{warningModal.remainingWarnings} warning(s)</strong> remaining. Exceeding the allowed limit will automatically submit and terminate your test.
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                setWarningModal((prev) => ({ ...prev, open: false }));
+                await handleReEnterFullscreen();
+              }}
+              className="w-full py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2"
+            >
+              <ShieldCheck size={14} />
+              <span>Acknowledge & Resume Assessment</span>
             </button>
           </div>
         </div>
@@ -1429,7 +1707,7 @@ export default function AssessmentTakingArena() {
                 Assessment Terminated & Submitted
               </div>
               <h2 className="text-xl font-bold text-[var(--kc-text-primary)] font-display">
-                Security Violation Triggered
+                Security Violation Threshold Reached
               </h2>
               <p className="text-xs text-[var(--kc-text-secondary)] leading-relaxed">
                 A security rule was triggered: <strong>{getViolationMeta(violationModal.violationType).title}</strong>. As configured by the exam security policy, the assessment has been automatically finalized.
@@ -1446,14 +1724,36 @@ export default function AssessmentTakingArena() {
               </div>
             </div>
 
+            {/* Offline or Network Error Handling */}
+            {violationModal.error && (
+              <div className="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-left text-xs text-amber-700 dark:text-amber-300 space-y-2">
+                <div className="font-bold flex items-center gap-1.5">
+                  <AlertTriangle size={15} className="text-amber-500 shrink-0" />
+                  <span>Submission Notice</span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  {violationModal.error}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRetryFinalSubmission}
+                  disabled={violationModal.isFinalizing}
+                  className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <RotateCcw size={12} className={violationModal.isFinalizing ? 'animate-spin' : ''} />
+                  <span>{violationModal.isFinalizing ? 'Retrying…' : 'Retry Submission Now'}</span>
+                </button>
+              </div>
+            )}
+
             {/* Authoritative assurance: saved responses are kept and scored */}
             <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-left text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
               <div className="font-semibold flex items-center gap-1.5">
                 <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
-                <span>Your responses have been saved</span>
+                <span>Your responses have been preserved</span>
               </div>
               <p className="text-[11px] leading-relaxed text-[var(--kc-text-secondary)]">
-                All question answers, numerical responses, and code submissions saved prior to this violation were recorded and evaluated normally according to assessment scoring rules.
+                All question answers, numerical responses, and code submissions saved prior to this violation have been safely recorded and are preserved for evaluation.
               </p>
             </div>
 

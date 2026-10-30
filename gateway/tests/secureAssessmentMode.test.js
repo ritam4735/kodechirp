@@ -28,6 +28,7 @@ describe('KodeChirp Secure Assessment Mode', () => {
       json: jest.fn(),
     };
     jest.clearAllMocks();
+    db.query.mockReset();
   });
 
   // ── 1. SECURE MODE CONFIGURATION & METADATA ────────────────────────────────
@@ -100,7 +101,9 @@ describe('KodeChirp Secure Assessment Mode', () => {
             },
           ],
         })
-        // Check in-progress attempts
+        // Check in-progress attempts for this assessment
+        .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+        // Check in-progress attempts for other assessments
         .mockResolvedValueOnce({ rowCount: 0, rows: [] })
         // Check attempt count
         .mockResolvedValueOnce({ rowCount: 1, rows: [{ count: 0 }] })
@@ -242,7 +245,7 @@ describe('KodeChirp Secure Assessment Mode', () => {
     it('automatically terminates exam on fullscreen_exited event', async () => {
       mockReq.params = { attemptId: 'att-sec-2' };
       mockReq.body = {
-        event_type: 'fullscreen_exited',
+        violation_type: 'fullscreen_exited',
         details: { timestamp: new Date().toISOString() },
       };
 
@@ -372,6 +375,176 @@ describe('KodeChirp Secure Assessment Mode', () => {
           success: true,
           message: 'Assessment is already submitted',
           is_finalized: true,
+        })
+      );
+    });
+
+    it('returns a warning when violations are under the configured max_violations threshold', async () => {
+      mockReq.params = { attemptId: 'att-sec-3' };
+      mockReq.body = {
+        event_type: 'fullscreen_exited',
+        details: { timestamp: new Date().toISOString() },
+      };
+
+      // Attempt with max_violations = 3, currently 0 violations
+      db.query
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [
+            {
+              id: 'att-sec-3',
+              assessment_id: 'assess-sec-1',
+              user_id: 'student-uuid-1',
+              is_finalized: false,
+              status: 'in_progress',
+              expires_at: new Date(Date.now() + 3600000).toISOString(),
+              is_secure_mode: true,
+              security_policy: { auto_submit_on_violation: true, max_violations: 3 },
+              violations: [],
+            },
+          ],
+        })
+        // Update assessment_attempts violations
+        .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+        // Insert into assessment_violation_logs
+        .mockResolvedValueOnce({ rowCount: 1, rows: [] });
+
+      await studentController.recordViolation(mockReq, mockRes);
+
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          terminated: false,
+          violation_count: 1,
+          max_violations: 3,
+          violations_remaining: 2,
+        })
+      );
+    });
+
+    it('coalesces duplicate cascade browser events occurring within 2000ms', async () => {
+      mockReq.params = { attemptId: 'att-sec-4' };
+      mockReq.body = {
+        event_type: 'fullscreen_exited',
+        details: { reason: 'cascade after tab_hidden' },
+      };
+
+      const justNow = new Date().toISOString();
+
+      // Attempt with previous violation recorded 300ms ago
+      db.query
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [
+            {
+              id: 'att-sec-4',
+              assessment_id: 'assess-sec-1',
+              user_id: 'student-uuid-1',
+              is_finalized: false,
+              status: 'in_progress',
+              expires_at: new Date(Date.now() + 3600000).toISOString(),
+              is_secure_mode: true,
+              security_policy: { auto_submit_on_violation: true, max_violations: 3 },
+              violations: [
+                {
+                  event_type: 'tab_hidden',
+                  occurred_at: justNow,
+                  strike_number: 1,
+                },
+              ],
+            },
+          ],
+        })
+        // Update assessment_attempts violations
+        .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+        // Insert into assessment_violation_logs
+        .mockResolvedValueOnce({ rowCount: 1, rows: [] });
+
+      await studentController.recordViolation(mockReq, mockRes);
+
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          terminated: false,
+          is_duplicate: true,
+          violation_count: 1, // strikeCount remained 1, did not increment!
+        })
+      );
+    });
+
+    it('prevents starting a new assessment when another attempt is active', async () => {
+      mockReq.params = { id: 'assess-sec-2' };
+
+      db.query
+        // 1. Assessment fetch
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [
+            {
+              id: 'assess-sec-2',
+              status: 'Published',
+              max_attempts: 1,
+              duration_minutes: 60,
+              is_secure_mode: true,
+            },
+          ],
+        })
+        // 2. In-progress check for this assessment: 0
+        .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+        // 3. Other in-progress check: finds an active attempt on assess-sec-1!
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [
+            {
+              id: 'att-sec-1',
+              assessment_id: 'assess-sec-1',
+              other_title: 'First Active Assessment',
+              expires_at: new Date(Date.now() + 3600000).toISOString(),
+            },
+          ],
+        });
+
+      await studentController.startAttempt(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          activeAttemptId: 'att-sec-1',
+          error: expect.stringContaining('active assessment attempt in progress'),
+        })
+      );
+    });
+
+    it('returns active attempt details via getActiveAttempt', async () => {
+      db.query.mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [
+          {
+            id: 'att-sec-1',
+            assessment_id: 'assess-sec-1',
+            assessment_title: 'Active Assessment',
+            assessment_slug: 'active-assessment',
+            status: 'in_progress',
+            started_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 1800000).toISOString(),
+            is_secure_mode: true,
+            security_policy: { max_violations: 2 },
+          },
+        ],
+      });
+
+      await studentController.getActiveAttempt(mockReq, mockRes);
+
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          hasActiveAttempt: true,
+          attempt: expect.objectContaining({
+            id: 'att-sec-1',
+            assessment_title: 'Active Assessment',
+            is_secure_mode: true,
+          }),
         })
       );
     });

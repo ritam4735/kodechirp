@@ -429,6 +429,11 @@ export const api = {
     return data;
   },
 
+  getActiveAssessmentAttempt: async () => {
+    const data = await request('/api/assessments/active-attempt');
+    return data;
+  },
+
   getAttemptData: async (attemptId) => {
     const data = await request(`/api/assessments/attempts/${attemptId}`);
     return data;
@@ -460,6 +465,11 @@ export const api = {
     const safePayload = (payload && typeof payload === 'object' && !payload.nativeEvent && !payload.target)
       ? { ...payload }
       : {};
+    const eventType = safePayload.event_type || safePayload.violation_type;
+    if (eventType) {
+      safePayload.event_type = eventType;
+      safePayload.violation_type = eventType;
+    }
     const data = await request(`/api/assessments/attempts/${attemptId}/violation`, {
       method: 'POST',
       body: JSON.stringify(safePayload),

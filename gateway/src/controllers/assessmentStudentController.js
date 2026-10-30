@@ -229,6 +229,57 @@ async function getAssessmentOverview(req, res) {
 }
 
 /**
+ * Check if the authenticated candidate currently has an active in-progress assessment attempt
+ */
+async function getActiveAttempt(req, res) {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+    const result = await db.query(
+      `
+      SELECT att.id, att.assessment_id, att.status, att.started_at, att.expires_at,
+             a.title AS assessment_title, a.slug AS assessment_slug, a.is_secure_mode, a.security_policy
+      FROM assessment_attempts att
+      JOIN assessments a ON att.assessment_id = a.id
+      WHERE att.user_id = $1 AND att.status = 'in_progress'
+      ORDER BY att.created_at DESC
+      LIMIT 1;
+    `,
+      [userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.json({ success: true, hasActiveAttempt: false, attempt: null });
+    }
+
+    const attempt = result.rows[0];
+    if (new Date(attempt.expires_at) < now) {
+      await finalizeAndScoreAttempt(attempt.id);
+      return res.json({ success: true, hasActiveAttempt: false, attempt: null });
+    }
+
+    const remainingSeconds = Math.max(0, Math.floor((new Date(attempt.expires_at).getTime() - Date.now()) / 1000));
+
+    return res.json({
+      success: true,
+      hasActiveAttempt: true,
+      attempt: {
+        id: attempt.id,
+        assessment_id: attempt.assessment_id,
+        assessment_title: attempt.assessment_title,
+        assessment_slug: attempt.assessment_slug,
+        is_secure_mode: Boolean(attempt.is_secure_mode),
+        security_policy: attempt.security_policy,
+        remaining_seconds: remainingSeconds,
+      },
+    });
+  } catch (err) {
+    logger.error({ err }, '[AssessmentStudent] getActiveAttempt failed');
+    res.status(500).json({ success: false, error: 'Failed to retrieve active attempt status' });
+  }
+}
+
+/**
  * Start or resume an assessment attempt
  */
 async function startAttempt(req, res) {
@@ -275,7 +326,7 @@ async function startAttempt(req, res) {
       return res.status(403).json({ success: false, error: 'Assessment has already concluded' });
     }
 
-    // Check existing in-progress attempt
+    // Check existing in-progress attempt for THIS assessment
     const inProgressRes = await db.query(
       `
       SELECT * FROM assessment_attempts
@@ -300,6 +351,30 @@ async function startAttempt(req, res) {
         });
       }
     } else {
+      // Check if user has an active in-progress attempt on a different assessment
+      const otherActiveRes = await db.query(
+        `
+        SELECT att.*, a.title AS other_title
+        FROM assessment_attempts att
+        JOIN assessments a ON att.assessment_id = a.id
+        WHERE att.user_id = $1 AND att.assessment_id != $2 AND att.status = 'in_progress';
+      `,
+        [userId, assessment.id]
+      );
+
+      if (otherActiveRes.rowCount > 0) {
+        const other = otherActiveRes.rows[0];
+        if (new Date(other.expires_at) < now) {
+          await finalizeAndScoreAttempt(other.id);
+        } else {
+          return res.status(403).json({
+            success: false,
+            error: `You have an active assessment attempt in progress ("${other.other_title}"). Please complete or resume your existing assessment first.`,
+            activeAttemptId: other.id,
+          });
+        }
+      }
+
       // Check max attempts
       const countRes = await db.query(
         `SELECT count(*)::int AS count FROM assessment_attempts WHERE assessment_id = $1 AND user_id = $2;`,
@@ -794,7 +869,9 @@ async function recordViolation(req, res) {
   try {
     const { attemptId } = req.params;
     const userId = req.user.id;
-    const { event_type, details } = req.body || {};
+    const rawBody = req.body || {};
+    const event_type = rawBody.event_type || rawBody.violation_type;
+    const details = rawBody.details || {};
 
     if (!event_type) {
       return res.status(400).json({ success: false, error: 'Missing event_type' });
@@ -830,20 +907,40 @@ async function recordViolation(req, res) {
     }
 
     const secPolicy = attempt.security_policy || {};
+    const maxViolations = Math.max(1, parseInt(secPolicy.max_violations, 10) || 1);
     const terminatingEvents = ['tab_hidden', 'fullscreen_exited', 'navigation_attempt', 'security_violation'];
-    const isStrictTermination = Boolean(
-      attempt.is_secure_mode &&
-      secPolicy.auto_submit_on_violation !== false &&
-      terminatingEvents.includes(event_type)
-    );
+    const isCountableViolation = terminatingEvents.includes(event_type);
 
     const userAgent = typeof req.get === 'function' ? req.get('user-agent') : (req.headers && req.headers['user-agent']) || null;
+    const now = new Date();
 
-    if (isStrictTermination) {
+    const currentViolations = Array.isArray(attempt.violations) ? attempt.violations : [];
+
+    // Deduplication / Coalescing of rapid cascade events (within 2000ms)
+    // When a tab switch or Esc exit happens, browsers fire blur, visibilitychange, and fullscreenchange within milliseconds.
+    const lastViolation = currentViolations.length > 0 ? currentViolations[currentViolations.length - 1] : null;
+    const isCascadeDuplicate = lastViolation && (now.getTime() - new Date(lastViolation.occurred_at).getTime() < 2000);
+
+    // Calculate current strike count
+    let strikeCount = currentViolations.filter(v => terminatingEvents.includes(v.event_type) && !v.is_duplicate).length;
+
+    if (isCountableViolation && !isCascadeDuplicate) {
+      strikeCount += 1;
+    }
+
+    // Check if threshold is reached
+    const shouldTerminate = Boolean(
+      attempt.is_secure_mode &&
+      secPolicy.auto_submit_on_violation !== false &&
+      isCountableViolation &&
+      strikeCount >= maxViolations
+    );
+
+    if (shouldTerminate) {
       const evaluated = await finalizeAndScoreAttempt(attemptId, {
         submission_reason: event_type,
         is_violation: true,
-        violation_details: details,
+        violation_details: { ...(details || {}), strike_count: strikeCount, max_violations: maxViolations },
         ip: req.ip || null,
         userAgent,
       });
@@ -852,18 +949,21 @@ async function recordViolation(req, res) {
         success: true,
         terminated: true,
         submission_reason: event_type,
-        message: 'Assessment automatically submitted due to security violation',
+        violation_count: strikeCount,
+        max_violations: maxViolations,
+        message: 'Assessment automatically submitted due to security violation threshold reached',
         result: evaluated,
       });
     } else {
-      // Non-terminating violation (e.g. copy attempt warning or audit logging)
-      const currentViolations = Array.isArray(attempt.violations) ? attempt.violations : [];
+      // Non-terminating violation (e.g. warning or duplicate cascade or clipboard attempt)
       const updatedViolations = [
         ...currentViolations,
         {
           event_type,
-          occurred_at: new Date().toISOString(),
+          occurred_at: now.toISOString(),
           details: details || {},
+          is_duplicate: Boolean(isCascadeDuplicate),
+          strike_number: isCountableViolation && !isCascadeDuplicate ? strikeCount : undefined,
         },
       ];
 
@@ -884,7 +984,7 @@ async function recordViolation(req, res) {
             attempt.assessment_id,
             attempt.user_id,
             event_type,
-            JSON.stringify(details || {}),
+            JSON.stringify({ ...(details || {}), is_duplicate: Boolean(isCascadeDuplicate) }),
             req.ip || null,
             userAgent,
           ]
@@ -896,7 +996,13 @@ async function recordViolation(req, res) {
       return res.json({
         success: true,
         terminated: false,
-        message: 'Violation recorded',
+        is_duplicate: Boolean(isCascadeDuplicate),
+        violation_count: strikeCount,
+        max_violations: maxViolations,
+        violations_remaining: Math.max(0, maxViolations - strikeCount),
+        message: isCountableViolation && !isCascadeDuplicate
+          ? `Security warning: Violation ${strikeCount} of ${maxViolations}`
+          : 'Violation recorded',
       });
     }
   } catch (err) {
@@ -1386,6 +1492,7 @@ async function getAttemptResult(req, res) {
 module.exports = {
   getPublishedAssessments,
   getAssessmentOverview,
+  getActiveAttempt,
   startAttempt,
   getAttemptData,
   saveResponse,

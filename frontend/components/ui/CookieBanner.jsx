@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Cookie, X, Check } from 'lucide-react';
 import { getConsentState, setConsentState } from '../../lib/analytics';
 
 export function CookieBanner() {
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -40,7 +42,8 @@ export function CookieBanner() {
     setVisible(false);
   };
 
-  if (!mounted) return null;
+  // Do not show cookie banner during active assessment
+  if (!mounted || pathname?.startsWith('/assessments/take/')) return null;
 
   return (
     <AnimatePresence>

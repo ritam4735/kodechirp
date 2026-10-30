@@ -35,10 +35,15 @@ const initialFormData = {
   randomize_options: false,
   default_negative_marking: true,
   show_results_immediately: true,
-  show_answers_mode: 'after_submission',
   is_public: false,
   target_audience: 'organization',
   is_secure_mode: false,
+  max_violations: 1,
+  require_fullscreen: true,
+  prevent_tab_switch: true,
+  prevent_clipboard: true,
+  prevent_navigation: true,
+  auto_submit_on_violation: true,
 };
 
 export default function AdminAssessmentsPage() {
@@ -107,6 +112,17 @@ export default function AdminAssessmentsPage() {
         max_attempts: parseInt(formData.max_attempts, 10) || 1,
         is_public: Boolean(formData.is_public),
         target_audience: formData.is_public ? 'public' : (formData.target_audience || 'organization'),
+        is_secure_mode: Boolean(formData.is_secure_mode),
+        security_policy: formData.is_secure_mode
+          ? {
+              require_fullscreen: Boolean(formData.require_fullscreen),
+              prevent_tab_switch: Boolean(formData.prevent_tab_switch),
+              prevent_clipboard: Boolean(formData.prevent_clipboard),
+              prevent_navigation: Boolean(formData.prevent_navigation),
+              auto_submit_on_violation: Boolean(formData.auto_submit_on_violation),
+              max_violations: Math.max(1, parseInt(formData.max_violations, 10) || 1),
+            }
+          : null,
       };
       if (!payload.slug || !payload.slug.trim()) {
         delete payload.slug;
@@ -538,8 +554,8 @@ export default function AdminAssessmentsPage() {
                   <span>Make assessment publicly accessible to all platform students</span>
                 </label>
 
-                {/* Secure Assessment Mode Toggle Card */}
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-1">
+                {/* Secure Assessment Mode Toggle Card & Violation Policy */}
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-3">
                   <label className="flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-300 cursor-pointer">
                     <input
                       type="checkbox"
@@ -555,6 +571,72 @@ export default function AdminAssessmentsPage() {
                   <p className="text-[11px] text-[var(--text-muted)] pl-5 leading-relaxed">
                     Enforces mandatory full-screen mode, restricts copy/paste on question text, and automatically submits the attempt if the student switches tabs, minimizes the window, or exits full-screen.
                   </p>
+
+                  {formData.is_secure_mode && (
+                    <div className="pt-2.5 border-t border-amber-500/20 space-y-3 pl-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[var(--text-primary)] mb-1">
+                            Violation Threshold (Strikes Before Auto-Submit)
+                          </label>
+                          <select
+                            value={formData.max_violations}
+                            onChange={(e) => setFormData({ ...formData, max_violations: parseInt(e.target.value, 10) || 1 })}
+                            className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                          >
+                            <option value={1}>1 Strike (Zero-Tolerance: Immediate Submission)</option>
+                            <option value={2}>2 Strikes (1 Warning Allowed)</option>
+                            <option value={3}>3 Strikes (2 Warnings Allowed)</option>
+                            <option value={4}>4 Strikes (3 Warnings Allowed)</option>
+                            <option value={5}>5 Strikes (4 Warnings Allowed)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[var(--text-secondary)]">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.require_fullscreen}
+                            onChange={(e) => setFormData({ ...formData, require_fullscreen: e.target.checked })}
+                          />
+                          <span>Mandate Full-Screen Mode</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.prevent_tab_switch}
+                            onChange={(e) => setFormData({ ...formData, prevent_tab_switch: e.target.checked })}
+                          />
+                          <span>Prevent Tab Switching / Blur</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.prevent_clipboard}
+                            onChange={(e) => setFormData({ ...formData, prevent_clipboard: e.target.checked })}
+                          />
+                          <span>Restrict Copy / Paste on Questions</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.prevent_navigation}
+                            onChange={(e) => setFormData({ ...formData, prevent_navigation: e.target.checked })}
+                          />
+                          <span>Block Browser Back & Leaving</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer sm:col-span-2">
+                          <input
+                            type="checkbox"
+                            checked={formData.auto_submit_on_violation}
+                            onChange={(e) => setFormData({ ...formData, auto_submit_on_violation: e.target.checked })}
+                          />
+                          <span>Automatically Submit Attempt on Threshold Reached</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
