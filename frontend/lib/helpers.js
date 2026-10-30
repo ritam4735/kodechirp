@@ -29,5 +29,3 @@ export const formatRelativeTime = (dateString) => {
   }
   return date.toLocaleDateString(undefined, options);
 };
-
-export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

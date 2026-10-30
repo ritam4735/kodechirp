@@ -1,2 +1,0 @@
-# Requirements can be empty or have minimal common packages like numpy if needed,
-# but for a strict algorithm sandbox, standard library is enough.

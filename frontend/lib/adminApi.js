@@ -299,8 +299,6 @@ export const adminApi = {
   // Section Management
   createAssessmentSection: (assessmentId, data) =>
     requestAdmin(`/assessments/${assessmentId}/sections`, { method: 'POST', body: JSON.stringify(data) }),
-  reorderAssessmentSections: (assessmentId, sectionIds) =>
-    requestAdmin(`/assessments/${assessmentId}/sections/reorder`, { method: 'PUT', body: JSON.stringify({ section_ids: sectionIds }) }),
   reorderSections: (assessmentId, sectionIds) =>
     requestAdmin(`/assessments/${assessmentId}/sections/reorder`, { method: 'PUT', body: JSON.stringify({ section_ids: sectionIds }) }),
   updateAssessmentSection: (sectionId, data) =>
@@ -309,8 +307,6 @@ export const adminApi = {
     requestAdmin(`/assessments/sections/${sectionId}`, { method: 'DELETE' }),
   addQuestionToSection: (sectionId, data) =>
     requestAdmin(`/assessments/sections/${sectionId}/questions`, { method: 'POST', body: JSON.stringify(data) }),
-  reorderSectionQuestions: (sectionId, mappingIds) =>
-    requestAdmin(`/assessments/sections/${sectionId}/questions/reorder`, { method: 'PUT', body: JSON.stringify({ mapping_ids: mappingIds }) }),
   reorderQuestions: (sectionId, mappingIds) =>
     requestAdmin(`/assessments/sections/${sectionId}/questions/reorder`, { method: 'PUT', body: JSON.stringify({ mapping_ids: mappingIds }) }),
   updateQuestionMapping: (mappingId, data) =>

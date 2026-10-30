@@ -19,8 +19,5 @@
     "logs:gateway": "docker compose logs -f gateway",
     "logs:worker": "docker compose logs -f worker",
     "import:aptitude": "node gateway/src/scripts/import_aptitude.js"
-  },
-  "devDependencies": {
-    "playwright": "^1.64.1"
   }
 }

@@ -22,10 +22,10 @@ export default async function sitemap() {
       priority: 0.6,
     },
     {
-      url: `${baseUrl}/coming-soon/chirps`,
+      url: `${baseUrl}/chirps`,
       lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.7,
+      changeFrequency: 'daily',
+      priority: 0.8,
     },
     {
       url: `${baseUrl}/coming-soon/flights`,
