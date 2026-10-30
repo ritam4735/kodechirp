@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
     display_name VARCHAR(100),
     avatar_url TEXT,
     bio TEXT,
-    github_url VARCHAR(400)),
+    github_url VARCHAR(400),
     linkedin_url VARCHAR(400),
     website_url VARCHAR(500),
     preferences_json JSONB DEFAULT '{}'::jsonb,
