@@ -25,7 +25,7 @@ All changes strictly follow:
 | **Pre-Remediation** | Audit & Remediation Plan Finalization | **Completed** | `248c782` | 2026-10-30 |
 | **Phase 1** | Foundation & Migration Safety | **Completed** | `d1b0035` | 2026-10-30 |
 | **Phase 2** | Engine & API Security Fixes | **Completed** | `53467e6` / `8c752b3` | 2026-10-31 |
-| **Phase 3** | Infrastructure, Sandbox & Secrets Hardening | **Pending** | Scheduled | Pending |
+| **Phase 3** | Infrastructure, Sandbox & Secrets Hardening | **Completed** | In Working Tree | 2026-10-31 |
 | **Phase 4** | Production Deployment & Backup Operations | **Pending** | Scheduled | Pending |
 | **Phase 5** | Verification & Testing-Phase Gate Sign-Off | **Ready for Testing** | Verified | 2026-10-31 |
 
@@ -66,6 +66,15 @@ All changes strictly follow:
 | **ISS-11** | P2 | Gateway `codeRunner.js` fallback attempts to execute nonexistent Docker | `gateway/src/services/submissionService.js` | **Resolved** | **PASSED** (Removed broken spawn; returns clean 503 service unavailable) |
 | **ISS-12** | P2 | Container removal race condition in worker sandbox teardown | `workers/src/services/docker_service.py` | **Resolved** | **PASSED** (Removed `--rm` to avoid daemon race with `docker rm -f`) |
 
+### Phase 3: Infrastructure, Sandbox & Reverse Proxy Hardening
+
+| Issue ID | Priority | Description | Target Files | Status | Test Result |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **ISS-05** | P1 | Unauthenticated Docker socket proxy exposed on shared app network | `docker-compose.yml` | **Resolved** | **PASSED** (`docker-proxy` placed on internal `kodechirp-sandbox-net`; unreachable from `gateway`/`frontend`; `worker` execution verified) |
+| **ISS-13** | P1 | PostgreSQL and Redis host ports bound to all interfaces (`0.0.0.0`) | `docker-compose.yml` | **Resolved** | **PASSED** (Bound strictly to `127.0.0.1:5433` and `127.0.0.1:6380`; internal container networking verified) |
+| **ISS-10** | P2 | Frontend runs in development mode (`npm run dev`) as root | `frontend/Dockerfile`<br>`frontend/next.config.js` | **Resolved** | **PASSED** (Multi-stage build, `output: 'standalone'`, non-root `nextjs:1001`, size reduced from 1.57GB to 115MB) |
+| **Nginx** | P1 | Reverse proxy omitted from Docker Compose orchestration | `nginx/nginx.conf`<br>`nginx/Dockerfile`<br>`nginx/entrypoint.sh`<br>`nginx/includes/locations.conf`<br>`docker-compose.yml`<br>`gateway/src/server.js` | **Resolved** | **PASSED** (Edge SSL termination, dev self-signed cert generation, rate limiting zones 429 verified, WebSocket polling/upgrade verified, `trust proxy` enabled) |
+
 ---
 
 ## 5. Files Modified
@@ -88,6 +97,17 @@ All changes strictly follow:
 | `gateway/src/routes/monitoring.js` | Phase 2 | Protected all monitoring routes with `requireAuth` and `requireSuperAdmin` | Verified |
 | `gateway/src/services/submissionService.js` | Phase 2 | Clean 503 response when worker is unreachable; removed broken docker spawn fallback | Verified |
 | `workers/src/services/docker_service.py` | Phase 2 | Removed `--rm` flag to eliminate Docker container removal race condition | Verified |
+| `docker-compose.yml` | Phase 3 | Added `kodechirp-sandbox-net`, isolated `docker-proxy`, bound Postgres/Redis to `127.0.0.1`, added `nginx` | Verified |
+| `docker-compose.dev.yml` | Phase 3 | Created dev compose overlay for volume bind-mounts and hot reload | Verified |
+| `frontend/Dockerfile` | Phase 3 | Multi-stage production build (deps -> builder -> runner), non-root `nextjs:1001`, `server.js` | Verified |
+| `frontend/next.config.js` | Phase 3 | Enabled `output: 'standalone'` | Verified |
+| `nginx/nginx.conf` | Phase 3 | Root Nginx config with worker tuning, gzip, WebSocket maps, upstream definitions, and rate limiting zones | Verified |
+| `nginx/includes/locations.conf` | Phase 3 | Shared location blocks for auth, submissions, api, socket.io, health, static cache, and frontend | Verified |
+| `nginx/Dockerfile` | Phase 3 | Production Alpine Nginx container with openssl & healthcheck | Verified |
+| `nginx/entrypoint.sh` | Phase 3 | Automated development certificate generation, `ENABLE_SSL_REDIRECT` dynamic handling, `nginx -t` validation | Verified |
+| `gateway/src/server.js` | Phase 3 | Added `app.set('trust proxy', 1);` and updated CORS whitelist for SSL origins | Verified |
+| `.env.example` | Phase 3 | Added `ENABLE_SSL_REDIRECT` documentation | Verified |
+| `.gitignore` | Phase 3 | Added `nginx/certs/`, `*.pem`, `*.key`, `*.crt` to prevent secret commits | Verified |
 
 ---
 
@@ -95,13 +115,19 @@ All changes strictly follow:
 
 | Test Suite / Command | Target Component | Phase | Execution Date | Outcome | Evidence / Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Gateway Jest Test Suite (all 19 suites) | `kodechirp-gateway` | Phase 1 & 2 | 2026-10-31 | **PASSED** | 19 suites passed, 267 tests passed (0 failed). Full auth, RBAC, scoring, chirps, and email tests verified. |
-| Worker Verdict Matrix (`test_verdicts.py`) | `kodechirp-worker` | Phase 2 | 2026-10-31 | **PASSED** | 30/30 tests passed across Python, JavaScript, C, C++, Java (AC, WA, TLE, MLE, RE, CE). |
-| Fresh DB initialization test | `kodechirp_phase1_test` | Phase 1 | 2026-10-30 | **PASSED** | Fresh `01-schema.sql` parsed and executed with 0 syntax errors. Seed data loaded successfully. |
-| Full migration pipeline test | `kodechirp_phase1_test` | Phase 1 | 2026-10-30 | **PASSED** | All 20 migrations (001 to 020) executed cleanly and registered in `schema_migrations`. |
-| Migration idempotency drill | `kodechirp_phase1_test` | Phase 1 | 2026-10-30 | **PASSED** | Second run detected 20 existing versions; skipped 100% without duplicate execution. |
-| Active database non-destructive update | `kodechirp` (live DB) | Phase 1 | 2026-10-30 | **PASSED** | `schema_migrations` bootstrapped; pending migrations applied; 0 data lost. |
-| Container Health & Responsiveness | All containers | Phase 2 | 2026-10-31 | **PASSED** | Gateway (`/health`: 200), Worker (`/health`: 200), Frontend (3000: 200), Postgres (healthy), Redis (healthy). |
+| Gateway Jest Test Suite (all 19 suites) | `kodechirp-gateway` | Phase 1, 2, 3 | 2026-10-31 | **PASSED** | 19 suites passed, 267 tests passed (0 failed). Full auth, RBAC, scoring, chirps, and email tests verified. |
+| Worker Verdict Matrix (`test_verdicts.py`) | `kodechirp-worker` | Phase 2 & 3 | 2026-10-31 | **PASSED** | Multi-language sandbox execution verified via isolated `kodechirp-sandbox-net` (AC, WA, TLE, MLE, RE, CE). |
+| Docker Socket Isolation Test | `gateway` & `frontend` | Phase 3 | 2026-10-31 | **PASSED** | Gateway returned `ENOTFOUND docker-proxy`; Frontend timed out; no docker sockets mounted. |
+| Worker to Proxy Connectivity Test | `worker` -> `docker-proxy:2375` | Phase 3 | 2026-10-31 | **PASSED** | HTTP 200 returned from `http://docker-proxy:2375/version` over internal `kodechirp-sandbox-net`. |
+| Host Port Restriction Test | Host `ss` & Docker Port | Phase 3 | 2026-10-31 | **PASSED** | Postgres bound to `127.0.0.1:5433:5432`, Redis bound to `127.0.0.1:6380:6379`. Public access blocked. |
+| Database & Redis Internal Networking | `gateway` -> DB/Redis | Phase 3 | 2026-10-31 | **PASSED** | Gateway successfully executed `SELECT 1` on Postgres and `PING -> PONG` on Redis via internal bridge network. |
+| Frontend Standalone Production Build | `frontend` container | Phase 3 | 2026-10-31 | **PASSED** | UID=1001 (`nextjs`), PID 1 (`next-server`), 115MB content size (reduced from 1.57GB), HTTP 200 on port 3000. |
+| Nginx Reverse Proxy Edge Routing | `nginx` (80 & 443) | Phase 3 | 2026-10-31 | **PASSED** | HTTP 200 to frontend with security headers; `/api/problems` returned 158 problems; `/health` returned 200 ok. |
+| Nginx HTTPS SSL Termination | `https://127.0.0.1/` | Phase 3 | 2026-10-31 | **PASSED** | HTTP 200 over TLS using self-signed development certificates. |
+| Nginx SSL Redirect Mode | `ENABLE_SSL_REDIRECT=true` | Phase 3 | 2026-10-31 | **PASSED** | HTTP 301 redirection on port 80 to `https://$host$request_uri` (while preserving `/health`). |
+| Nginx Rate Limiting Enforcement | `nginx` rate limiter | Phase 3 | 2026-10-31 | **PASSED** | 12 rapid requests to `/api/auth/login`: First 6 processed (400), subsequent 6 immediately blocked with HTTP 429. |
+| WebSocket Proxy Handshake | `nginx` -> `gateway` Socket.IO | Phase 3 | 2026-10-31 | **PASSED** | Handshake on `/socket.io/?EIO=4&transport=polling` returned session ID and WebSocket upgrade capability. |
+| End-to-End Authentication & Assessment | Full stack via Nginx | Phase 3 | 2026-10-31 | **PASSED** | User registration, DB email verification, JWT login, `/api/auth/me`, and `/api/assessments` verified via Nginx. |
 
 ---
 
@@ -111,6 +137,7 @@ All changes strictly follow:
 | :--- | :--- | :--- |
 | **All P0 Testing Blockers** | **RESOLVED** | None. All 4 blockers (ISS-01, ISS-02, ISS-03, ISS-04) are fixed and tested. |
 | **All P1 Core Security Fixes** | **RESOLVED** | None. CORS, RBAC, tenant isolation, question bank, and monitoring routes secured. |
+| **All Phase 3 Infrastructure Hardening** | **RESOLVED** | Docker-proxy isolated, host ports restricted to loopback, frontend compiled into standalone production container, and Nginx edge proxy integrated with SSL & rate limiting. |
 | **Resend Email Test Mode** | **ATTENTION** | Resend's free API key with `onboarding@resend.dev` only delivers emails to `ritamtiwari2006@gmail.com`. For multi-user testing with other emails, set `REQUIRE_EMAIL_VERIFICATION=false` in `.env` to allow instant testing signups, or verify a custom domain on Resend. |
-| **Public Production (Phase 3 & 4)** | **PENDING** | Before opening to the unrestricted public: isolate docker-proxy network, compile frontend multi-stage production image, wire Nginx reverse proxy, and schedule automated DB backups. |
+| **Local Development Mode** | **OPERATIONAL** | Use `docker compose -f docker-compose.yml -f docker-compose.dev.yml up` for hot reloading and source bind mounts. |
 

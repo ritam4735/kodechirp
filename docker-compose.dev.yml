@@ -1,0 +1,20 @@
+# ─── KodeChirp Local Development Overrides ──────────────────────────────────────
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  gateway:
+    volumes:
+      - ./gateway/src:/app/src:z
+      - ./gateway/tests:/app/tests:z
+      - ./gateway/node_modules:/app/node_modules:z
+
+  frontend:
+    command: ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
+    volumes:
+      - ./frontend:/app:z
+      - /app/node_modules
+
+  worker:
+    volumes:
+      - ./workers/src:/app/src:z

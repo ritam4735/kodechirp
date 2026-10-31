@@ -23,6 +23,9 @@ const { errorHandler } = require('./middleware/errorHandler');
 const app = express();
 const server = http.createServer(app);
 
+// Trust first proxy (Nginx reverse proxy) for accurate client IP in rate limiting & logging
+app.set('trust proxy', 1);
+
 // ── Middleware Stack ──────────────────────────────────────────────────────────
 
 // Security headers
@@ -42,9 +45,13 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost',
   'http://localhost:80',
+  'https://localhost',
+  'https://localhost:443',
   'http://127.0.0.1:3000',
   'http://127.0.0.1',
   'http://127.0.0.1:80',
+  'https://127.0.0.1',
+  'https://127.0.0.1:443',
 ].filter(Boolean);
 
 app.use(cors({

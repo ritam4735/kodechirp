@@ -71,3 +71,10 @@ flow.md
 
 /database/backups/
 /scratch/
+
+# ─── SSL Certificates & Keys ─────────────────────────────────────────────────
+nginx/certs/
+*.pem
+*.key
+*.crt
+*.csr
