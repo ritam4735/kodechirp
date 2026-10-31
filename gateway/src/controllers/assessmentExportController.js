@@ -106,7 +106,7 @@ exports.downloadExport = async (req, res, next) => {
       filters,
     });
 
-    const file = exportService.generateExportFile(rows, assessment, format, selectedFields);
+    const file = await exportService.generateExportFile(rows, assessment, format, selectedFields);
 
     // Record export in background
     await exportService.recordExportLog({

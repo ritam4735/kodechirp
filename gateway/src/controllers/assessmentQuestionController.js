@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const db = require('../config/database');
 const logger = require('../utils/logger');
 const { normalizeOptions, normalizeCorrectAnswer, validateObjectiveQuestion } = require('../utils/helpers');
+const { isSuperAdmin } = require('../middleware/rbac');
 
 function generateHash(category, topic, text) {
   const normalized = `${(category || '').trim().toLowerCase()}:${(topic || '').trim().toLowerCase()}:${(text || '').replace(/\s+/g, ' ').trim().toLowerCase()}`;
@@ -67,6 +68,23 @@ async function getQuestions(req, res) {
       conditions.push(`q.is_active = $${params.length}`);
     }
 
+    const isSuper = isSuperAdmin(req.user);
+    if (!isSuper) {
+      if (req.organizationId) {
+        params.push(req.organizationId);
+        conditions.push(`(q.organization_id IS NULL OR q.organization_id = $${params.length})`);
+      } else {
+        conditions.push(`q.organization_id IS NULL`);
+      }
+    } else if (req.query.organization_id) {
+      if (req.query.organization_id === 'global') {
+        conditions.push(`q.organization_id IS NULL`);
+      } else {
+        params.push(req.query.organization_id);
+        conditions.push(`q.organization_id = $${params.length}`);
+      }
+    }
+
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const validSortCols = ['created_at', 'updated_at', 'category', 'topic', 'difficulty', 'default_marks'];
@@ -102,6 +120,7 @@ async function getQuestions(req, res) {
         q.source_file,
         q.import_batch,
         q.is_active,
+        q.organization_id,
         q.created_at,
         q.updated_at
       FROM assessment_questions q
@@ -157,6 +176,11 @@ async function getQuestion(req, res) {
     }
 
     const q = result.rows[0];
+    const isSuper = isSuperAdmin(req.user);
+    if (!isSuper && q.organization_id && q.organization_id !== req.organizationId) {
+      return res.status(403).json({ success: false, error: 'Access denied: question belongs to another organization' });
+    }
+
     const opts = normalizeOptions(q.options);
     const normalizedQ = {
       ...q,
@@ -221,17 +245,20 @@ async function createQuestion(req, res) {
       return res.status(400).json({ success: false, error: validationErr });
     }
 
+    const isSuper = isSuperAdmin(req.user);
+    const targetOrgId = isSuper ? (req.body.organization_id || null) : (req.organizationId || null);
+
     const insertSql = `
       INSERT INTO assessment_questions (
         category, topic, subtopic, difficulty, question_type,
         question_text, options, correct_answer, explanation,
         default_marks, default_negative_marks, tags,
-        source_file, import_batch, content_hash, is_active, created_by
+        source_file, import_batch, content_hash, is_active, created_by, organization_id
       ) VALUES (
         $1, $2, $3, $4, $5,
         $6, $7, $8, $9,
         $10, $11, $12,
-        $13, $14, $15, $16, $17
+        $13, $14, $15, $16, $17, $18
       ) RETURNING *;
     `;
 
@@ -253,6 +280,7 @@ async function createQuestion(req, res) {
       contentHash,
       Boolean(is_active),
       req.user?.id || null,
+      targetOrgId,
     ]);
 
     const created = result.rows[0];
@@ -294,6 +322,15 @@ async function updateQuestion(req, res) {
     }
 
     const current = existingRes.rows[0];
+    const isSuper = isSuperAdmin(req.user);
+    if (!isSuper) {
+      if (!current.organization_id) {
+        return res.status(403).json({ success: false, error: 'Only super administrators can modify global questions' });
+      }
+      if (current.organization_id !== req.organizationId) {
+        return res.status(403).json({ success: false, error: 'Cannot modify question belonging to another organization' });
+      }
+    }
     const newCategory = category !== undefined ? category.trim() : current.category;
     const newTopic = topic !== undefined ? topic.trim() : current.topic;
     const newText = question_text !== undefined ? question_text.trim() : current.question_text;
@@ -377,14 +414,26 @@ async function updateQuestion(req, res) {
 async function toggleStatus(req, res) {
   try {
     const { id } = req.params;
+    const existingRes = await db.query(`SELECT id, organization_id FROM assessment_questions WHERE id = $1;`, [id]);
+    if (existingRes.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Question not found' });
+    }
+
+    const current = existingRes.rows[0];
+    const isSuper = isSuperAdmin(req.user);
+    if (!isSuper) {
+      if (!current.organization_id) {
+        return res.status(403).json({ success: false, error: 'Only super administrators can modify global questions' });
+      }
+      if (current.organization_id !== req.organizationId) {
+        return res.status(403).json({ success: false, error: 'Cannot modify question belonging to another organization' });
+      }
+    }
+
     const result = await db.query(
       `UPDATE assessment_questions SET is_active = NOT is_active, updated_at = NOW() WHERE id = $1 RETURNING id, is_active;`,
       [id]
     );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, error: 'Question not found' });
-    }
 
     res.json({ success: true, question: result.rows[0] });
   } catch (err) {
@@ -428,6 +477,22 @@ async function deleteQuestion(req, res) {
         success: false,
         error: 'Cannot delete question: student attempt responses reference this record. Deactivate the question instead to preserve historical candidate records.'
       });
+    }
+
+    const isSuper = isSuperAdmin(req.user);
+    if (!isSuper) {
+      const existingRes = await db.query(`SELECT id, organization_id FROM assessment_questions WHERE id = $1;`, [id]);
+      if (existingRes.rowCount === 0) {
+        return res.status(404).json({ success: false, error: 'Question not found' });
+      }
+
+      const current = existingRes.rows[0];
+      if (!current.organization_id) {
+        return res.status(403).json({ success: false, error: 'Only super administrators can delete global questions' });
+      }
+      if (current.organization_id !== req.organizationId) {
+        return res.status(403).json({ success: false, error: 'Cannot delete question belonging to another organization' });
+      }
     }
 
     const result = await db.query(`DELETE FROM assessment_questions WHERE id = $1 RETURNING id;`, [id]);
@@ -550,12 +615,12 @@ async function importQuestions(req, res) {
             category, topic, subtopic, difficulty, question_type,
             question_text, options, correct_answer, explanation,
             default_marks, default_negative_marks, tags,
-            source_file, import_batch, content_hash, is_active, created_by
+            source_file, import_batch, content_hash, is_active, created_by, organization_id
           ) VALUES (
             $1, $2, $3, $4, $5,
             $6, $7, $8, $9,
             $10, $11, $12,
-            $13, $14, $15, $16, $17
+            $13, $14, $15, $16, $17, $18
           );`,
           [
             category,
@@ -575,6 +640,7 @@ async function importQuestions(req, res) {
             contentHash,
             item.is_active !== undefined ? Boolean(item.is_active) : true,
             req.user?.id || null,
+            isSuperAdmin(req.user) ? (req.body.organization_id || null) : (req.organizationId || null),
           ]
         );
         totalInserted++;

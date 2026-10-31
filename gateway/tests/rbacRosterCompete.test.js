@@ -3,7 +3,7 @@
 // Automated Test Suite for RBAC, Roster Import, Eligibility, Export & Compete
 // ─────────────────────────────────────────────────────────────────────────────
 
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const db = require('../src/config/database');
 const {
   normalizeRole,
@@ -142,7 +142,7 @@ describe('RBAC, Roster, Eligibility, and Export Test Suite', () => {
 
   // ── 2. ROSTER PARSING & VALIDATION ─────────────────────────────────────────
   describe('2. Spreadsheet Roster Import & Validation Engine', () => {
-    it('parses valid CSV and auto-detects alias column headers', () => {
+    it('parses valid CSV and auto-detects alias column headers', async () => {
       const csvData = [
         'Roll Number,Candidate Name,Email ID,Stream,Graduating Year,Status',
         'CS101,John Doe,john@test.edu,Computer Science,2025,active',
@@ -150,7 +150,7 @@ describe('RBAC, Roster, Eligibility, and Export Test Suite', () => {
       ].join('\n');
 
       const buffer = Buffer.from(csvData, 'utf-8');
-      const parsed = rosterService.parseRosterFile(buffer, 'test_roster.csv');
+      const parsed = await rosterService.parseRosterFile(buffer, 'test_roster.csv');
 
       expect(parsed.totalRows).toBe(2);
       expect(parsed.headers).toContain('Roll Number');
@@ -163,6 +163,17 @@ describe('RBAC, Roster, Eligibility, and Export Test Suite', () => {
       expect(autoMapping.department).toBe('Stream');
       expect(autoMapping.academic_year).toBe('Graduating Year');
       expect(autoMapping.enrollment_status).toBe('Status');
+    });
+
+    it('parses valid XLSX spreadsheet and extracts row objects', async () => {
+      const template = await rosterService.generateRosterTemplate('xlsx');
+      const parsed = await rosterService.parseRosterFile(template.buffer, template.fileName);
+
+      expect(parsed.totalRows).toBe(3);
+      expect(parsed.headers).toContain('Student ID');
+      expect(parsed.headers).toContain('College Email');
+      expect(parsed.rows[0]['Student ID']).toBe('CS2024001');
+      expect(parsed.rows[0]['College Email']).toBe('alex.j@college.edu');
     });
 
     it('detects duplicate student IDs and invalid email addresses in file', async () => {
@@ -213,17 +224,17 @@ describe('RBAC, Roster, Eligibility, and Export Test Suite', () => {
       expect(result.conflicts[0].reason).toContain('belongs to');
     });
 
-    it('generates downloadable template and error reports in CSV and XLSX', () => {
-      const csvTemplate = rosterService.generateRosterTemplate('csv');
+    it('generates downloadable template and error reports in CSV and XLSX', async () => {
+      const csvTemplate = await rosterService.generateRosterTemplate('csv');
       expect(csvTemplate.contentType).toBe('text/csv');
       expect(csvTemplate.fileName.endsWith('.csv')).toBe(true);
       expect(csvTemplate.buffer.toString('utf-8')).toContain('Student ID');
 
-      const xlsxTemplate = rosterService.generateRosterTemplate('xlsx');
+      const xlsxTemplate = await rosterService.generateRosterTemplate('xlsx');
       expect(xlsxTemplate.contentType).toContain('openxmlformats');
       expect(xlsxTemplate.fileName.endsWith('.xlsx')).toBe(true);
 
-      const errorReport = rosterService.generateErrorReport({
+      const errorReport = await rosterService.generateErrorReport({
         id: 'batch-1',
         validation_errors: [{ row: 5, studentId: 'S5', email: 'bad', errors: ['Invalid email'] }],
       }, 'csv');
@@ -244,7 +255,7 @@ describe('RBAC, Roster, Eligibility, and Export Test Suite', () => {
       expect(exportService.sanitizeCell(null)).toBe('');
     });
 
-    it('generates export file with accurate fields and headers', () => {
+    it('generates export file with accurate fields and headers', async () => {
       const mockRows = [
         {
           student_id: 'CS101',
@@ -271,7 +282,7 @@ describe('RBAC, Roster, Eligibility, and Export Test Suite', () => {
       const assessment = { title: 'DSA Placement Mock', pass_percentage: 40 };
 
       // Generate CSV
-      const csvExport = exportService.generateExportFile(mockRows, assessment, 'csv');
+      const csvExport = await exportService.generateExportFile(mockRows, assessment, 'csv');
       expect(csvExport.contentType).toContain('text/csv');
       const csvText = csvExport.buffer.toString('utf-8');
       expect(csvText).toContain('Student ID');
@@ -280,7 +291,7 @@ describe('RBAC, Roster, Eligibility, and Export Test Suite', () => {
       expect(csvText).toContain('Passed');
 
       // Generate XLSX
-      const xlsxExport = exportService.generateExportFile(mockRows, assessment, 'xlsx');
+      const xlsxExport = await exportService.generateExportFile(mockRows, assessment, 'xlsx');
       expect(xlsxExport.contentType).toContain('openxmlformats');
       expect(xlsxExport.buffer.length).toBeGreaterThan(100);
     });

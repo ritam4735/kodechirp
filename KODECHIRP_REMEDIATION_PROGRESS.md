@@ -24,7 +24,7 @@ All changes strictly follow:
 | :--- | :--- | :--- | :--- | :--- |
 | **Pre-Remediation** | Audit & Remediation Plan Finalization | **Completed** | `248c782` | 2026-10-30 |
 | **Phase 1** | Foundation & Migration Safety | **Completed** | `d1b0035` | 2026-10-30 |
-| **Phase 2** | Engine & API Security Fixes | **Pending User Review** | Scheduled | Pending |
+| **Phase 2** | Engine & API Security Fixes | **In Progress** | Scheduled | In Progress |
 | **Phase 3** | Infrastructure, Sandbox & Secrets Hardening | **Pending** | Scheduled | Pending |
 | **Phase 4** | Production Deployment & Backup Operations | **Pending** | Scheduled | Pending |
 | **Phase 5** | Verification & Testing-Phase Gate Sign-Off | **Pending** | Scheduled | Pending |

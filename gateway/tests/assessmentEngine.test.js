@@ -15,8 +15,9 @@ describe('KodeChirp Assessment Engine', () => {
   let mockRes;
 
   beforeEach(() => {
+    db.query.mockReset();
     mockReq = {
-      user: { id: 'user-uuid-1', username: 'student1', role: 'user' },
+      user: { id: 'admin-uuid-1', username: 'admin1', role: 'admin' },
       params: {},
       body: {},
       query: {},

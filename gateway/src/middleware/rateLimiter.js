@@ -87,6 +87,15 @@ const authSignupLimiter = createRateLimiter({
   keyPrefix: 'auth:signup',
 });
 
+const authResendLimiter = createRateLimiter({
+  ...(config.rateLimit?.authResend || { window: 900, max: 5 }),
+  keyPrefix: 'auth:resend',
+  keyGenerator: (req) => {
+    const email = req.body?.email ? String(req.body.email).toLowerCase().trim() : '';
+    return email ? `${getClientIp(req)}:${email}` : getClientIp(req);
+  },
+});
+
 const submitRunLimiter = createRateLimiter({
   ...config.rateLimit.submitRun,
   keyPrefix: 'submit:run',
@@ -104,6 +113,7 @@ module.exports = {
   globalLimiter,
   authLoginLimiter,
   authSignupLimiter,
+  authResendLimiter,
   submitRunLimiter,
   submitJudgeLimiter,
 };

@@ -104,10 +104,10 @@ exports.getRoster = async (req, res, next) => {
 /**
  * Download sample roster template (.xlsx or .csv).
  */
-exports.getTemplate = (req, res, next) => {
+exports.getTemplate = async (req, res, next) => {
   try {
     const format = req.query.format === 'csv' ? 'csv' : 'xlsx';
-    const template = rosterService.generateRosterTemplate(format);
+    const template = await rosterService.generateRosterTemplate(format);
 
     res.setHeader('Content-Type', template.contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${template.fileName}"`);
@@ -131,7 +131,7 @@ exports.previewRosterImport = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'No file uploaded. Please upload a .xlsx or .csv file.' });
     }
 
-    const { rows, headers, totalRows, isCsv } = rosterService.parseRosterFile(
+    const { rows, headers, totalRows, isCsv } = await rosterService.parseRosterFile(
       req.file.buffer,
       req.file.originalname
     );
@@ -239,7 +239,7 @@ exports.confirmRosterImport = async (req, res, next) => {
     // If a file was uploaded in this request directly:
     if (req.file) {
       fileName = req.file.originalname;
-      const parsed = rosterService.parseRosterFile(req.file.buffer, req.file.originalname);
+      const parsed = await rosterService.parseRosterFile(req.file.buffer, req.file.originalname);
       fileFormat = parsed.isCsv ? 'csv' : 'xlsx';
       const autoMapping = rosterService.autoDetectMapping(parsed.headers);
       columnMapping = { ...autoMapping, ...columnMapping };
@@ -356,7 +356,7 @@ exports.downloadErrorReport = async (req, res, next) => {
     }
 
     const format = req.query.format === 'xlsx' ? 'xlsx' : 'csv';
-    const report = rosterService.generateErrorReport(result.rows[0], format);
+    const report = await rosterService.generateErrorReport(result.rows[0], format);
 
     res.setHeader('Content-Type', report.contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${report.fileName}"`);

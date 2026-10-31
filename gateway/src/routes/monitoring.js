@@ -8,8 +8,13 @@ const { pool } = require('../config/database');
 const { getClient } = require('../config/redis');
 const { getMetrics } = require('../services/monitorService');
 const logger = require('../utils/logger');
+const { requireAuth } = require('../middleware/auth');
+const { requireSuperAdmin } = require('../middleware/rbac');
 
 const router = express.Router();
+
+// Guard all monitoring and metric inspection endpoints
+router.use(requireAuth, requireSuperAdmin);
 
 /**
  * GET /monitoring/metrics — Real-time gateway metrics

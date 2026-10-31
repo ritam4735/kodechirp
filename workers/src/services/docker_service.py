@@ -247,7 +247,6 @@ class DockerService:
         docker_args = [
             "docker", "run", "-d",
             "--name", container_name,
-            "--rm",
             "--network=none",
             f"--memory={config.get('memory', f'{memory_mb}m')}",
             f"--cpus={config['cpus']}",

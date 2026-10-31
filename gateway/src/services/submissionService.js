@@ -228,11 +228,15 @@ async function runCode({ code, language, stdin, problemId, judgeMode, signatureM
       || err.message?.includes('fetch failed');
 
     if (isNetworkError) {
-      logger.info('[Submission] Worker unavailable, falling back to local Docker execution');
+      logger.warn({ err: err.message }, '[Submission] Code execution worker is unreachable');
       recordWorkerUnreachable(err.message);
-      const { executeLocal } = require('./codeRunner');
-      const result = await executeLocal(code, language, stdin, judgeMode, signatureMetadata);
-      return result;
+      return {
+        stdout: '',
+        stderr: 'Code execution service is temporarily unavailable. Please try again in a few moments.',
+        exitCode: -1,
+        timedOut: false,
+        serviceUnavailable: true,
+      };
     }
 
     logger.error({ err }, '[Submission] Run code failed');

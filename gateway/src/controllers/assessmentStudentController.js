@@ -669,6 +669,45 @@ async function saveResponse(req, res) {
       return res.status(400).json({ success: false, error: 'Attempt time has expired', expired: true });
     }
 
+    // 1. Verify question/problem mapping to section within this assessment
+    const mapCheck = await db.query(
+      `SELECT sq.id FROM assessment_section_questions sq
+       JOIN assessment_sections s ON sq.section_id = s.id
+       WHERE s.id = $1 AND s.assessment_id = $2
+         AND ($3::uuid IS NULL OR sq.question_id = $3)
+         AND ($4::uuid IS NULL OR sq.problem_id = $4);`,
+      [section_id, attempt.assessment_id, question_id || null, problem_id || null]
+    );
+    if (mapCheck.rowCount === 0) {
+      return res.status(400).json({ success: false, error: 'Question or problem does not belong to specified assessment section' });
+    }
+
+    // 2. If code_submission_id is supplied, enforce strict four-point ownership and timeline verification
+    if (code_submission_id) {
+      const subCheck = await db.query(
+        `SELECT id, user_id, problem_id, created_at FROM submissions WHERE id = $1;`,
+        [code_submission_id]
+      );
+      if (subCheck.rowCount === 0) {
+        return res.status(400).json({ success: false, error: 'Referenced submission not found' });
+      }
+      const sub = subCheck.rows[0];
+      if (sub.user_id !== userId) {
+        return res.status(403).json({ success: false, error: 'Unauthorized submission assignment' });
+      }
+      if (problem_id && sub.problem_id !== problem_id) {
+        return res.status(400).json({ success: false, error: 'Submission does not match question problem' });
+      }
+      const subTime = new Date(sub.created_at);
+      const attemptStart = new Date(attempt.started_at);
+      if (subTime < new Date(attemptStart.getTime() - 30000)) {
+        return res.status(400).json({ success: false, error: 'Submission was created before assessment attempt began' });
+      }
+      if (subTime > new Date(new Date(attempt.expires_at).getTime() + 60000)) {
+        return res.status(400).json({ success: false, error: 'Submission was created after assessment attempt expired' });
+      }
+    }
+
     // Upsert response
     const upsertSql = `
       INSERT INTO assessment_responses (
@@ -1194,19 +1233,30 @@ async function finalizeAndScoreAttempt(attemptId, options = {}) {
         // DSA Coding problem evaluation
         if (response.code_submission_id) {
           const subRes = await db.query(
-            `SELECT status, test_cases_passed, test_cases_total FROM submissions WHERE id = $1;`,
-            [response.code_submission_id]
+            `SELECT id, user_id, problem_id, status, test_cases_passed, test_cases_total, created_at
+             FROM submissions
+             WHERE id = $1 AND user_id = $2 AND problem_id = $3;`,
+            [response.code_submission_id, attempt.user_id, item.problem_id]
           );
           if (subRes.rowCount > 0) {
             const sub = subRes.rows[0];
-            if (sub.status === 'Accepted' && sub.test_cases_passed === sub.test_cases_total && sub.test_cases_total > 0) {
-              isCorrect = true;
-              scoreAwarded = marks;
-            } else if (sub.test_cases_passed > 0 && sub.test_cases_total > 0) {
-              const fraction = sub.test_cases_passed / sub.test_cases_total;
-              scoreAwarded = parseFloat((fraction * marks).toFixed(2));
-              isCorrect = fraction >= 0.5;
+            const subTime = new Date(sub.created_at);
+            const attemptStart = new Date(attempt.started_at);
+            // Verify submission occurred within attempt window (30s grace before start)
+            if (subTime >= new Date(attemptStart.getTime() - 30000)) {
+              if (sub.status === 'Accepted' && sub.test_cases_passed === sub.test_cases_total && sub.test_cases_total > 0) {
+                isCorrect = true;
+                scoreAwarded = marks;
+              } else if (sub.test_cases_passed > 0 && sub.test_cases_total > 0) {
+                const fraction = sub.test_cases_passed / sub.test_cases_total;
+                scoreAwarded = parseFloat((fraction * marks).toFixed(2));
+                isCorrect = fraction >= 0.5;
+              } else {
+                isCorrect = false;
+                scoreAwarded = 0;
+              }
             } else {
+              logger.warn({ attemptId, submissionId: response.code_submission_id }, '[AssessmentStudent] Submission disqualified: timestamp prior to attempt start');
               isCorrect = false;
               scoreAwarded = 0;
             }
@@ -1351,7 +1401,7 @@ async function getAttemptResult(req, res) {
       [attemptId]
     );
 
-    if (attRes.rowCount === 0) {
+    if (!attRes || !attRes.rows || attRes.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Attempt not found' });
     }
     const attempt = attRes.rows[0];

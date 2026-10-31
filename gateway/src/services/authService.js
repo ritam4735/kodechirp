@@ -33,27 +33,62 @@ async function signup({ email, password, username }) {
   const salt = await bcrypt.genSalt(12);
   const passwordHash = await bcrypt.hash(password, salt);
 
-  // Generate verification token
-  const verificationToken = crypto.randomBytes(32).toString('hex');
-  const tokenHash = crypto.createHash('sha256').update(verificationToken).digest('hex');
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  const requireEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION !== 'false';
+
+  // Generate verification token if required
+  let verificationToken = null;
+  let tokenHash = null;
+  let expiresAt = null;
+
+  if (requireEmailVerification) {
+    verificationToken = crypto.randomBytes(32).toString('hex');
+    tokenHash = crypto.createHash('sha256').update(verificationToken).digest('hex');
+    expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  }
 
   // Insert user
   const result = await db.query(
-    `INSERT INTO users (username, email, password_hash, verification_token_hash, verification_expires_at)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO users (username, email, password_hash, verification_token_hash, verification_expires_at, email_verified, email_verified_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING id, username, email, display_name, role, avatar_url, bio, rating, github_url, linkedin_url, website_url, preferences_json, created_at, email_verified`,
-    [username, email, passwordHash, tokenHash, expiresAt]
+    [
+      username,
+      email,
+      passwordHash,
+      tokenHash,
+      expiresAt,
+      !requireEmailVerification,
+      !requireEmailVerification ? new Date() : null,
+    ]
   );
 
   const user = result.rows[0];
 
-  // Send verification email
-  await emailService.sendVerificationEmail(user.email, verificationToken);
-
-  logger.info({ userId: user.id }, '[Auth] New user registered, verification email sent');
-
-  return { user, verificationRequired: true };
+  // Send verification email if required
+  if (requireEmailVerification && verificationToken) {
+    let emailDeliveryFailed = false;
+    try {
+      await emailService.sendVerificationEmail(user.email, verificationToken);
+      logger.info({ userId: user.id }, '[Auth] New user registered, verification email sent');
+    } catch (emailErr) {
+      emailDeliveryFailed = true;
+      logger.error({ err: emailErr.message, userId: user.id }, '[Auth] Verification email delivery failed during signup');
+    }
+    return {
+      user,
+      verificationRequired: true,
+      emailDeliveryFailed,
+    };
+  } else {
+    logger.info({ userId: user.id }, '[Auth] New user registered, auto-verified (REQUIRE_EMAIL_VERIFICATION=false)');
+    const tokens = await generateTokenPair(user);
+    return {
+      user,
+      verificationRequired: false,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
+  }
 }
 
 /**
@@ -80,7 +115,8 @@ async function login({ identifier, password }) {
     throw err;
   }
 
-  if (!user.email_verified) {
+  const requireEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION !== 'false';
+  if (requireEmailVerification && !user.email_verified) {
     const err = new Error('Email not verified. Please verify your email to continue.');
     err.status = 403;
     err.code = 'EMAIL_NOT_VERIFIED';
@@ -440,7 +476,7 @@ async function verifyEmail(token, email) {
 
   if (user.email_verified) {
     // Already verified
-    return true;
+    return { alreadyVerified: true };
   }
 
   if (!user.verification_token_hash || !user.verification_expires_at) {
@@ -473,7 +509,7 @@ async function verifyEmail(token, email) {
   await syncUserWithRoster(user);
 
   logger.info({ userId: user.id }, '[Auth] Email verified successfully');
-  return true;
+  return { alreadyVerified: false };
 }
 
 /**
@@ -508,10 +544,16 @@ async function resendVerification(email) {
     [tokenHash, expiresAt, user.id]
   );
 
-  await emailService.sendVerificationEmail(user.email, verificationToken);
-
-  logger.info({ userId: user.id }, '[Auth] Verification email resent');
-  return true;
+  try {
+    await emailService.sendVerificationEmail(user.email, verificationToken);
+    logger.info({ userId: user.id }, '[Auth] Verification email resent');
+    return true;
+  } catch (emailErr) {
+    logger.error({ err: emailErr.message, userId: user.id }, '[Auth] Failed to send verification email on resend');
+    const err = new Error('Failed to deliver verification email. Please try again in a few moments.');
+    err.status = 502;
+    throw err;
+  }
 }
 
 /**

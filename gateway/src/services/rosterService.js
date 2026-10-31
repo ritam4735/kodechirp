@@ -4,7 +4,8 @@
 // Supports: .xlsx and .csv parsing, validation, conflict detection, persistence
 // ─────────────────────────────────────────────────────────────────────────────
 
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
+const { Readable } = require('stream');
 const db = require('../config/database');
 const logger = require('../utils/logger');
 const { logAdminAction } = require('../middleware/rbac');
@@ -24,7 +25,7 @@ const HEADER_ALIASES = {
 /**
  * Parse an uploaded buffer (.xlsx or .csv) into rows of raw objects.
  */
-function parseRosterFile(buffer, originalname = '') {
+async function parseRosterFile(buffer, originalname = '') {
   if (!buffer || buffer.length === 0) {
     const err = new Error('Uploaded file is empty');
     err.status = 400;
@@ -32,30 +33,68 @@ function parseRosterFile(buffer, originalname = '') {
   }
 
   const isCsv = originalname.toLowerCase().endsWith('.csv');
-  let workbook;
+  const workbook = new ExcelJS.Workbook();
 
   try {
-    workbook = XLSX.read(buffer, {
-      type: 'buffer',
-      cellDates: true,
-      raw: false,
-      sheetRows: MAX_ROWS + 10,
-    });
-  } catch (parseErr) {
-    logger.warn({ parseErr, originalname }, '[Roster] Workbook parsing failed');
-    const err = new Error('Failed to parse spreadsheet file. Please ensure it is a valid .xlsx or .csv file.');
-    err.status = 400;
-    throw err;
+    if (isCsv) {
+      await workbook.csv.read(Readable.from(buffer));
+    } else {
+      await workbook.xlsx.load(buffer);
+    }
+  } catch (primaryErr) {
+    try {
+      if (isCsv) {
+        await workbook.xlsx.load(buffer);
+      } else {
+        await workbook.csv.read(Readable.from(buffer));
+      }
+    } catch (fallbackErr) {
+      logger.warn({ primaryErr, fallbackErr, originalname }, '[Roster] Workbook parsing failed');
+      const err = new Error('Failed to parse spreadsheet file. Please ensure it is a valid .xlsx or .csv file.');
+      err.status = 400;
+      throw err;
+    }
   }
 
-  if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+  const sheet = workbook.worksheets && workbook.worksheets[0];
+  if (!sheet || sheet.rowCount === 0) {
     const err = new Error('Spreadsheet contains no sheets');
     err.status = 400;
     throw err;
   }
 
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+  const headers = [];
+  const headerRow = sheet.getRow(1);
+  for (let c = 1; c <= headerRow.cellCount; c++) {
+    const val = headerRow.getCell(c).value;
+    headers.push(val != null ? String(val).trim() : '');
+  }
+
+  if (headers.filter(Boolean).length === 0) {
+    const err = new Error('Spreadsheet has no valid column headers');
+    err.status = 400;
+    throw err;
+  }
+
+  const rows = [];
+  for (let r = 2; r <= sheet.rowCount; r++) {
+    const row = sheet.getRow(r);
+    let hasValue = false;
+    const rowObj = {};
+    for (let c = 1; c <= headers.length; c++) {
+      const header = headers[c - 1];
+      if (!header) continue;
+      let cellVal = row.getCell(c).value;
+      if (cellVal && typeof cellVal === 'object') {
+        if (cellVal.text !== undefined) cellVal = cellVal.text;
+        else if (cellVal.result !== undefined) cellVal = cellVal.result;
+      }
+      const strVal = cellVal != null ? String(cellVal).trim() : '';
+      if (strVal !== '') hasValue = true;
+      rowObj[header] = strVal;
+    }
+    if (hasValue) rows.push(rowObj);
+  }
 
   if (rows.length === 0) {
     const err = new Error('Spreadsheet has no data rows');
@@ -68,9 +107,6 @@ function parseRosterFile(buffer, originalname = '') {
     err.status = 400;
     throw err;
   }
-
-  // Get raw headers from first row keys
-  const headers = Object.keys(rows[0]);
 
   return { rows, headers, totalRows: rows.length, isCsv };
 }
@@ -462,7 +498,7 @@ async function commitRosterImport({
 /**
  * Generate a downloadable sample roster template.
  */
-function generateRosterTemplate(format = 'xlsx') {
+async function generateRosterTemplate(format = 'xlsx') {
   const data = [
     {
       'Student ID': 'CS2024001',
@@ -490,20 +526,23 @@ function generateRosterTemplate(format = 'xlsx') {
     },
   ];
 
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Roster Template');
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Roster Template');
+
+  const headers = Object.keys(data[0]);
+  worksheet.columns = headers.map(h => ({ header: h, key: h, width: Math.max(h.length + 4, 15) }));
+  data.forEach(row => worksheet.addRow(row));
 
   if (format === 'csv') {
-    const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+    const csvBuffer = await workbook.csv.writeBuffer();
     return {
-      buffer: Buffer.from(csvContent, 'utf-8'),
+      buffer: csvBuffer,
       contentType: 'text/csv',
       fileName: 'kodechirp_student_roster_template.csv',
     };
   }
 
-  const xlsxBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  const xlsxBuffer = await workbook.xlsx.writeBuffer();
   return {
     buffer: xlsxBuffer,
     contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -514,7 +553,7 @@ function generateRosterTemplate(format = 'xlsx') {
 /**
  * Generate a downloadable error report from an import record.
  */
-function generateErrorReport(importRecord, format = 'csv') {
+async function generateErrorReport(importRecord, format = 'csv') {
   const errors = importRecord.validation_errors || [];
   const rows = errors.map(err => ({
     'Row Number': err.row || 'N/A',
@@ -524,20 +563,26 @@ function generateErrorReport(importRecord, format = 'csv') {
     'Error Details': Array.isArray(err.errors) ? err.errors.join('; ') : (err.reason || 'Validation error'),
   }));
 
-  const worksheet = XLSX.utils.json_to_sheet(rows.length > 0 ? rows : [{ 'Message': 'No validation errors recorded' }]);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Validation Errors');
+  const data = rows.length > 0 ? rows : [{ 'Message': 'No validation errors recorded' }];
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Validation Errors');
+
+  const headers = Object.keys(data[0]);
+  worksheet.columns = headers.map(h => ({ header: h, key: h, width: Math.max(h.length + 4, 15) }));
+  data.forEach(row => worksheet.addRow(row));
 
   if (format === 'xlsx') {
+    const xlsxBuffer = await workbook.xlsx.writeBuffer();
     return {
-      buffer: XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }),
+      buffer: xlsxBuffer,
       contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       fileName: `roster_import_errors_${importRecord.id}.xlsx`,
     };
   }
 
+  const csvBuffer = await workbook.csv.writeBuffer();
   return {
-    buffer: Buffer.from(XLSX.utils.sheet_to_csv(worksheet), 'utf-8'),
+    buffer: csvBuffer,
     contentType: 'text/csv',
     fileName: `roster_import_errors_${importRecord.id}.csv`,
   };

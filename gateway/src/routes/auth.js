@@ -6,7 +6,7 @@ const { body } = require('express-validator');
 const authController = require('../controllers/authController');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 const { validateRequest } = require('../middleware/validate');
-const { authLoginLimiter, authSignupLimiter } = require('../middleware/rateLimiter');
+const { authLoginLimiter, authSignupLimiter, authResendLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -86,6 +86,7 @@ router.get(
 
 router.post(
   '/resend-verification',
+  authResendLimiter,
   body('email').notEmpty().withMessage('Email or username is required'),
   validateRequest,
   authController.resendVerification

@@ -30,10 +30,18 @@ const config = {
     refreshExpiresMs: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
   },
 
-  // ── CORS ───────────────────────────────────────────────────────────────────
+  // ── CORS & URLs ────────────────────────────────────────────────────────────
   cors: {
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
+  },
+  frontendUrl: process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000'),
+
+  // ── Email / Resend ─────────────────────────────────────────────────────────
+  email: {
+    provider: process.env.EMAIL_PROVIDER || (process.env.RESEND_API_KEY ? 'resend' : (process.env.SMTP_HOST ? 'smtp' : 'console')),
+    resendApiKey: process.env.RESEND_API_KEY,
+    from: process.env.EMAIL_FROM || 'KodeChirp <onboarding@resend.dev>',
   },
 
   // ── Rate Limiting ──────────────────────────────────────────────────────────
@@ -41,6 +49,7 @@ const config = {
     global:      { window: 60, max: parseInt(process.env.RATE_LIMIT_GLOBAL_MAX, 10) || (process.env.NODE_ENV === 'production' ? 100 : 1000) },
     authLogin:   { window: 900, max: 50 },    // 15 min
     authSignup:  { window: 3600, max: 30 },   // 1 hour
+    authResend:  { window: 900, max: 5 },     // 15 min, max 5 requests per IP/email
     submitRun:   { window: 60, max: 10 },
     submitJudge: { window: 60, max: 1000 },
   },
@@ -70,6 +79,16 @@ if (config.env === 'production') {
     if (!process.env[key]) {
       throw new Error(`Missing required environment variable: ${key}`);
     }
+  }
+
+  // Ensure production FRONTEND_URL is provided and does not point to localhost
+  if (!process.env.FRONTEND_URL || process.env.FRONTEND_URL.includes('localhost') || process.env.FRONTEND_URL.includes('127.0.0.1')) {
+    throw new Error('FRONTEND_URL must be configured to a deployed non-localhost URL in production');
+  }
+
+  // Ensure RESEND_API_KEY is present if Resend provider is active
+  if (config.email.provider === 'resend' && !config.email.resendApiKey) {
+    throw new Error('RESEND_API_KEY is required when EMAIL_PROVIDER is resend in production');
   }
 }
 

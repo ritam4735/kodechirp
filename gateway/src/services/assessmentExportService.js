@@ -3,7 +3,7 @@
 // Assessment Results Export Service — XLSX & CSV with Formula Injection Defense
 // ─────────────────────────────────────────────────────────────────────────────
 
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const db = require('../config/database');
 const logger = require('../utils/logger');
 const { logAdminAction } = require('../middleware/rbac');
@@ -137,7 +137,7 @@ async function getExportResults({ assessmentId, organizationId, isSuperAdmin = f
 /**
  * Format and serialize assessment attempt rows into XLSX or CSV buffer.
  */
-function generateExportFile(rows, assessment, format = 'xlsx', selectedFields = null) {
+async function generateExportFile(rows, assessment, format = 'xlsx', selectedFields = null) {
   const defaultFields = [
     { key: 'student_id', label: 'Student ID' },
     { key: 'student_name', label: 'Student Name' },
@@ -186,32 +186,36 @@ function generateExportFile(rows, assessment, format = 'xlsx', selectedFields = 
     return rowObj;
   });
 
-  const worksheet = XLSX.utils.json_to_sheet(
-    formattedRows.length > 0 ? formattedRows : [{ Message: 'No assessment attempts found matching criteria' }]
-  );
-
-  // Set column widths
-  const colWidths = fieldsToExport.map(f => ({ wch: Math.max(f.label.length + 4, 15) }));
-  worksheet['!cols'] = colWidths;
-
-  const workbook = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
   const sheetName = (assessment.title || 'Assessment Results').substring(0, 30).replace(/[:\/\\?*\[\]]/g, '');
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  const worksheet = workbook.addWorksheet(sheetName || 'Results');
+
+  worksheet.columns = fieldsToExport.map(f => ({
+    header: f.label,
+    key: f.label,
+    width: Math.max(f.label.length + 4, 15),
+  }));
+
+  if (formattedRows.length > 0) {
+    formattedRows.forEach(row => worksheet.addRow(row));
+  } else {
+    worksheet.addRow({ [fieldsToExport[0].label]: 'No assessment attempts found matching criteria' });
+  }
 
   const cleanTitle = (assessment.title || 'assessment').toLowerCase().replace(/[^a-z0-9]+/g, '_');
   const timestamp = new Date().toISOString().substring(0, 10);
 
   if (format === 'csv') {
-    const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+    const csvBuffer = await workbook.csv.writeBuffer();
     return {
-      buffer: Buffer.from(csvContent, 'utf-8'),
+      buffer: csvBuffer,
       contentType: 'text/csv; charset=utf-8',
       fileName: `${cleanTitle}_results_${timestamp}.csv`,
       totalRecords: rows.length,
     };
   }
 
-  const xlsxBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  const xlsxBuffer = await workbook.xlsx.writeBuffer();
   return {
     buffer: xlsxBuffer,
     contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

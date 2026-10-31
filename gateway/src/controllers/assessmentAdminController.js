@@ -23,9 +23,9 @@ function slugify(text) {
 
 function canModifyAssessment(user, assessmentOrgId, userOrgId) {
   if (isSuperAdmin(user)) return true;
-  // If assessment has no org yet, allow college admin to manage
-  if (!assessmentOrgId) return true;
-  return assessmentOrgId === userOrgId;
+  // Global assessments (NULL organization_id) can ONLY be modified by super-admins
+  if (!assessmentOrgId) return false;
+  return Boolean(userOrgId && assessmentOrgId === userOrgId);
 }
 
 async function ensureAssessmentOrg(assessmentId, orgId) {

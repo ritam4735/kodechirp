@@ -22,6 +22,14 @@ exports.signup = async (req, res, next) => {
     const result = await authService.signup({ email, password, username });
 
     if (result.verificationRequired) {
+      if (result.emailDeliveryFailed) {
+        return res.status(201).json({
+          success: true,
+          verificationRequired: true,
+          emailDeliveryFailed: true,
+          message: 'Account created, but we could not deliver your verification email right now. Please use "Resend Verification" in a few moments.'
+        });
+      }
       return res.status(201).json({
         success: true,
         verificationRequired: true,
@@ -163,11 +171,14 @@ exports.verifyEmail = async (req, res, next) => {
       throw err;
     }
 
-    await authService.verifyEmail(token, email);
+    const result = await authService.verifyEmail(token, email);
     
     return res.status(200).json({
       success: true,
-      message: 'Email verified successfully. You can now log in.'
+      alreadyVerified: result?.alreadyVerified || false,
+      message: result?.alreadyVerified 
+        ? 'Your email is already verified. You can log in.' 
+        : 'Email verified successfully. You can now log in.'
     });
   } catch (err) {
     next(err);

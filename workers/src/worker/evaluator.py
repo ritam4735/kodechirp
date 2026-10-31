@@ -141,7 +141,7 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
         else:
             # --- STDIN_STDOUT BATCH EXECUTION ---
             run_cmd = LANGUAGE_CONFIG[job.language]["run_command"]
-            sh_lines = []
+            sh_lines = ["set -e"]
             for tc in job.testCases:
                 marker = f"EOF_KC_{uuid.uuid4().hex}"
                 sh_lines.append(f"{run_cmd} << '{marker}'")
@@ -188,7 +188,7 @@ async def evaluate_submission(job: SubmissionJob) -> SubmissionResult:
                     is_mle = True
                 elif result.stderr:
                     stderr_lower = result.stderr.lower()
-                    if "memoryerror" in stderr_lower or "javascript heap out of memory" in stderr_lower or "fatal error: runtime: out of memory" in stderr_lower or "java.lang.outofmemoryerror" in stderr_lower:
+                    if "memoryerror" in stderr_lower or "javascript heap out of memory" in stderr_lower or "fatal error: runtime: out of memory" in stderr_lower or "java.lang.outofmemoryerror" in stderr_lower or "out of memory" in stderr_lower:
                         is_mle = True
                 elif "Runtime Error: Output exceeded 10 MB limit" in (result.stderr or ""):
                     is_mle = True

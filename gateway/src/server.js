@@ -32,8 +32,13 @@ app.use(helmet({
 }));
 
 // CORS
+const configuredOrigins = (config.cors?.origin || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
 const allowedOrigins = [
-  config.cors.origin,
+  ...configuredOrigins,
   'http://localhost:3000',
   'http://localhost',
   'http://localhost:80',
@@ -44,16 +49,17 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow non-browser requests (e.g. curl, server-to-server, mobile app)
     if (!origin) return callback(null, true);
     if (
       allowedOrigins.includes(origin) ||
-      origin.startsWith('http://localhost:') ||
-      origin.startsWith('http://127.0.0.1:') ||
-      config.env === 'development'
+      ((config.env === 'development' || config.env === 'test') &&
+        (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')))
     ) {
       return callback(null, true);
     }
-    return callback(null, true);
+    logger.warn({ origin }, '[CORS] Blocked unauthorized cross-origin request');
+    return callback(new Error(`CORS origin not allowed: ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
