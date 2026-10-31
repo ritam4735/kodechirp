@@ -49,13 +49,15 @@ function getActiveProvider() {
 const providers = {
   resend: {
     send: async ({ to, subject, html, text }) => {
-      const apiKey = process.env.RESEND_API_KEY || config.email?.resendApiKey;
+      const rawApiKey = process.env.RESEND_API_KEY || config.email?.resendApiKey;
+      const apiKey = typeof rawApiKey === 'string' ? rawApiKey.trim() : rawApiKey;
       if (!apiKey) {
         throw new Error('RESEND_API_KEY is not configured');
       }
 
       const resend = new Resend(apiKey);
-      const from = process.env.EMAIL_FROM || config.email?.from || 'KodeChirp <onboarding@resend.dev>';
+      const rawFrom = process.env.EMAIL_FROM || config.email?.from || 'KodeChirp <onboarding@resend.dev>';
+      const from = typeof rawFrom === 'string' ? rawFrom.trim() : rawFrom;
       const recipients = Array.isArray(to) ? to : [to];
 
       const { data, error } = await resend.emails.send({

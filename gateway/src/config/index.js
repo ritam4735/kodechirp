@@ -39,9 +39,9 @@ const config = {
 
   // ── Email / Resend ─────────────────────────────────────────────────────────
   email: {
-    provider: process.env.EMAIL_PROVIDER || (process.env.RESEND_API_KEY ? 'resend' : (process.env.SMTP_HOST ? 'smtp' : 'console')),
-    resendApiKey: process.env.RESEND_API_KEY,
-    from: process.env.EMAIL_FROM || 'KodeChirp <onboarding@resend.dev>',
+    provider: (process.env.EMAIL_PROVIDER || (process.env.RESEND_API_KEY ? 'resend' : (process.env.SMTP_HOST ? 'smtp' : 'console'))).trim(),
+    resendApiKey: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.trim() : undefined,
+    from: (process.env.EMAIL_FROM || 'KodeChirp <onboarding@resend.dev>').trim(),
   },
 
   // ── Rate Limiting ──────────────────────────────────────────────────────────
