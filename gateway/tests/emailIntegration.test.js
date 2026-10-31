@@ -124,10 +124,17 @@ describe('Resend Transactional Email & Verification System', () => {
 
     it('throws configuration error if RESEND_API_KEY is missing when provider is resend', async () => {
       delete process.env.RESEND_API_KEY;
+      const config = require('../src/config');
+      const prevKey = config.email?.resendApiKey;
+      if (config.email) config.email.resendApiKey = undefined;
 
-      await expect(
-        emailService.sendVerificationEmail('user@domain.com', 'dummy-token')
-      ).rejects.toThrow(/RESEND_API_KEY/);
+      try {
+        await expect(
+          emailService.sendVerificationEmail('user@domain.com', 'dummy-token')
+        ).rejects.toThrow(/RESEND_API_KEY/);
+      } finally {
+        if (config.email && prevKey) config.email.resendApiKey = prevKey;
+      }
     });
   });
 

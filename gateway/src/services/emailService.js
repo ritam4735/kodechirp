@@ -60,13 +60,14 @@ const providers = {
       const from = typeof rawFrom === 'string' ? rawFrom.trim() : rawFrom;
       const recipients = Array.isArray(to) ? to : [to];
 
-      const { data, error } = await resend.emails.send({
+      const resendRes = await resend.emails.send({
         from,
         to: recipients,
         subject,
         html,
         text,
       });
+      const { data, error } = resendRes || {};
 
       if (error) {
         logger.error({ to, subject, err: error.message, errorName: error.name }, '[EmailService:Resend] Provider returned delivery error');
